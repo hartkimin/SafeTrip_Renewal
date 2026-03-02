@@ -1,0 +1,44 @@
+name: Flutter Analyze
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'safetrip-mobile/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'safetrip-mobile/**'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: safetrip-mobile
+        run: flutter pub get
+
+      - name: Create .env for CI
+        working-directory: safetrip-mobile
+        run: |
+          cat > .env << 'EOF'
+          API_SERVER_URL=http://localhost:3001
+          USE_FIREBASE_EMULATOR=false
+          FIREBASE_EMULATOR_HOST=
+          FIREBASE_AUTH_EMULATOR_URL=
+          FIREBASE_RTDB_EMULATOR_URL=
+          FIREBASE_STORAGE_EMULATOR_URL=
+          EOF
+
+      - name: Flutter analyze
+        working-directory: safetrip-mobile
+        run: flutter analyze --no-fatal-infos
