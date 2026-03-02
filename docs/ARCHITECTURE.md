@@ -10,6 +10,12 @@
 
 **결정:** `flutter_riverpod` v2.x
 
+> **사전 조건:** `flutter_riverpod`가 아직 pubspec.yaml에 없음.
+> Task 10 스캐폴딩 시 아래 패키지를 추가한다:
+> ```yaml
+> flutter_riverpod: ^2.6.1
+> ```
+
 **이유:**
 - SafeTrip은 역할(캡틴/크루장/크루/가디언) + 프라이버시 등급(3종)에 따라
   동일 화면에서 UI 분기가 많음 → Provider 트리 세밀 관리 필요
@@ -86,11 +92,17 @@ class ApiClient {
   }
 }
 
-class AuthInterceptor extends Interceptor {
+/// Firebase ID Token을 요청 헤더에 자동으로 주입하는 인터셉터.
+/// QueuedInterceptor를 사용하여 비동기 토큰 발급을 안전하게 처리한다.
+class AuthInterceptor extends QueuedInterceptor {
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-    if (token != null) {
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final token = await user.getIdToken();
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
@@ -115,7 +127,8 @@ class AuthInterceptor extends Interceptor {
 
 ## 5. 의존성 주입
 
-Riverpod의 `Provider`/`StateNotifierProvider`/`FutureProvider`를 활용.
+Riverpod의 `NotifierProvider`/`AsyncNotifierProvider`/`FutureProvider`를 활용.
+(`StateNotifierProvider`는 Riverpod 2.x에서 deprecated — `NotifierProvider` 사용)
 별도 DI 프레임워크 사용 안 함 (YAGNI).
 
 ---
