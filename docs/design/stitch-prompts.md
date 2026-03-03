@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (25개 고유 화면 확인)
+## 생성된 화면 목록 (29개 — 27 확인 + 2 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -34,11 +34,15 @@
 | 14 | B-07 | Invite Code Input | `914e49341aa14c3dbe580da4a6695228` | ✅ |
 | 15 | B-08 | Trip Preview | `52273ada04fe4f0692c825d259c6eccb` | ✅ |
 
-### C. 메인 맵 (1개)
+### C. 메인 맵 (5개) — 3/5 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
-| 12 | C-01 | Main Map View | `68a428dc0232412a83defd86ec09a776` | ✅ |
+| 16 | C-01 | Main Map View | `68a428dc0232412a83defd86ec09a776` | ✅ |
+| 17 | C-02 | Guardian Map Mode | (background) | ⚠️ 백그라운드 |
+| 18 | C-03 | Map Top Bar (Captain) | `ba7e888e928d4f81b9d898cac4ceab48` | ✅ |
+| 19 | C-04 | Crew Nav + SOS | `623de1d58dd942d7bdfd58117d323ab7` | ✅ |
+| 20 | C-05 | Guardian Nav | (background) | ⚠️ 백그라운드 |
 
 ### D. 여행 관리 (3개) ✅ 전체 확인
 
