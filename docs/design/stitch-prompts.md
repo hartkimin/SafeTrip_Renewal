@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (21개 고유 화면 확인)
+## 생성된 화면 목록 (25개 고유 화면 확인)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -21,7 +21,7 @@
 | 6 | A-06 | Profile Setup | `0f2652a3fc4b4c6d98837a0d3aabf2ef` | ✅ |
 | 7 | A-07 | Consent/Terms | `1aef6b94b52e4cbdaa275ced17db533e` | ✅ |
 
-### B. 여행 생성 (4개) ✅ 전체 확인
+### B. 여행 생성 (8개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -29,6 +29,10 @@
 | 9 | B-02 | Trip Create Form | `89b2b832fb5141528f5ddfc5dcc9d865` | ✅ |
 | 10 | B-03 | Country Picker | `20c56522caac469aa1d72ad99f6b9b97` | ✅ |
 | 11 | B-04 | Privacy Level | `6a4321cc632440d88d6e7dee7e770d46` | ✅ |
+| 12 | B-05 | Location Sharing Mode | `6a239c02463d4ddb8675d64e74fd879a` | ✅ |
+| 13 | B-06 | Trip Confirmation | `6426931cddd740ba9b8dd3fadbe6cbe7` | ✅ |
+| 14 | B-07 | Invite Code Input | `914e49341aa14c3dbe580da4a6695228` | ✅ |
+| 15 | B-08 | Trip Preview | `52273ada04fe4f0692c825d259c6eccb` | ✅ |
 
 ### C. 메인 맵 (1개)
 
