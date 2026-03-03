@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (38개 — 34 확인 + 4 백그라운드)
+## 생성된 화면 목록 (44개 — 43 확인 + 1 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -34,39 +34,42 @@
 | 14 | B-07 | Invite Code Input | `914e49341aa14c3dbe580da4a6695228` | ✅ |
 | 15 | B-08 | Trip Preview | `52273ada04fe4f0692c825d259c6eccb` | ✅ |
 
-### C. 메인 맵 (9개) — 6/9 확인
+### C. 메인 맵 (9개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 16 | C-01 | Main Map View | `68a428dc0232412a83defd86ec09a776` | ✅ |
-| 17 | C-02 | Guardian Map Mode | (background) | ⚠️ 백그라운드 |
+| 17 | C-02 | Guardian Map Mode | `0c00b32330be470ab0bcb00b9d15a604` | ✅ |
 | 18 | C-03 | Map Top Bar (Captain) | `ba7e888e928d4f81b9d898cac4ceab48` | ✅ |
 | 19 | C-04 | Crew Nav + SOS | `623de1d58dd942d7bdfd58117d323ab7` | ✅ |
-| 20 | C-05 | Guardian Nav | (background) | ⚠️ 백그라운드 |
+| 20 | C-05 | Guardian Nav | `0b11f74f08694c5eb4211a5ea81723d3` | ✅ |
 | 21 | C-06 | Trip Switch Modal | `9d77d688bc54456d85f111367d924a42` | ✅ |
-| 22 | C-07 | Notifications | (background) | ⚠️ 백그라운드 |
+| 22 | C-07 | Notifications | `26fea840435c44baa1ec4fb2df1b7ce5` | ✅ |
 | 23 | C-08 | Permissions | `40d45bbc914b48dd93ed3bf02df72394` | ✅ |
 | 24 | C-09 | Demo Mode | `51a9c3ff8e5d4c4080f7bff0fc3381d2` | ✅ |
 
-### D. 여행 관리 (3개) ✅ 전체 확인
+### D. 여행 관리 (6개) — 5/6 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 13 | D-01 | Schedule Tab | `ddf72a4582c54f3ead3f8cb45d8201db` | ✅ |
+| 25 | D-02 | Add Schedule Modal | `4dbd1d0157b342f29d0bce200fe438d8` | ✅ |
+| 26 | D-03 | Quick Schedule Entry | `70caa97efe9f424c9b0acbb9f127eada` | ✅ |
+| 27 | D-05 | Schedule Detail | (background) | ⚠️ 백그라운드 |
 | 14 | D-09 | Member List | `3d583bb4a2e446e38900649f53a9b4a6` | ✅ |
 | 15 | D-10 | Invite Code | `71a3ae9116b5497d897743f70757a6b5` | ✅ |
 
-### F. 가디언 (7개) — 6/7 확인
+### F. 가디언 (7개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
-| 25 | F-01 | Add Guardian | `b413d954a9f941da819a4be6665dd90e` | ✅ |
-| 26 | F-02 | Guardian Manage | (background) | ⚠️ 백그라운드 |
-| 27 | F-03 | Guardian Approval | `d911f8b9be57429b98a0e40177140be8` | ✅ |
-| 28 | F-04 | Guardian Home | `772d95b3bd67495bb3df3a261436ce20` | ✅ |
-| 29 | F-05 | Guardian Member Detail | `b328fa65f9c94fae9ab98f783fdf37f8` | ✅ |
-| 30 | F-06 | Guardian Messages | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
-| 31 | F-07 | Guardian Emergency Alert | `c9c4cfde43fd47aabe3973a8b4f0e707` | ✅ |
+| 28 | F-01 | Add Guardian | `b413d954a9f941da819a4be6665dd90e` | ✅ |
+| 29 | F-02 | Guardian Manage | `eb99d414d2a240cbae6a6c20a299e34e` | ✅ |
+| 30 | F-03 | Guardian Approval | `d911f8b9be57429b98a0e40177140be8` | ✅ |
+| 31 | F-04 | Guardian Home | `772d95b3bd67495bb3df3a261436ce20` | ✅ |
+| 32 | F-05 | Guardian Member Detail | `b328fa65f9c94fae9ab98f783fdf37f8` | ✅ |
+| 33 | F-06 | Guardian Messages | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
+| 34 | F-07 | Guardian Emergency Alert | `c9c4cfde43fd47aabe3973a8b4f0e707` | ✅ |
 
 ### G. SOS (1개) ✅
 
