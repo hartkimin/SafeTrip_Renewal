@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (61개 — 57 확인 + 4 백그라운드)
+## 생성된 화면 목록 (65개 — 60 확인 + 5 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -65,7 +65,7 @@
 | 39 | D-12 | Member Detail | `ad10a339905342f0ba4f1437d27eca8b` | ✅ |
 | 40 | D-13 | Leadership Transfer | `6f7a0aed19a44b429a3c218105ad51a4` | ✅ |
 
-### E. 위치공유/프라이버시 (4개) — 2/4 확인
+### E. 위치공유/프라이버시 (8개) — 5/8 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -73,6 +73,10 @@
 | 49 | E-02 | Sharing Schedule | `df12512374b34647b3ec28d4b2a06923` | ✅ |
 | 50 | E-03 | Event-Linked Sharing | `08f5f456610446cf9ee70389d630bba8` | ✅ |
 | 51 | E-04 | Visibility Range | (background) | ⚠️ 백그라운드 |
+| 52 | E-05 | Guardian Pause | `2c8b460c19324011b1998d3fba3daf25` | ✅ |
+| 53 | E-06 | Privacy Level Change | `f7333d5e957f4e39aa30b7ee4ffc214e` | ✅ |
+| 54 | E-07 | Mode Switch Confirm | `c6e1e9344ea248dab6a6d9505fb25d0c` | ✅ |
+| 55 | E-08 | Geofence Manage | (background) | ⚠️ 백그라운드 |
 
 ### F. 가디언 (7개) ✅ 전체 확인
 
