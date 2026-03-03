@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (57개 — 55 확인 + 2 백그라운드)
+## 생성된 화면 목록 (61개 — 57 확인 + 4 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -64,6 +64,15 @@
 | 38 | D-11 | Invite Code Manage | `805d42ee99cc4dd486ef390f0ae500c2` | ✅ |
 | 39 | D-12 | Member Detail | `ad10a339905342f0ba4f1437d27eca8b` | ✅ |
 | 40 | D-13 | Leadership Transfer | `6f7a0aed19a44b429a3c218105ad51a4` | ✅ |
+
+### E. 위치공유/프라이버시 (4개) — 2/4 확인
+
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 48 | E-01 | Location Sharing Main | (background) | ⚠️ 백그라운드 |
+| 49 | E-02 | Sharing Schedule | `df12512374b34647b3ec28d4b2a06923` | ✅ |
+| 50 | E-03 | Event-Linked Sharing | `08f5f456610446cf9ee70389d630bba8` | ✅ |
+| 51 | E-04 | Visibility Range | (background) | ⚠️ 백그라운드 |
 
 ### F. 가디언 (7개) ✅ 전체 확인
 
