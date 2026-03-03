@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "safetrip-server-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["safetrip-server-api/node_modules/tsx/dist/cli.mjs", "watch", "safetrip-server-api/src/index.ts"],
+      "port": 3001
+    },
+    {
+      "name": "safetrip-firebase-function",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["safetrip-firebase-function/node_modules/firebase-tools/lib/bin/firebase.js", "emulators:start", "--only", "functions"],
+      "port": 5001
+    }
+  ]
+}

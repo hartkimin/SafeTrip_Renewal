@@ -1,0 +1,31 @@
+# ============================================================================
+# SafeTrip ngrok 터널 설정
+# ============================================================================
+# 사용법: start-dev-ngrok.sh 가 자동으로 사용합니다.
+# 수동 실행: ngrok start --all --config scripts/ngrok.yml
+#
+# 아키텍처:
+#   외부 기기 → ngrok HTTP → local-proxy.cjs(:8888) → 각 서비스
+#   - /identitytoolkit.googleapis.com/* → Firebase Auth  :9099
+#   - /v0/*                             → Firebase Storage :9199
+#   - WebSocket                         → Firebase RTDB  :9000
+#   - /*                               → Backend API    :3001
+#
+# HTTP-only 이유: Firebase SDK의 useAuthEmulator/useDatabaseEmulator는
+#   내부적으로 http:// 프로토콜을 사용. ngrok 기본값(HTTP→HTTPS 307 리다이렉트)을
+#   사용하면 SDK가 리다이렉트를 따르지 않아 연결 실패.
+#   schemes: [http]로 HTTP만 노출하면 리다이렉트 없이 직접 연결.
+#
+# authtoken 설정 방법:
+#   export NGROK_AUTHTOKEN=your_token_here
+#   또는 ~/.bashrc 에 추가
+# ============================================================================
+version: "3"
+
+tunnels:
+  safetrip-proxy:
+    addr: 8888
+    proto: http
+    schemes:
+      - http
+    inspect: true

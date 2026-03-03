@@ -1,0 +1,460 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 2800" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.08"/>
+    </filter>
+    <filter id="shadowDeep" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.12"/>
+    </filter>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00897B"/>
+      <stop offset="100%" style="stop-color:#26A69A"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D32F2F"/>
+      <stop offset="100%" style="stop-color:#EF5350"/>
+    </linearGradient>
+    <linearGradient id="apiGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#E8F5E9"/>
+      <stop offset="100%" style="stop-color:#C8E6C9"/>
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FAFAFA"/>
+      <stop offset="100%" style="stop-color:#F5F5F5"/>
+    </linearGradient>
+    <marker id="arrowTeal" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#00897B"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#9E9E9E"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#D32F2F"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="1400" height="2800" fill="#F8F9FA" rx="12"/>
+
+  <!-- ================================================================== -->
+  <!-- 제목 -->
+  <!-- ================================================================== -->
+  <text x="700" y="50" text-anchor="middle" font-size="28" font-weight="800" fill="#1A1A1A">SafeTrip 안전 가이드 탭 구조 + 외교부 API 연동 현황</text>
+  <text x="700" y="78" text-anchor="middle" font-size="14" fill="#757575">bottom_sheet_4_guide.dart → 5개 가이드 탭 + 긴급연락처 모달 | 데이터: MofaService → Server Proxy → 외교부 공공데이터 API</text>
+
+  <!-- ================================================================== -->
+  <!-- SECTION 1: 전체 화면 레이아웃 (모바일 프레임) -->
+  <!-- ================================================================== -->
+  <text x="60" y="130" font-size="20" font-weight="700" fill="#333">1. 안전 가이드 화면 전체 레이아웃</text>
+  <text x="60" y="152" font-size="12" fill="#888">bottom_sheet_4_guide.dart - GuideScreen</text>
+
+  <!-- 모바일 프레임 -->
+  <rect x="60" y="170" width="375" height="780" rx="24" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="2" filter="url(#shadowDeep)"/>
+  <!-- 노치 -->
+  <rect x="160" y="176" width="110" height="24" rx="12" fill="#1A1A1A"/>
+
+  <!-- 헤더 (56px) -->
+  <rect x="60" y="205" width="375" height="56" fill="url(#headerGrad)"/>
+  <line x1="60" y1="261" x2="435" y2="261" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="82" y="238" font-size="20" fill="#9E9E9E">&lt;</text>
+  <text x="108" y="239" font-size="14" font-weight="600" fill="#333">안전 가이드</text>
+  <!-- 긴급 버튼 -->
+  <rect x="385" y="218" width="36" height="36" rx="10" fill="#FFF0F0"/>
+  <text x="403" y="242" text-anchor="middle" font-size="16" fill="#D32F2F">!</text>
+
+  <!-- 국가 선택 영역 (52px + padding) -->
+  <rect x="60" y="261" width="375" height="76" fill="#FFFFFF"/>
+  <line x1="60" y1="337" x2="435" y2="337" stroke="#F0F0F0" stroke-width="1"/>
+  <!-- 선택된 국가 -->
+  <rect x="76" y="275" width="100" height="46" rx="23" fill="#00897B"/>
+  <text x="126" y="302" text-anchor="middle" font-size="14" font-weight="600" fill="white">TH 태국</text>
+  <text x="126" y="316" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.8)">1.15 - 1.22</text>
+  <!-- 비선택 국가 -->
+  <rect x="184" y="275" width="90" height="46" rx="23" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="229" y="302" text-anchor="middle" font-size="14" font-weight="600" fill="#555">VN 베트남</text>
+  <text x="229" y="316" text-anchor="middle" font-size="9" fill="#999">1.23 - 1.28</text>
+  <rect x="282" y="275" width="80" height="46" rx="23" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="322" y="302" text-anchor="middle" font-size="14" font-weight="600" fill="#555">JP 일본</text>
+
+  <!-- 여행경보 배너 -->
+  <rect x="76" y="347" width="343" height="56" rx="12" fill="#FFF8E1" stroke="#FFE082" stroke-width="1"/>
+  <circle cx="102" cy="375" r="16" fill="#FFECB3"/>
+  <text x="102" y="380" text-anchor="middle" font-size="14" font-weight="800" fill="#F57F17">1</text>
+  <text x="128" y="370" font-size="14" font-weight="700" fill="#F57F17">여행경보 1단계</text>
+  <text x="128" y="388" font-size="11" fill="rgba(245,127,23,0.8)">여행유의: 신변안전에 유의하세요</text>
+
+  <!-- 탭바 -->
+  <rect x="60" y="413" width="375" height="44" fill="#FFFFFF"/>
+  <line x1="60" y1="457" x2="435" y2="457" stroke="#E0E0E0" stroke-width="1"/>
+  <!-- 탭 항목 -->
+  <text x="88" y="440" font-size="13" font-weight="700" fill="#00897B">&#9432; 개요</text>
+  <rect x="76" y="452" width="54" height="3" rx="1.5" fill="#00897B"/>
+  <text x="154" y="440" font-size="13" font-weight="500" fill="#999">&#9888; 안전</text>
+  <text x="220" y="440" font-size="13" font-weight="500" fill="#999">&#9992; 입국</text>
+  <text x="282" y="440" font-size="13" font-weight="500" fill="#999">&#9769; 의료</text>
+  <text x="352" y="440" font-size="13" font-weight="500" fill="#999">&#9742; 연락처</text>
+
+  <!-- 탭 콘텐츠 영역 -->
+  <rect x="60" y="457" width="375" height="493" fill="#FFFFFF"/>
+  <rect x="76" y="472" width="343" height="50" rx="8" fill="#F5F5F5"/>
+  <text x="92" y="493" font-size="13" font-weight="600" fill="#555">&#9432; 국가 기본정보</text>
+  <text x="92" y="510" font-size="11" fill="#999">HTML 콘텐츠 (flutter_html 렌더링)</text>
+  <rect x="76" y="532" width="343" height="50" rx="8" fill="#F5F5F5"/>
+  <text x="92" y="553" font-size="13" font-weight="600" fill="#555">&#127760; 일반사항</text>
+  <text x="92" y="570" font-size="11" fill="#999">HTML 콘텐츠 (flutter_html 렌더링)</text>
+
+  <!-- ================================================================== -->
+  <!-- 우측: API 연동 데이터 흐름 -->
+  <!-- ================================================================== -->
+  <text x="500" y="190" font-size="18" font-weight="700" fill="#333">데이터 흐름</text>
+
+  <!-- API 흐름 박스 -->
+  <rect x="500" y="210" width="380" height="200" rx="12" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- 외교부 API -->
+  <rect x="520" y="226" width="160" height="36" rx="8" fill="#1565C0"/>
+  <text x="600" y="249" text-anchor="middle" font-size="12" font-weight="600" fill="white">외교부 공공데이터 API</text>
+  <text x="600" y="275" text-anchor="middle" font-size="10" fill="#888">apis.data.go.kr/1262000</text>
+
+  <!-- 화살표: 외교부 → 서버 -->
+  <line x1="600" y1="285" x2="600" y2="300" stroke="#9E9E9E" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- 서버 프록시 -->
+  <rect x="520" y="305" width="160" height="36" rx="8" fill="#00897B"/>
+  <text x="600" y="322" text-anchor="middle" font-size="11" font-weight="600" fill="white">SafeTrip Server API</text>
+  <text x="600" y="336" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.8)">mofa-api.service.ts</text>
+  <text x="600" y="360" text-anchor="middle" font-size="10" fill="#888">/api/v1/mofa/country/:code/*</text>
+
+  <!-- 화살표: 서버 → 모바일 -->
+  <line x1="600" y1="370" x2="600" y2="385" stroke="#9E9E9E" stroke-width="1.5" marker-end="url(#arrowGray)"/>
+
+  <!-- 모바일 서비스 -->
+  <rect x="520" y="390" width="340" height="10" rx="5" fill="#E8F5E9"/>
+  <rect x="520" y="390" width="160" height="10" rx="5" fill="#A5D6A7"/>
+  <text x="710" y="398" font-size="9" fill="#666">서버 캐시 30분 + 클라이언트 캐시 10분</text>
+
+  <!-- 엔드포인트 목록 -->
+  <rect x="700" y="226" width="160" height="170" rx="8" fill="#F5F5F5"/>
+  <text x="780" y="246" text-anchor="middle" font-size="11" font-weight="700" fill="#555">서버 엔드포인트</text>
+  <text x="716" y="268" font-size="10" fill="#00897B">/summary</text>
+  <text x="790" y="268" font-size="10" fill="#888">→ 개요 탭</text>
+  <text x="716" y="288" font-size="10" fill="#00897B">/safety</text>
+  <text x="790" y="288" font-size="10" fill="#888">→ 안전 탭</text>
+  <text x="716" y="308" font-size="10" fill="#00897B">/entry</text>
+  <text x="790" y="308" font-size="10" fill="#888">→ 입국 탭</text>
+  <text x="716" y="328" font-size="10" fill="#00897B">/medical</text>
+  <text x="790" y="328" font-size="10" fill="#888">→ 의료 탭</text>
+  <text x="716" y="348" font-size="10" fill="#00897B">/contacts</text>
+  <text x="790" y="348" font-size="10" fill="#888">→ 연락처 탭</text>
+  <text x="716" y="372" font-size="10" fill="#D32F2F">/contacts</text>
+  <text x="790" y="372" font-size="10" fill="#888">→ 긴급연락처</text>
+
+  <!-- ================================================================== -->
+  <!-- SECTION 2: 5개 탭 상세 구조 -->
+  <!-- ================================================================== -->
+  <text x="60" y="1020" font-size="20" font-weight="700" fill="#333">2. 탭별 상세 구조 및 외교부 API 매핑</text>
+
+  <!-- ================================================================== -->
+  <!-- 탭 1: 개요 -->
+  <!-- ================================================================== -->
+  <rect x="60" y="1050" width="380" height="440" rx="16" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="60" y="1050" width="380" height="44" rx="16" fill="url(#tealGrad)"/>
+  <rect x="60" y="1078" width="380" height="16" fill="url(#tealGrad)"/>
+  <text x="250" y="1080" text-anchor="middle" font-size="15" font-weight="700" fill="white">&#9432;  개요 탭 (guide_overview_tab.dart)</text>
+
+  <!-- API 호출 -->
+  <rect x="80" y="1108" width="340" height="28" rx="6" fill="#E8F5E9"/>
+  <text x="100" y="1127" font-size="11" font-weight="600" fill="#2E7D32">API: MofaService.getCountrySummary(countryCode)</text>
+
+  <!-- 모델 -->
+  <rect x="80" y="1144" width="340" height="24" rx="6" fill="#E3F2FD"/>
+  <text x="100" y="1160" font-size="11" font-weight="600" fill="#1565C0">Model: MofaCountrySummary</text>
+
+  <!-- 섹션 1: 기본정보 -->
+  <rect x="80" y="1180" width="340" height="100" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="80" y="1180" width="340" height="32" rx="10" fill="#F5F5F5"/>
+  <rect x="80" y="1200" width="340" height="12" fill="#F5F5F5"/>
+  <text x="106" y="1202" font-size="13" font-weight="700" fill="#555">&#9432;  국가 기본정보</text>
+  <text x="100" y="1232" font-size="11" fill="#888">countryBasics[0].basicInfo</text>
+  <rect x="100" y="1242" width="300" height="26" rx="4" fill="#F0F0F0"/>
+  <text x="250" y="1259" text-anchor="middle" font-size="10" fill="#999">HTML 콘텐츠 (flutter_html 렌더링)</text>
+  <text x="100" y="1230" font-size="9" fill="#00897B">외교부 CountryBasicService (XML API → 3자리 ISO)</text>
+
+  <!-- 섹션 2: 일반사항 -->
+  <rect x="80" y="1292" width="340" height="100" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <rect x="80" y="1292" width="340" height="32" rx="10" fill="#F5F5F5"/>
+  <rect x="80" y="1312" width="340" height="12" fill="#F5F5F5"/>
+  <text x="106" y="1314" font-size="13" font-weight="700" fill="#555">&#127760;  일반사항</text>
+  <text x="100" y="1344" font-size="11" fill="#888">overviewInfos[0].txtOriginCn</text>
+  <rect x="100" y="1354" width="300" height="26" rx="4" fill="#F0F0F0"/>
+  <text x="250" y="1371" text-anchor="middle" font-size="10" fill="#999">HTML 콘텐츠 (flutter_html 렌더링)</text>
+  <text x="100" y="1342" font-size="9" fill="#00897B">외교부 OverviewGnrlInfoService</text>
+
+  <!-- 기능: RefreshIndicator -->
+  <rect x="80" y="1404" width="340" height="30" rx="6" fill="#FFF3E0"/>
+  <text x="100" y="1424" font-size="11" fill="#E65100">Pull-to-Refresh: clearCache() → 재호출</text>
+
+  <!-- 추가 데이터: 국기 -->
+  <rect x="80" y="1444" width="340" height="30" rx="6" fill="#F3E5F5"/>
+  <text x="100" y="1464" font-size="11" fill="#7B1FA2">+ TravelAlarm (여행경보) + CountryFlag (국기) 도 summary에 포함</text>
+
+  <!-- ================================================================== -->
+  <!-- 탭 2: 안전 -->
+  <!-- ================================================================== -->
+  <rect x="470" y="1050" width="380" height="520" rx="16" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="470" y="1050" width="380" height="44" rx="16" fill="#D32F2F"/>
+  <rect x="470" y="1078" width="380" height="16" fill="#D32F2F"/>
+  <text x="660" y="1080" text-anchor="middle" font-size="15" font-weight="700" fill="white">&#9888;  안전 탭 (guide_safety_tab.dart)</text>
+
+  <!-- API 호출 -->
+  <rect x="490" y="1108" width="340" height="28" rx="6" fill="#E8F5E9"/>
+  <text x="510" y="1127" font-size="11" font-weight="600" fill="#2E7D32">API: MofaService.getSafetyInfo(countryCode)</text>
+
+  <!-- 모델 -->
+  <rect x="490" y="1144" width="340" height="24" rx="6" fill="#E3F2FD"/>
+  <text x="510" y="1160" font-size="11" font-weight="600" fill="#1565C0">Model: MofaSafetyInfo</text>
+
+  <!-- 섹션 1: 안전공지 -->
+  <rect x="490" y="1180" width="340" height="110" rx="10" fill="#FFF8E1" stroke="#FFE082" stroke-width="1"/>
+  <text x="516" y="1202" font-size="13" font-weight="700" fill="#555">&#128227;  최신 안전공지</text>
+  <text x="510" y="1220" font-size="9" fill="#00897B">외교부 CountrySafetyService6</text>
+  <text x="510" y="1238" font-size="11" fill="#888">safetyNotices[].map → ExpansionTile 카드</text>
+  <!-- ExpansionTile 미니 -->
+  <rect x="510" y="1248" width="300" height="30" rx="6" fill="rgba(255,255,255,0.7)" stroke="#FFE082" stroke-width="0.5"/>
+  <text x="530" y="1262" font-size="10" fill="#FF8F00">&#128226;</text>
+  <text x="548" y="1262" font-size="10" font-weight="600" fill="#555">안전공지 제목 (접기/펼치기)</text>
+  <text x="548" y="1274" font-size="9" fill="#999">2025-01-15 | HTML 본문 확장</text>
+
+  <!-- 섹션 2: 사건사고 -->
+  <rect x="490" y="1302" width="340" height="100" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="516" y="1324" font-size="13" font-weight="700" fill="#555">&#9888;  사건/사고 유형별 주의사항</text>
+  <text x="510" y="1342" font-size="9" fill="#00897B">외교부 CountryAccidentService2</text>
+  <text x="510" y="1358" font-size="11" fill="#888">accidents[].map → ExpansionTile 카드</text>
+  <rect x="510" y="1368" width="300" height="22" rx="6" fill="#FFF0F0" stroke="#FFCDD2" stroke-width="0.5"/>
+  <text x="530" y="1383" font-size="10" fill="#D32F2F">&#9888;</text>
+  <text x="548" y="1383" font-size="10" font-weight="600" fill="#555">사고유형명 (접기/펼치기)</text>
+
+  <!-- 섹션 3: 치안환경 -->
+  <rect x="490" y="1414" width="340" height="90" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="516" y="1436" font-size="13" font-weight="700" fill="#555">&#128737;  치안환경</text>
+  <text x="510" y="1454" font-size="9" fill="#00897B">외교부 SecurityEnvironmentService</text>
+  <text x="510" y="1470" font-size="11" fill="#888">securityEnvs[0].txtOriginCn</text>
+  <rect x="510" y="1478" width="300" height="18" rx="4" fill="#F0F0F0"/>
+  <text x="660" y="1491" text-anchor="middle" font-size="9" fill="#999">HTML 콘텐츠</text>
+
+  <!-- Refresh -->
+  <rect x="490" y="1516" width="340" height="30" rx="6" fill="#FFF3E0"/>
+  <text x="510" y="1536" font-size="11" fill="#E65100">Pull-to-Refresh: clearCache() → 재호출</text>
+
+  <!-- ================================================================== -->
+  <!-- 탭 3: 입국 -->
+  <!-- ================================================================== -->
+  <rect x="60" y="1530" width="380" height="330" rx="16" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="60" y="1530" width="380" height="44" rx="16" fill="#0277BD"/>
+  <rect x="60" y="1558" width="380" height="16" fill="#0277BD"/>
+  <text x="250" y="1560" text-anchor="middle" font-size="15" font-weight="700" fill="white">&#9992;  입국 탭 (guide_entry_tab.dart)</text>
+
+  <rect x="80" y="1588" width="340" height="28" rx="6" fill="#E8F5E9"/>
+  <text x="100" y="1607" font-size="11" font-weight="600" fill="#2E7D32">API: MofaService.getEntryInfo(countryCode)</text>
+
+  <rect x="80" y="1624" width="340" height="24" rx="6" fill="#E3F2FD"/>
+  <text x="100" y="1640" font-size="11" font-weight="600" fill="#1565C0">Model: MofaEntryInfo → MofaEntranceVisa</text>
+
+  <rect x="80" y="1660" width="340" height="130" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="106" y="1682" font-size="13" font-weight="700" fill="#555">&#9992;  입국허가요건 / 비자</text>
+  <text x="100" y="1700" font-size="9" fill="#00897B">외교부 EntranceVisaService2</text>
+  <text x="100" y="1718" font-size="11" fill="#888">entranceVisas[0].txtOriginCn</text>
+  <rect x="100" y="1728" width="300" height="48" rx="4" fill="#F0F0F0"/>
+  <text x="250" y="1748" text-anchor="middle" font-size="10" fill="#999">HTML 콘텐츠 (테이블 포함)</text>
+  <text x="250" y="1764" text-anchor="middle" font-size="9" fill="#999">table/td/th 스타일 커스텀 적용</text>
+
+  <rect x="80" y="1802" width="340" height="30" rx="6" fill="#FFF3E0"/>
+  <text x="100" y="1822" font-size="11" fill="#E65100">Pull-to-Refresh: clearCache() → 재호출</text>
+
+  <!-- ================================================================== -->
+  <!-- 탭 4: 의료 -->
+  <!-- ================================================================== -->
+  <rect x="470" y="1600" width="380" height="310" rx="16" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="470" y="1600" width="380" height="44" rx="16" fill="#C62828"/>
+  <rect x="470" y="1628" width="380" height="16" fill="#C62828"/>
+  <text x="660" y="1630" text-anchor="middle" font-size="15" font-weight="700" fill="white">&#9769;  의료 탭 (guide_medical_tab.dart)</text>
+
+  <rect x="490" y="1658" width="340" height="28" rx="6" fill="#E8F5E9"/>
+  <text x="510" y="1677" font-size="11" font-weight="600" fill="#2E7D32">API: MofaService.getMedicalInfo(countryCode)</text>
+
+  <rect x="490" y="1694" width="340" height="24" rx="6" fill="#E3F2FD"/>
+  <text x="510" y="1710" font-size="11" font-weight="600" fill="#1565C0">Model: MofaMedicalInfo → MofaMedicalEnv</text>
+
+  <rect x="490" y="1730" width="340" height="100" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="516" y="1752" font-size="13" font-weight="700" fill="#555">&#9769;  의료환경</text>
+  <text x="510" y="1770" font-size="9" fill="#00897B">외교부 MedicalEnvironmentService</text>
+  <text x="510" y="1788" font-size="11" fill="#888">medicalEnvs[0].txtOriginCn</text>
+  <rect x="510" y="1798" width="300" height="22" rx="4" fill="#F0F0F0"/>
+  <text x="660" y="1813" text-anchor="middle" font-size="10" fill="#999">HTML 콘텐츠 (테이블 포함)</text>
+
+  <rect x="490" y="1842" width="340" height="30" rx="6" fill="#FFF3E0"/>
+  <text x="510" y="1862" font-size="11" fill="#E65100">Pull-to-Refresh: clearCache() → 재호출</text>
+
+  <!-- ================================================================== -->
+  <!-- 탭 5: 연락처 -->
+  <!-- ================================================================== -->
+  <rect x="60" y="1900" width="790" height="500" rx="16" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="60" y="1900" width="790" height="44" rx="16" fill="#4527A0"/>
+  <rect x="60" y="1928" width="790" height="16" fill="#4527A0"/>
+  <text x="455" y="1930" text-anchor="middle" font-size="15" font-weight="700" fill="white">&#9742;  연락처 탭 (guide_contacts_tab.dart) + &#128680; 긴급연락처 모달 (emergency_sheet.dart)</text>
+
+  <rect x="80" y="1958" width="340" height="28" rx="6" fill="#E8F5E9"/>
+  <text x="100" y="1977" font-size="11" font-weight="600" fill="#2E7D32">API: MofaService.getContactInfo(countryCode)</text>
+
+  <rect x="80" y="1994" width="340" height="24" rx="6" fill="#E3F2FD"/>
+  <text x="100" y="2010" font-size="11" font-weight="600" fill="#1565C0">Model: MofaContactInfo → MofaEmbassy + MofaLocalContact</text>
+
+  <!-- 영사콜센터 -->
+  <rect x="80" y="2030" width="340" height="90" rx="12" fill="url(#redGrad)"/>
+  <text x="250" y="2055" text-anchor="middle" font-size="12" font-weight="600" fill="white">&#9742; 영사콜센터 (24시간)</text>
+  <text x="250" y="2080" text-anchor="middle" font-size="22" font-weight="800" fill="white">+82-2-3210-0404</text>
+  <text x="250" y="2098" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)">하드코딩 상수 | 전화 연결 기능</text>
+
+  <!-- 재외공관 -->
+  <rect x="80" y="2132" width="340" height="160" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="106" y="2154" font-size="13" font-weight="700" fill="#555">&#127963;  재외공관</text>
+  <text x="100" y="2172" font-size="9" fill="#00897B">외교부 EmbassyService2</text>
+  <text x="100" y="2190" font-size="11" fill="#888">embassies[].map → 카드 리스트</text>
+  <!-- 카드 미니 -->
+  <rect x="100" y="2200" width="300" height="80" rx="6" fill="#FFFFFF" stroke="#E8E8E8" stroke-width="0.5"/>
+  <text x="120" y="2218" font-size="11" font-weight="700" fill="#333">주태국대한민국대사관</text>
+  <text x="120" y="2236" font-size="10" fill="#555">&#9742; 대표: +66-2-247-7537</text>
+  <text x="120" y="2252" font-size="10" fill="#D32F2F">&#9742; 긴급: +66-2-247-7540</text>
+  <text x="120" y="2268" font-size="10" fill="#555">&#128205; 23 Thiam-Ruamit Road...</text>
+
+  <!-- 현지연락처 -->
+  <rect x="80" y="2304" width="340" height="76" rx="10" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="106" y="2326" font-size="13" font-weight="700" fill="#555">&#9742;  현지 연락처</text>
+  <text x="100" y="2344" font-size="9" fill="#00897B">외교부 LocalContactService2</text>
+  <text x="100" y="2360" font-size="11" fill="#888">localContacts[0].txtOriginCn → HTML 렌더링</text>
+
+  <!-- 긴급연락처 모달 (우측) -->
+  <rect x="450" y="2030" width="380" height="350" rx="12" fill="#FFF0F0" stroke="#FFCDD2" stroke-width="1.5"/>
+  <text x="640" y="2055" text-anchor="middle" font-size="14" font-weight="700" fill="#C62828">&#128680; 긴급연락처 모달 (emergency_sheet.dart)</text>
+  <text x="470" y="2078" font-size="11" fill="#888">별도 MofaService 인스턴스 생성</text>
+  <text x="470" y="2096" font-size="11" fill="#2E7D32">API: MofaService.getContactInfo(countryCode)</text>
+  <text x="470" y="2114" font-size="11" fill="#888">embassies 데이터만 사용 (공관 긴급번호)</text>
+
+  <rect x="470" y="2128" width="340" height="80" rx="8" fill="url(#redGrad)"/>
+  <text x="640" y="2150" text-anchor="middle" font-size="11" font-weight="600" fill="white">영사콜센터 24시간</text>
+  <text x="640" y="2175" text-anchor="middle" font-size="20" font-weight="800" fill="white">+82-2-3210-0404</text>
+  <text x="640" y="2195" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)">전화 연결 가능</text>
+
+  <rect x="470" y="2220" width="340" height="60" rx="8" fill="#FFFFFF" stroke="#E8E8E8" stroke-width="1"/>
+  <text x="490" y="2242" font-size="12" font-weight="700" fill="#333">재외공관 긴급연락처</text>
+  <text x="490" y="2260" font-size="10" fill="#D32F2F">&#9742; 긴급전화 버튼 → 바로 전화 연결</text>
+  <text x="490" y="2270" font-size="9" fill="#888">emergencyTelNo 필드 우선 표시</text>
+
+  <rect x="470" y="2292" width="340" height="72" rx="8" fill="#FFF8E1" stroke="#FFE082" stroke-width="1"/>
+  <text x="490" y="2312" font-size="11" font-weight="600" fill="#F57F17">헤더 긴급 버튼에서 열림</text>
+  <text x="490" y="2330" font-size="10" fill="#888">showModalBottomSheet</text>
+  <text x="490" y="2348" font-size="10" fill="#888">isScrollControlled: true</text>
+
+  <!-- ================================================================== -->
+  <!-- SECTION 3: 외교부 API 매핑 요약 테이블 -->
+  <!-- ================================================================== -->
+  <text x="60" y="2460" font-size="20" font-weight="700" fill="#333">3. 외교부 API ↔ 탭 매핑 요약</text>
+
+  <!-- 테이블 헤더 -->
+  <rect x="60" y="2480" width="830" height="36" rx="0" fill="#00897B"/>
+  <text x="170" y="2504" text-anchor="middle" font-size="12" font-weight="700" fill="white">외교부 API 서비스명</text>
+  <text x="370" y="2504" text-anchor="middle" font-size="12" font-weight="700" fill="white">서버 메서드</text>
+  <text x="540" y="2504" text-anchor="middle" font-size="12" font-weight="700" fill="white">모바일 탭</text>
+  <text x="700" y="2504" text-anchor="middle" font-size="12" font-weight="700" fill="white">표시 형태</text>
+  <text x="830" y="2504" text-anchor="middle" font-size="12" font-weight="700" fill="white">캐시</text>
+
+  <!-- 행들 -->
+  <rect x="60" y="2516" width="830" height="32" fill="#FAFAFA"/>
+  <text x="170" y="2537" text-anchor="middle" font-size="11" fill="#555">TravelAlarmService2</text>
+  <text x="370" y="2537" text-anchor="middle" font-size="11" fill="#555">getTravelAlarm</text>
+  <text x="540" y="2537" text-anchor="middle" font-size="11" fill="#555">개요 (배너)</text>
+  <text x="700" y="2537" text-anchor="middle" font-size="11" fill="#555">경보 레벨 배너</text>
+  <text x="830" y="2537" text-anchor="middle" font-size="11" fill="#555">30분</text>
+
+  <rect x="60" y="2548" width="830" height="32" fill="#FFFFFF"/>
+  <text x="170" y="2569" text-anchor="middle" font-size="11" fill="#555">CountryBasicService (XML)</text>
+  <text x="370" y="2569" text-anchor="middle" font-size="11" fill="#555">getCountryBasicInfo</text>
+  <text x="540" y="2569" text-anchor="middle" font-size="11" fill="#555">개요</text>
+  <text x="700" y="2569" text-anchor="middle" font-size="11" fill="#555">HTML 카드</text>
+  <text x="830" y="2569" text-anchor="middle" font-size="11" fill="#555">24시간</text>
+
+  <rect x="60" y="2580" width="830" height="32" fill="#FAFAFA"/>
+  <text x="170" y="2601" text-anchor="middle" font-size="11" fill="#555">OverviewGnrlInfoService</text>
+  <text x="370" y="2601" text-anchor="middle" font-size="11" fill="#555">getOverviewInfo</text>
+  <text x="540" y="2601" text-anchor="middle" font-size="11" fill="#555">개요</text>
+  <text x="700" y="2601" text-anchor="middle" font-size="11" fill="#555">HTML 카드</text>
+  <text x="830" y="2601" text-anchor="middle" font-size="11" fill="#555">24시간</text>
+
+  <rect x="60" y="2612" width="830" height="32" fill="#FFFFFF"/>
+  <text x="170" y="2633" text-anchor="middle" font-size="11" fill="#555">CountrySafetyService6</text>
+  <text x="370" y="2633" text-anchor="middle" font-size="11" fill="#555">getCountrySafetyList</text>
+  <text x="540" y="2633" text-anchor="middle" font-size="11" fill="#555">안전</text>
+  <text x="700" y="2633" text-anchor="middle" font-size="11" fill="#555">ExpansionTile 리스트</text>
+  <text x="830" y="2633" text-anchor="middle" font-size="11" fill="#555">30분</text>
+
+  <rect x="60" y="2644" width="830" height="32" fill="#FAFAFA"/>
+  <text x="170" y="2665" text-anchor="middle" font-size="11" fill="#555">CountryAccidentService2</text>
+  <text x="370" y="2665" text-anchor="middle" font-size="11" fill="#555">getCountryAccidentList</text>
+  <text x="540" y="2665" text-anchor="middle" font-size="11" fill="#555">안전</text>
+  <text x="700" y="2665" text-anchor="middle" font-size="11" fill="#555">ExpansionTile 리스트</text>
+  <text x="830" y="2665" text-anchor="middle" font-size="11" fill="#555">30분</text>
+
+  <rect x="60" y="2676" width="830" height="32" fill="#FFFFFF"/>
+  <text x="170" y="2697" text-anchor="middle" font-size="11" fill="#555">SecurityEnvironmentService</text>
+  <text x="370" y="2697" text-anchor="middle" font-size="11" fill="#555">getSecurityEnvironment</text>
+  <text x="540" y="2697" text-anchor="middle" font-size="11" fill="#555">안전</text>
+  <text x="700" y="2697" text-anchor="middle" font-size="11" fill="#555">HTML 카드</text>
+  <text x="830" y="2697" text-anchor="middle" font-size="11" fill="#555">24시간</text>
+
+  <rect x="60" y="2708" width="830" height="32" fill="#FAFAFA"/>
+  <text x="170" y="2729" text-anchor="middle" font-size="11" fill="#555">EntranceVisaService2</text>
+  <text x="370" y="2729" text-anchor="middle" font-size="11" fill="#555">getEntranceVisa</text>
+  <text x="540" y="2729" text-anchor="middle" font-size="11" fill="#555">입국</text>
+  <text x="700" y="2729" text-anchor="middle" font-size="11" fill="#555">HTML 카드 (테이블)</text>
+  <text x="830" y="2729" text-anchor="middle" font-size="11" fill="#555">24시간</text>
+
+  <rect x="60" y="2740" width="830" height="32" fill="#FFFFFF"/>
+  <text x="170" y="2761" text-anchor="middle" font-size="11" fill="#555">MedicalEnvironmentService</text>
+  <text x="370" y="2761" text-anchor="middle" font-size="11" fill="#555">getMedicalEnvironment</text>
+  <text x="540" y="2761" text-anchor="middle" font-size="11" fill="#555">의료</text>
+  <text x="700" y="2761" text-anchor="middle" font-size="11" fill="#555">HTML 카드 (테이블)</text>
+  <text x="830" y="2761" text-anchor="middle" font-size="11" fill="#555">24시간</text>
+
+  <rect x="60" y="2772" width="830" height="32" fill="#FAFAFA" stroke-width="0"/>
+  <text x="170" y="2793" text-anchor="middle" font-size="11" fill="#555">EmbassyService2</text>
+  <text x="370" y="2793" text-anchor="middle" font-size="11" fill="#555">getEmbassyInfo</text>
+  <text x="540" y="2793" text-anchor="middle" font-size="11" fill="#D32F2F">연락처 + 긴급</text>
+  <text x="700" y="2793" text-anchor="middle" font-size="11" fill="#555">구조화 카드 + 전화</text>
+  <text x="830" y="2793" text-anchor="middle" font-size="11" fill="#555">6시간</text>
+
+  <!-- 테이블 테두리 -->
+  <rect x="60" y="2480" width="830" height="324" rx="0" fill="none" stroke="#E0E0E0" stroke-width="1"/>
+  <!-- 세로선 -->
+  <line x1="260" y1="2480" x2="260" y2="2804" stroke="#E0E0E0" stroke-width="0.5"/>
+  <line x1="470" y1="2480" x2="470" y2="2804" stroke="#E0E0E0" stroke-width="0.5"/>
+  <line x1="620" y1="2480" x2="620" y2="2804" stroke="#E0E0E0" stroke-width="0.5"/>
+  <line x1="780" y1="2480" x2="780" y2="2804" stroke="#E0E0E0" stroke-width="0.5"/>
+
+  <!-- 범례 -->
+  <rect x="920" y="1050" width="300" height="200" rx="12" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1" filter="url(#shadow)"/>
+  <text x="1070" y="1078" text-anchor="middle" font-size="14" font-weight="700" fill="#333">범례</text>
+  <rect x="940" y="1092" width="16" height="16" rx="4" fill="#E8F5E9"/>
+  <text x="966" y="1104" font-size="11" fill="#555">API 호출 정보</text>
+  <rect x="940" y="1116" width="16" height="16" rx="4" fill="#E3F2FD"/>
+  <text x="966" y="1128" font-size="11" fill="#555">모델 클래스</text>
+  <rect x="940" y="1140" width="16" height="16" rx="4" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="966" y="1152" font-size="11" fill="#555">UI 섹션 (카드)</text>
+  <rect x="940" y="1164" width="16" height="16" rx="4" fill="#FFF3E0"/>
+  <text x="966" y="1176" font-size="11" fill="#555">Pull-to-Refresh 지원</text>
+  <rect x="940" y="1188" width="16" height="16" rx="4" fill="#FFF8E1"/>
+  <text x="966" y="1200" font-size="11" fill="#555">경고/안전공지 강조</text>
+  <rect x="940" y="1212" width="16" height="16" rx="4" fill="#FFF0F0"/>
+  <text x="966" y="1224" font-size="11" fill="#555">긴급/위험 표시</text>
+  <text x="940" y="1242" font-size="9" fill="#00897B">초록 텍스트 = 외교부 API 서비스명</text>
+
+</svg>

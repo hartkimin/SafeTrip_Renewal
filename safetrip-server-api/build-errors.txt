@@ -1,0 +1,34 @@
+﻿src/entities/index.ts(65,5): error TS2305: Module '"./country.entity"' has no exported member 'SafetyInfo'.
+src/entities/index.ts(66,5): error TS2305: Module '"./country.entity"' has no exported member 'Embassy'.
+src/entities/index.ts(67,5): error TS2305: Module '"./country.entity"' has no exported member 'TravelGuide'.
+src/modules/auth/auth.module.ts(8,10): error TS2305: Module '"../../entities/event-log.entity"' has no exported member 'UserConsent'.
+src/modules/auth/auth.service.ts(139,30): error TS2339: Property 'consentRepo' does not exist on type 'AuthService'.
+src/modules/auth/auth.service.ts(146,21): error TS2339: Property 'consentRepo' does not exist on type 'AuthService'.
+src/modules/geofences/geofences.controller.ts(53,55): error TS2339: Property 'findByGroup' does not exist on type 'GeofencesService'.
+src/modules/geofences/geofences.controller.ts(72,54): error TS2339: Property 'findByIdAndGroup' does not exist on type 'GeofencesService'.
+src/modules/geofences/geofences.controller.ts(99,73): error TS2554: Expected 2 arguments, but got 3.
+src/modules/geofences/geofences.controller.ts(122,53): error TS2339: Property 'softDelete' does not exist on type 'GeofencesService'.
+src/modules/geofences/geofences.controller.ts(151,37): error TS2339: Property 'recordGeofenceEventLog' does not exist on type 'GeofencesService'.
+src/modules/groups/groups.controller.ts(141,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/modules/groups/groups.controller.ts(152,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/modules/groups/groups.service.ts(331,19): error TS2353: Object literal may only specify known properties, and 'ownerUserId' does not exist in type '_QueryDeepPartialEntity<Group>'.
+src/modules/guides/guides.module.ts(6,26): error TS2307: Cannot find module '../../entities/mofa-risk.entity' or its corresponding type declarations.
+src/modules/guides/guides.service.ts(4,19): error TS2305: Module '"../../entities/country.entity"' has no exported member 'TravelGuide'.
+src/modules/guides/guides.service.ts(5,26): error TS2307: Cannot find module '../../entities/mofa-risk.entity' or its corresponding type declarations.
+src/modules/locations/locations.service.ts(89,17): error TS2353: Object literal may only specify known properties, and 'sharingDurationHours' does not exist in type '_QueryDeepPartialEntity<LocationSharing>'.
+src/modules/locations/locations.service.ts(93,40): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<LocationSharing>[]): LocationSharing[]', gave the following error.
+    Object literal may only specify known properties, and 'tripId' does not exist in type 'DeepPartial<LocationSharing>[]'.
+  Overload 2 of 3, '(entityLike: DeepPartial<LocationSharing>): LocationSharing', gave the following error.
+    Object literal may only specify known properties, and 'sharingDurationHours' does not exist in type 'DeepPartial<LocationSharing>'.
+src/modules/trips/trips.module.ts(8,10): error TS2305: Module '"../../entities/event-log.entity"' has no exported member 'Schedule'.
+src/modules/trips/trips.module.ts(8,20): error TS2305: Module '"../../entities/event-log.entity"' has no exported member 'ScheduleItem'.
+src/modules/trips/trips.module.ts(8,34): error TS2305: Module '"../../entities/event-log.entity"' has no exported member 'Invite'.
+src/modules/trips/trips.service.ts(16,27): error TS2304: Cannot find name 'Schedule'.
+src/modules/trips/trips.service.ts(16,70): error TS2304: Cannot find name 'Schedule'.
+src/modules/trips/trips.service.ts(17,27): error TS2304: Cannot find name 'ScheduleItem'.
+src/modules/trips/trips.service.ts(17,78): error TS2304: Cannot find name 'ScheduleItem'.
+src/modules/trips/trips.service.ts(18,27): error TS2304: Cannot find name 'Invite'.
+src/modules/trips/trips.service.ts(18,66): error TS2304: Cannot find name 'Invite'.

@@ -1,0 +1,938 @@
+{
+  "info": {
+    "name": "SafeTrip API",
+    "description": "SafeTrip 해외 여행 안전 플랫폼 API 컬렉션\n\n## 사용 방법\n1. Environment 설정: `base_url`, `access_token`, `refresh_token`\n2. 인증 폴더에서 로그인 실행\n3. 자동으로 토큰이 환경 변수에 저장됨\n4. 다른 API 실행 시 자동으로 토큰 사용\n\n## 주요 기능\n- 🔐 SMS 인증 기반 로그인\n- 🚨 SOS 긴급 알림\n- 📍 실시간 위치 공유\n- 👥 그룹 여행 관리\n- 🛡️ 보호자 시스템",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345678"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.safetrip.io/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trip_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "group_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01. Authentication",
+      "item": [
+        {
+          "name": "Send OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success property', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"+821012345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/send-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "send-otp"]
+            },
+            "description": "전화번호로 SMS 인증 코드를 전송합니다.\n\n**Rate Limit**: 5회/시간\n**유효기간**: 3분"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP & Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has tokens', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.tokens.access_token).to.exist;",
+                  "    pm.expect(jsonData.tokens.refresh_token).to.exist;",
+                  "    ",
+                  "    // 토큰을 환경 변수에 저장",
+                  "    pm.collectionVariables.set('access_token', jsonData.tokens.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.tokens.refresh_token);",
+                  "    pm.collectionVariables.set('user_id', jsonData.user.user_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"+821012345678\",\n  \"otp_code\": \"123456\",\n  \"auto_login\": true,\n  \"device_info\": {\n    \"device_id\": \"abc123xyz\",\n    \"device_name\": \"iPhone 15 Pro\",\n    \"os\": \"ios\",\n    \"os_version\": \"17.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "description": "SMS 인증 코드를 검증하고 JWT 토큰을 발급받습니다.\n\n**신규 사용자**: 자동으로 계정 생성\n**기존 사용자**: 로그인 처리"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('New access token received', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    ",
+                  "    // 새 토큰을 환경 변수에 저장",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.\n\n**Access Token 유효기간**: 1시간"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "현재 세션을 종료하고 토큰을 무효화합니다."
+          },
+          "response": []
+        }
+      ],
+      "description": "사용자 인증 및 세션 관리 API"
+    },
+    {
+      "name": "02. Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            },
+            "description": "현재 로그인한 사용자의 프로필 정보를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"홍길동\",\n  \"location_sharing_mode\": \"normal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            },
+            "description": "사용자 프로필을 수정합니다.\n\n**location_sharing_mode**:\n- normal: 정확한 위치\n- privacy: 대략적 위치 (100m)\n- minimal: 최소 위치 (1km)"
+          },
+          "response": []
+        }
+      ],
+      "description": "사용자 프로필 및 계정 관리 API"
+    },
+    {
+      "name": "03. Trips",
+      "item": [
+        {
+          "name": "Get Trips",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips?status=active&limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["trips"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "planned, active, completed, cancelled"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "여행 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Trip created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.trip_id).to.exist;",
+                  "    ",
+                  "    // trip_id를 환경 변수에 저장",
+                  "    pm.collectionVariables.set('trip_id', jsonData.trip_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country_code\": \"JP\",\n  \"start_date\": \"2025-02-01\",\n  \"end_date\": \"2025-02-10\",\n  \"trip_type\": \"solo\",\n  \"title\": \"도쿄 겨울 여행\",\n  \"description\": \"도쿄 및 교토 여행\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trips",
+              "host": ["{{base_url}}"],
+              "path": ["trips"]
+            },
+            "description": "새로운 여행을 생성합니다.\n\n**trip_type**: solo, group, family, school, business"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trip Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/{{trip_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["trips", "{{trip_id}}"]
+            },
+            "description": "특정 여행의 상세 정보를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Start Trip",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/{{trip_id}}/start",
+              "host": ["{{base_url}}"],
+              "path": ["trips", "{{trip_id}}", "start"]
+            },
+            "description": "여행을 시작 상태(active)로 전환합니다.\n- 위치 추적 자동 시작\n- 보호자에게 알림 전송"
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Trip",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trips/{{trip_id}}/complete",
+              "host": ["{{base_url}}"],
+              "path": ["trips", "{{trip_id}}", "complete"]
+            },
+            "description": "여행을 완료 상태(completed)로 전환합니다.\n- 위치 추적 자동 중지\n- 여행 기록 자동 저장"
+          },
+          "response": []
+        }
+      ],
+      "description": "여행 생성 및 관리 API"
+    },
+    {
+      "name": "04. Groups",
+      "item": [
+        {
+          "name": "Get Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/groups?trip_id={{trip_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["groups"],
+              "query": [
+                {
+                  "key": "trip_id",
+                  "value": "{{trip_id}}"
+                }
+              ]
+            },
+            "description": "그룹 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Group created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.group_id).to.exist;",
+                  "    ",
+                  "    // group_id를 환경 변수에 저장",
+                  "    pm.collectionVariables.set('group_id', jsonData.group_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"도쿄 여행 그룹\",\n  \"description\": \"가족 여행 그룹\",\n  \"trip_id\": \"{{trip_id}}\",\n  \"max_members\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/groups",
+              "host": ["{{base_url}}"],
+              "path": ["groups"]
+            },
+            "description": "새로운 여행 그룹을 생성합니다.\n- 그룹 생성자는 자동으로 owner 역할 부여\n- 초대 코드 자동 생성"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/groups/{{group_id}}/members",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "{{group_id}}", "members"]
+            },
+            "description": "그룹 멤버 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"+821098765432\",\n  \"role\": \"member\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/groups/{{group_id}}/members",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "{{group_id}}", "members"]
+            },
+            "description": "그룹에 새로운 멤버를 초대합니다.\n\n**권한**: admin 이상 필요"
+          },
+          "response": []
+        },
+        {
+          "name": "Join Group",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/groups/join/:invite_code",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "join", ":invite_code"],
+              "variable": [
+                {
+                  "key": "invite_code",
+                  "value": "abc123xyz"
+                }
+              ]
+            },
+            "description": "초대 코드를 사용하여 그룹에 참여합니다."
+          },
+          "response": []
+        }
+      ],
+      "description": "그룹 여행 관리 API"
+    },
+    {
+      "name": "05. Locations",
+      "item": [
+        {
+          "name": "Upload Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 35.6762,\n  \"longitude\": 139.6503,\n  \"accuracy\": 10.5,\n  \"altitude\": 25.0,\n  \"speed\": 5.2,\n  \"heading\": 180.0,\n  \"battery_level\": 75,\n  \"tracking_mode\": \"normal\",\n  \"recorded_at\": \"2025-02-01T10:30:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/locations",
+              "host": ["{{base_url}}"],
+              "path": ["locations"]
+            },
+            "description": "현재 위치 정보를 서버에 업로드합니다.\n\n**tracking_mode**: normal, power_save, minimal, sos"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Latest Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/latest?user_id={{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["locations", "latest"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "group_id",
+                  "value": "{{group_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "특정 사용자 또는 그룹의 최신 위치를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Location History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/locations/history?user_id={{user_id}}&start_time=2025-02-01T00:00:00Z&end_time=2025-02-01T23:59:59Z&limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["locations", "history"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "start_time",
+                  "value": "2025-02-01T00:00:00Z"
+                },
+                {
+                  "key": "end_time",
+                  "value": "2025-02-01T23:59:59Z"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "특정 기간의 위치 이력을 조회합니다.\n\n**최대 조회 기간**: 30일"
+          },
+          "response": []
+        }
+      ],
+      "description": "실시간 위치 공유 API"
+    },
+    {
+      "name": "06. SOS",
+      "item": [
+        {
+          "name": "Send SOS Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alert_type\": \"emergency\",\n  \"trigger_method\": \"manual\",\n  \"location\": {\n    \"latitude\": 35.6762,\n    \"longitude\": 139.6503,\n    \"accuracy\": 10.5\n  },\n  \"message\": \"도와주세요!\",\n  \"has_video\": false,\n  \"has_audio\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sos",
+              "host": ["{{base_url}}"],
+              "path": ["sos"]
+            },
+            "description": "긴급 상황을 알리는 SOS 알림을 발송합니다.\n\n**alert_type**: emergency, crime, medical, embassy, help\n**trigger_method**: manual, auto_impact, auto_inactive, voice, gesture\n\n**목표**: 500ms 이내 알림 전송"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel SOS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"실수로 발송했습니다\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sos/:sos_id/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["sos", ":sos_id", "cancel"],
+              "variable": [
+                {
+                  "key": "sos_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "발송한 SOS 알림을 취소합니다.\n\n**제한**: 발송 후 5초 이내만 취소 가능"
+          },
+          "response": []
+        },
+        {
+          "name": "Respond to SOS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response_status\": \"on_the_way\",\n  \"message\": \"지금 가고 있어요!\",\n  \"location\": {\n    \"latitude\": 35.6800,\n    \"longitude\": 139.6600\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sos/:sos_id/respond",
+              "host": ["{{base_url}}"],
+              "path": ["sos", ":sos_id", "respond"],
+              "variable": [
+                {
+                  "key": "sos_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "SOS 알림에 대한 응답을 전송합니다.\n\n**response_status**: acknowledged, on_the_way, arrived, resolved\n\n**권한**: 보호자 또는 그룹원만 가능"
+          },
+          "response": []
+        }
+      ],
+      "description": "긴급 알림 시스템 API"
+    },
+    {
+      "name": "07. Messages",
+      "item": [
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/groups/{{group_id}}/messages?limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "{{group_id}}", "messages"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "before",
+                  "value": "2025-02-01T10:00:00Z",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "그룹 메시지를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"안녕하세요!\",\n  \"message_type\": \"text\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/groups/{{group_id}}/messages",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "{{group_id}}", "messages"]
+            },
+            "description": "그룹에 메시지를 전송합니다.\n\n**message_type**: text, location, image, file"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Announcements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/groups/{{group_id}}/announcements",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "{{group_id}}", "announcements"]
+            },
+            "description": "그룹 공지를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"내일 일정 변경 안내\",\n  \"content\": \"내일 집합 시간이 오전 9시로 변경되었습니다.\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/groups/{{group_id}}/announcements",
+              "host": ["{{base_url}}"],
+              "path": ["groups", "{{group_id}}", "announcements"]
+            },
+            "description": "그룹 공지를 작성합니다.\n\n**priority**: low, normal, high, urgent\n**권한**: admin 이상 필요"
+          },
+          "response": []
+        }
+      ],
+      "description": "그룹 채팅 및 공지 API"
+    },
+    {
+      "name": "08. Guardians",
+      "item": [
+        {
+          "name": "Get Guardians",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/guardians",
+              "host": ["{{base_url}}"],
+              "path": ["guardians"]
+            },
+            "description": "현재 사용자의 보호자 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Guardian",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"+821098765432\",\n  \"guardian_type\": \"primary\",\n  \"nickname\": \"엄마\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/guardians",
+              "host": ["{{base_url}}"],
+              "path": ["guardians"]
+            },
+            "description": "새로운 보호자를 초대합니다.\n\n**guardian_type**: primary, secondary, temporary"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Guardian",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/guardians/:guardian_id",
+              "host": ["{{base_url}}"],
+              "path": ["guardians", ":guardian_id"],
+              "variable": [
+                {
+                  "key": "guardian_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "보호자 관계를 해제합니다."
+          },
+          "response": []
+        }
+      ],
+      "description": "보호자 관리 API"
+    },
+    {
+      "name": "09. Subscriptions",
+      "item": [
+        {
+          "name": "Get Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/plans",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "plans"]
+            },
+            "description": "이용 가능한 구독 플랜 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"individual_7d\",\n  \"trip_id\": \"{{trip_id}}\",\n  \"payment_method\": \"card\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions"]
+            },
+            "description": "새로운 구독을 생성합니다.\n\n**payment_method**: card, kakaopay, naverpay, paypal"
+          },
+          "response": []
+        },
+        {
+          "name": "Redeem Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ABCD1234EFGH\",\n  \"trip_id\": \"{{trip_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/redeem",
+              "host": ["{{base_url}}"],
+              "path": ["redeem"]
+            },
+            "description": "리딤 코드를 사용하여 구독을 활성화합니다."
+          },
+          "response": []
+        }
+      ],
+      "description": "구독 및 결제 API"
+    },
+    {
+      "name": "10. Countries",
+      "item": [
+        {
+          "name": "Get Countries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/countries",
+              "host": ["{{base_url}}"],
+              "path": ["countries"]
+            },
+            "description": "지원 국가 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Country Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/countries/:country_code",
+              "host": ["{{base_url}}"],
+              "path": ["countries", ":country_code"],
+              "variable": [
+                {
+                  "key": "country_code",
+                  "value": "JP",
+                  "description": "ISO 3166-1 alpha-2"
+                }
+              ]
+            },
+            "description": "특정 국가의 상세 안전 정보를 조회합니다.\n- 위험 정보 (외교부 연동)\n- 긴급 연락처\n- 대사관 정보\n- 여행 팁"
+          },
+          "response": []
+        }
+      ],
+      "description": "국가별 안전 정보 API"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "rules": {
+    "location_sharing": {
+      "$groupId": {
+        "$userId": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "guardian_messages": {
+      "$tripId": {
+        "$linkId": {
+          "messages": {
+            ".read": "auth != null",
+            ".write": "auth != null"
+          }
+        }
+      }
+    },
+    "guardian_captain_messages": {
+      "$tripId": {
+        "$guardianId": {
+          "messages": {
+            ".read": "auth != null",
+            ".write": "auth != null"
+          }
+        }
+      }
+    }
+  }
+}

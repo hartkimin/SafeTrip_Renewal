@@ -1,0 +1,1563 @@
+openapi: 3.0.3
+info:
+  title: SafeTrip API
+  version: 2.0.0
+  description: |
+    SafeTrip 해외 여행 안전 플랫폼 REST API
+
+    ## 개요
+    SafeTrip은 해외 여행 중 발생할 수 있는 안전 문제를 해결하는 모바일 안전 플랫폼입니다.
+
+    ## 주요 기능
+    - 📍 **실시간 위치 공유**: Firebase Realtime Database 기반 위치 모니터링
+    - 👥 **그룹 여행 관리**: 역할 기반 권한으로 대규모 단체 관리
+    - 🛡️ **지오펜스 관리**: 위치 기반 알림 및 이벤트 기록
+    - 📱 **이벤트 로그**: 통합 이벤트 로깅 시스템
+
+    ## 인증 방식
+    - **Firebase ID Token**: Firebase Authentication 기반 인증
+    - 일부 엔드포인트는 JWT Bearer Token 사용
+
+  contact:
+    name: SafeTrip API Support
+    email: api@safetrip.io
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.safetrip.io/v1
+    description: Production server
+  - url: https://api-staging.safetrip.io/v1
+    description: Staging server
+  - url: http://localhost:3001/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: 사용자 인증 및 세션 관리
+  - name: Users
+    description: 사용자 프로필 및 계정 관리
+  - name: Travelers
+    description: 여행자 관리
+  - name: Guardians
+    description: 보호자 관리
+  - name: FCM
+    description: Firebase Cloud Messaging 알림
+  - name: Locations
+    description: 실시간 위치 공유 및 이동 세션
+  - name: Geofences
+    description: 지오펜스 관리
+  - name: Groups
+    description: 그룹 여행 관리
+  - name: Trips
+    description: 여행 정보 조회
+  - name: Guides
+    description: 국가별 여행 가이드
+  - name: Events
+    description: 이벤트 로그
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== Authentication ====================
+  /auth/firebase-verify:
+    post:
+      tags:
+        - Authentication
+      summary: Firebase ID Token 검증 및 사용자 동기화
+      description: Firebase Authentication으로 로그인한 후 ID Token을 서버에서 검증하고 사용자 정보를 동기화합니다.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id_token
+              properties:
+                id_token:
+                  type: string
+                  description: Firebase ID Token
+                  example: 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQ1NiJ9...'
+                phone_country_code:
+                  type: string
+                  description: 전화번호 국가 코드 (기본값: "+82")
+                  example: '+82'
+      responses:
+        '200':
+          description: 인증 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+                example:
+                  success: true
+                  data:
+                    user_id: 'firebase_uid'
+                    phone_number: '+821012345678'
+                    phone_country_code: '+82'
+                    display_name: '홍길동'
+                    is_new_user: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 로그아웃
+      description: 로그아웃 처리
+      security: []
+      responses:
+        '200':
+          description: 로그아웃 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Users ====================
+  /users/register:
+    post:
+      tags:
+        - Users
+      summary: 사용자 등록 (테스트용)
+      description: 테스트용 사용자 등록 엔드포인트
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                display_name:
+                  type: string
+                phone_number:
+                  type: string
+                phone_country_code:
+                  type: string
+      responses:
+        '201':
+          description: 사용자 등록 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/by-phone:
+    get:
+      tags:
+        - Users
+      summary: 전화번호로 사용자 조회
+      security: []
+      parameters:
+        - name: phone_number
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 사용자 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: 사용자 조회
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 사용자 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    put:
+      tags:
+        - Users
+      summary: 사용자 프로필 업데이트
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                profile_image_url:
+                  type: string
+                location_sharing_mode:
+                  type: string
+      responses:
+        '200':
+          description: 업데이트 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: 현재 사용자 정보 조회
+      responses:
+        '200':
+          description: 사용자 정보 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    patch:
+      tags:
+        - Users
+      summary: 현재 사용자 정보 수정
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                profile_image_url:
+                  type: string
+                location_sharing_mode:
+                  type: string
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/me/fcm-token:
+    put:
+      tags:
+        - Users
+      summary: FCM 토큰 등록/업데이트
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_token
+                - platform
+              properties:
+                device_token:
+                  type: string
+                platform:
+                  type: string
+                  enum: [android, ios]
+                device_id:
+                  type: string
+                device_model:
+                  type: string
+                os_version:
+                  type: string
+                app_version:
+                  type: string
+      responses:
+        '200':
+          description: 토큰 등록 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/me/fcm-token/{tokenId}:
+    delete:
+      tags:
+        - Users
+      summary: FCM 토큰 삭제
+      parameters:
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 토큰 삭제 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Travelers ====================
+  /travelers/register:
+    post:
+      tags:
+        - Travelers
+      summary: 여행자 등록 (테스트용)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                trip_id:
+                  type: string
+                group_id:
+                  type: string
+      responses:
+        '201':
+          description: 여행자 등록 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /travelers/{travelerId}/last-location:
+    get:
+      tags:
+        - Travelers
+      summary: 여행자 마지막 위치 조회
+      parameters:
+        - name: travelerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 위치 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Guardians ====================
+  /guardians/{guardianId}/travelers:
+    get:
+      tags:
+        - Guardians
+      summary: 여행자 목록 조회
+      parameters:
+        - name: guardianId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 여행자 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== FCM ====================
+  /fcm/travelers/{travelerId}/notify:
+    post:
+      tags:
+        - FCM
+      summary: 여행자에게 알림 전송
+      parameters:
+        - name: travelerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - body
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: 알림 전송 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Locations ====================
+  /locations:
+    post:
+      tags:
+        - Locations
+      summary: 위치 업로드
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - latitude
+                - longitude
+              properties:
+                user_id:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                accuracy:
+                  type: number
+                altitude:
+                  type: number
+                speed:
+                  type: number
+                heading:
+                  type: number
+                battery_level:
+                  type: integer
+                network_type:
+                  type: string
+                tracking_mode:
+                  type: string
+                movement_session_id:
+                  type: string
+                is_movement_start:
+                  type: boolean
+                is_movement_end:
+                  type: boolean
+                activity_type:
+                  type: string
+                activity_confidence:
+                  type: integer
+                recorded_at:
+                  type: string
+                  format: date-time
+                group_id:
+                  type: string
+      responses:
+        '201':
+          description: 위치 저장 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/latest:
+    get:
+      tags:
+        - Locations
+      summary: 최신 위치 조회
+      security: []
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 위치 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/history:
+    get:
+      tags:
+        - Locations
+      summary: 위치 이력 조회
+      security: []
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: 위치 이력 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/users/{userId}/movement-sessions/summary:
+    get:
+      tags:
+        - Locations
+      summary: 이동 세션 요약 리스트 조회
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: need_images
+          in: query
+          schema:
+            type: string
+        - name: target_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: timezone_offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 세션 요약 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/users/{userId}/movement-sessions/date-range:
+    get:
+      tags:
+        - Locations
+      summary: 세션 날짜 범위 조회
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timezone_offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 날짜 범위 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/users/{userId}/movement-sessions/by-date:
+    get:
+      tags:
+        - Locations
+      summary: 날짜별 세션 리스트 조회
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: timezone_offset
+          in: query
+          schema:
+            type: integer
+        - name: need_images
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 날짜별 세션 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/users/{userId}/movement-sessions/{sessionId}:
+    get:
+      tags:
+        - Locations
+      summary: 세션 상세 조회
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 세션 상세 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/users/{userId}/movement-sessions/{sessionId}/complete:
+    patch:
+      tags:
+        - Locations
+      summary: 세션 완료 처리
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                recorded_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: 세션 완료 처리 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /locations/users/{userId}/movement-sessions/{sessionId}/events:
+    get:
+      tags:
+        - Locations
+      summary: 세션의 이벤트 목록 조회
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 이벤트 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Geofences ====================
+  /geofences:
+    get:
+      tags:
+        - Geofences
+      summary: 지오펜스 목록 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 지오펜스 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /geofences/{id}:
+    get:
+      tags:
+        - Geofences
+      summary: 지오펜스 상세 조회
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: group_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 지오펜스 상세 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    patch:
+      tags:
+        - Geofences
+      summary: 지오펜스 수정
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                radius_meters:
+                  type: number
+      responses:
+        '200':
+          description: 지오펜스 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    delete:
+      tags:
+        - Geofences
+      summary: 지오펜스 삭제
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 지오펜스 삭제 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /geofences/events:
+    post:
+      tags:
+        - Geofences
+      summary: 지오펜스 이벤트 기록
+      description: flutter_background_geolocation에서 자동 전송
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - geofence
+                - location
+              properties:
+                geofence:
+                  type: object
+                  properties:
+                    identifier:
+                      type: string
+                    action:
+                      type: string
+                      enum: [ENTER, EXIT]
+                location:
+                  type: object
+                  properties:
+                    coords:
+                      type: object
+                      properties:
+                        latitude:
+                          type: number
+                        longitude:
+                          type: number
+                    uuid:
+                      type: string
+                params:
+                  type: object
+                  properties:
+                    user_id:
+                      type: string
+      responses:
+        '200':
+          description: 이벤트 기록 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Groups ====================
+  /groups/join/{invite_code}:
+    post:
+      tags:
+        - Groups
+      summary: 그룹 참여 (초대 코드)
+      security: []
+      parameters:
+        - name: invite_code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: 그룹 참여 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}:
+    get:
+      tags:
+        - Groups
+      summary: 그룹 상세 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 그룹 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}/my-permission:
+    get:
+      tags:
+        - Groups
+      summary: 현재 사용자의 권한 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 권한 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}/members:
+    get:
+      tags:
+        - Groups
+      summary: 그룹 멤버 목록 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 멤버 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    post:
+      tags:
+        - Groups
+      summary: 그룹 멤버 초대
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                role:
+                  type: string
+      responses:
+        '200':
+          description: 멤버 초대 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}/members/{user_id}:
+    patch:
+      tags:
+        - Groups
+      summary: 멤버 권한 변경
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                can_edit_schedule:
+                  type: boolean
+                can_edit_geofence:
+                  type: boolean
+      responses:
+        '200':
+          description: 권한 변경 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    delete:
+      tags:
+        - Groups
+      summary: 멤버 제거
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 멤버 제거 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}/schedules:
+    get:
+      tags:
+        - Groups
+      summary: 일정 목록 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 일정 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    post:
+      tags:
+        - Groups
+      summary: 일정 생성
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - location_coords
+                - scheduled_time
+              properties:
+                title:
+                  type: string
+                location_coords:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                scheduled_time:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: 일정 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}/schedules/{schedule_id}:
+    patch:
+      tags:
+        - Groups
+      summary: 일정 수정
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                scheduled_time:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: 일정 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    delete:
+      tags:
+        - Groups
+      summary: 일정 삭제
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 일정 삭제 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /groups/{group_id}/geofences:
+    post:
+      tags:
+        - Groups
+      summary: 지오펜스 생성
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - shape_type
+                - center_latitude
+                - center_longitude
+                - radius_meters
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                shape_type:
+                  type: string
+                  enum: [circle, polygon]
+                center_latitude:
+                  type: number
+                center_longitude:
+                  type: number
+                radius_meters:
+                  type: number
+      responses:
+        '200':
+          description: 지오펜스 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Trips ====================
+  /trips/groups/{group_id}/countries:
+    get:
+      tags:
+        - Trips
+      summary: 그룹의 국가 코드 목록 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 국가 코드 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /trips/users/{user_id}/countries:
+    get:
+      tags:
+        - Trips
+      summary: 사용자의 국가 코드 목록 조회
+      security: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 국가 코드 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /trips/groups/{group_id}/timezones:
+    get:
+      tags:
+        - Trips
+      summary: 그룹의 타임존 정보 조회
+      security: []
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 타임존 정보 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Guides ====================
+  /guides/search:
+    get:
+      tags:
+        - Guides
+      summary: 가이드 검색
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: country
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 검색 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /guides/{countryCode}:
+    get:
+      tags:
+        - Guides
+      summary: 국가별 가이드 조회
+      security: []
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 가이드 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /guides/{countryCode}/emergency:
+    get:
+      tags:
+        - Guides
+      summary: 긴급 연락처 조회
+      security: []
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 긴급 연락처 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Events ====================
+  /events:
+    post:
+      tags:
+        - Events
+      summary: 이벤트 로그 기록
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - event_type
+              properties:
+                user_id:
+                  type: string
+                group_id:
+                  type: string
+                event_type:
+                  type: string
+                event_subtype:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                address:
+                  type: string
+                battery_level:
+                  type: integer
+                battery_is_charging:
+                  type: boolean
+                network_type:
+                  type: string
+                app_version:
+                  type: string
+                geofence_id:
+                  type: string
+                movement_session_id:
+                  type: string
+                location_id:
+                  type: string
+                sos_id:
+                  type: string
+                event_data:
+                  type: object
+                occurred_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: 이벤트 기록 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    get:
+      tags:
+        - Events
+      summary: 이벤트 로그 조회
+      security: []
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: group_id
+          in: query
+          schema:
+            type: string
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: event_subtype
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 이벤트 로그 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==================== Health ====================
+  /health:
+    get:
+      tags: []
+      summary: 서버 상태 확인
+      security: []
+      responses:
+        '200':
+          description: 서버 정상
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'ok'
+                  timestamp:
+                    type: string
+                    format: date-time
+                  database:
+                    type: string
+                    example: 'connected'
+                  firebase:
+                    type: string
+                    example: 'connected'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: 잘못된 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: '{field} is required'
+
+    Unauthorized:
+      description: 인증 실패
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: 'Invalid or expired token'
+
+    Forbidden:
+      description: 권한 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: 'Forbidden'
+
+    NotFound:
+      description: 리소스 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: '{resource} not found'
+
+    InternalServerError:
+      description: 서버 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: 'Internal server error'

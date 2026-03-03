@@ -1,0 +1,137 @@
+import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { TripsService } from './trips.service';
+
+@ApiTags('Trips')
+@ApiBearerAuth('firebase-auth')
+@Controller('trips')
+export class TripsController {
+    constructor(private readonly tripsService: TripsService) { }
+
+    @Post()
+    @ApiOperation({ summary: '여행 생성 (그룹+captain+채팅방 자동 생성)' })
+    create(
+        @CurrentUser() userId: string,
+        @Body() body: {
+            tripName: string; destination?: string; destinationCountryCode?: string;
+            startDate: string; endDate: string; sharingMode?: string; privacyLevel?: string;
+        },
+    ) {
+        return this.tripsService.create(userId, body);
+    }
+
+    @Get()
+    @ApiOperation({ summary: '내 여행 목록 조회' })
+    findMyTrips(@CurrentUser() userId: string) {
+        return this.tripsService.findByUser(userId);
+    }
+
+    @Get(':tripId')
+    @ApiOperation({ summary: '여행 상세 조회' })
+    findOne(@Param('tripId') tripId: string) {
+        return this.tripsService.findById(tripId);
+    }
+
+    @Patch(':tripId')
+    @ApiOperation({ summary: '여행 수정' })
+    update(
+        @CurrentUser() userId: string,
+        @Param('tripId') tripId: string,
+        @Body() body: any,
+    ) {
+        return this.tripsService.updateTrip(tripId, userId, body);
+    }
+
+    @Get('preview/:code')
+    @ApiOperation({ summary: '초대 코드로 여행 미리보기' })
+    previewByInviteCode(@Param('code') code: string) {
+        return this.tripsService.previewByInviteCode(code);
+    }
+
+    @Get('invite/:inviteCode')
+    @ApiOperation({ summary: '여행자용 초대 코드로 여행 정보 조회' })
+    findByInviteCode(@Param('inviteCode') inviteCode: string) {
+        return this.tripsService.findByInviteCode(inviteCode);
+    }
+
+    @Get('verify-invite-code/:code')
+    @ApiOperation({ summary: '초대 코드 유효성 검증' })
+    verifyInviteCode(@Param('code') code: string) {
+        return this.tripsService.verifyInviteCode(code);
+    }
+
+    @Post('join')
+    @ApiOperation({ summary: '초대 코드로 그룹에 참여' })
+    joinTrip(
+        @CurrentUser() userId: string,
+        @Body() body: { invite_code: string },
+    ) {
+        return this.tripsService.joinTrip(body.invite_code, userId);
+    }
+
+
+    // ── 일정 ──
+    @Get(':tripId/schedules')
+    @ApiOperation({ summary: '여행 일정 목록 조회' })
+    getSchedules(@Param('tripId') tripId: string) {
+        return this.tripsService.getSchedules(tripId);
+    }
+
+    @Post(':tripId/schedules')
+    @ApiOperation({ summary: '일정 추가' })
+    addSchedule(
+        @Param('tripId') tripId: string,
+        @Body() body: { dayNumber: number; scheduleDate: string; title?: string },
+    ) {
+        return this.tripsService.addSchedule(tripId, body);
+    }
+
+    @Post(':tripId/schedules/items')
+    @ApiOperation({ summary: '일정 아이템 추가' })
+    async addScheduleItem(
+        @CurrentUser() userId: string,
+        @Param('tripId') tripId: string,
+        @Body() body: any,
+    ) {
+        // Need to grab groupId from trip first
+        const trip = await this.tripsService.findById(tripId);
+        return this.tripsService.addScheduleItem(tripId, trip.groupId, userId, body);
+    }
+
+    // ── 초대 ──
+    @Post(':tripId/invite')
+    @ApiOperation({ summary: '여행 초대 생성' })
+    createInvite(
+        @CurrentUser() userId: string,
+        @Param('tripId') tripId: string,
+        @Body() body: { inviteType: string; invitePhone?: string },
+    ) {
+        return this.tripsService.createInvite(tripId, userId, body);
+    }
+
+    @Post('invite/accept')
+    @ApiOperation({ summary: '초대 수락' })
+    acceptInvite(
+        @CurrentUser() userId: string,
+        @Body() body: { inviteCode: string },
+    ) {
+        return this.tripsService.acceptInvite(body.inviteCode, userId);
+    }
+
+    // ── 가디언 ──
+    @Post('guardian/request')
+    @ApiOperation({ summary: '가디언 승인 요청' })
+    createGuardianApprovalRequest(
+        @CurrentUser() userId: string,
+        @Body() body: { inviteCode: string; guardianPhone: string },
+    ) {
+        return this.tripsService.createGuardianApprovalRequest(userId, body);
+    }
+
+    @Get('guardian/approval-status')
+    @ApiOperation({ summary: '내 가디언 승인 상태 조회' })
+    getGuardianApprovalStatus(@CurrentUser() userId: string) {
+        return this.tripsService.getGuardianApprovalStatus(userId);
+    }
+}

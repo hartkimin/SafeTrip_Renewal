@@ -1,0 +1,193 @@
+
+> safetrip-server-api@2.0.0 start
+> nest start
+
+[90m[4mquery:[24m[39m [94mSELECT[0m [95mversion[0m[37m([0m[37m)[0m
+[90m[4mquery:[24m[39m [94mSELECT[0m [37m*[0m [94mFROM[0m [95mcurrent_schema[0m[37m([0m[37m)[0m
+[90m[4mquery:[24m[39m [94mCREATE[0m [37mEXTENSION[0m [94mIF[0m [94mNOT[0m [94mEXISTS[0m [37m"uuid-ossp"[0m
+2026-03-03 15:45:57 [[32minfo[39m]: Starting Nest application...
+2026-03-03 15:45:57 [[32minfo[39m]: AppModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: LoggerModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: HttpModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: HealthModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: ConfigHostModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: DiscoveryModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: ConfigModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: ConfigModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: ScheduleModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: MofaModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: FirebaseModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmCoreModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TypeOrmModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: AuthModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: UsersModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: GroupsModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: TripsModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: GuardiansModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: GeofencesModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: EmergenciesModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: NotificationsModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: PaymentsModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: B2bModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: GuidesModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: CountriesModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: EventLogModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: LocationsModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: ChatsModule dependencies initialized
+2026-03-03 15:45:57 [[32minfo[39m]: LocationsGateway subscribed to the "joinTrip" message
+2026-03-03 15:45:57 [[32minfo[39m]: LocationsGateway subscribed to the "leaveTrip" message
+2026-03-03 15:45:57 [[32minfo[39m]: LocationsGateway subscribed to the "updateLocation" message
+2026-03-03 15:45:57 [[32minfo[39m]: ChatsGateway subscribed to the "joinRoom" message
+2026-03-03 15:45:57 [[32minfo[39m]: ChatsGateway subscribed to the "leaveRoom" message
+2026-03-03 15:45:57 [[32minfo[39m]: ChatsGateway subscribed to the "sendMessage" message
+2026-03-03 15:45:57 [[32minfo[39m]: HealthController {/api/v1/health}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/health, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: AuthController {/api/v1/auth}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/firebase-verify, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/logout, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/verify, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/register, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/consent, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/account, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/auth/cancel-deletion, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: UsersController {/api/v1/users}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/register, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/by-phone, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/search, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/me, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/me, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/me/location-sharing, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/me/device, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/me/fcm-token, PUT} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/me/fcm-token/:tokenId, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/:userId, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/:userId, PUT} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/:userId/fcm-token, PUT} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/users/:id/terms, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: GroupsController {/api/v1/groups}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/my-permission, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/users/:userId/recent-groups, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:tripId/members, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/members, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:tripId/members/:userId/role, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:tripId/members/:userId, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/preview-by-code/:code, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/join-by-code/:code, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/join/:invite_code, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/invite-codes, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/invite-codes, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/invite-codes/:codeId, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/transfer-leadership, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/groups/:groupId/transfer-history, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: TripsController {/api/v1/trips}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/preview/:code, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/invite/:inviteCode, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/verify-invite-code/:code, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/join, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/schedules, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/schedules, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/schedules/items, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/invite, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/invite/accept, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/guardian/request, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/guardian/approval-status, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: GuardiansController {/api/v1/trips/:tripId/guardians}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/:linkId/respond, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/:linkId, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/me, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/pending, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/linked-members, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/:linkId/location-request, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/location-request/:requestId, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/guardians/:linkId/snapshots, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: LocationsController {/api/v1}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations/batch, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations/latest, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations/sharing-settings, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations/sharing-settings, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations/schedules, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/trips/:tripId/locations/stay-points, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/locations/users/:userId/movement-sessions/summary, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/locations/users/:userId/movement-sessions/date-range, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/locations/users/:userId/movement-sessions/by-date, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/locations/users/:userId/movement-sessions/:sessionId, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/locations/users/:userId/movement-sessions/:sessionId/complete, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/locations/users/:userId/movement-sessions/:sessionId/events, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: GeofencesController {/api/v1}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/groups/:group_id/geofences, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/geofences, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/geofences/:id, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/geofences/:id, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/geofences/:id, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/api/v1/geofences/events, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: EmergenciesController {/api/v1/emergencies}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies/trip/:tripId, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies/:emergencyId/resolve, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies/:emergencyId/acknowledge, PATCH} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies/contacts, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies/contacts, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/emergencies/contacts/:contactId, DELETE} route
+2026-03-03 15:45:57 [[32minfo[39m]: ChatsController {/api/v1/chats}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/chats/trip/:tripId/rooms, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/chats/rooms/:roomId/messages, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/chats/rooms/:roomId/messages, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/chats/rooms/:roomId/read, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: NotificationsController {/api/v1/fcm}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/fcm/send, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/fcm/send-multicast, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/fcm/history, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/fcm/history/unread-count, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/fcm/history/:notificationId/read, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: PaymentsController {/api/v1/payments}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/payments/transaction, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/payments/transaction/:id/verify, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/payments/transactions, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/payments/subscription, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/payments/subscription, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: B2bController {/api/v1/b2b}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/b2b/organizations, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/b2b/organizations/:orgId, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/b2b/organizations/:orgId/contracts, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/b2b/organizations/:orgId/admins, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/b2b/organizations/:orgId/dashboard-config, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/b2b/organizations/:orgId/dashboard-config, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: CountriesController {/api/v1/countries}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/countries, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: GuidesController {/api/v1/guides}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/guides/search, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/guides/:countryCode, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/guides/:countryCode/emergency, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: EventLogController {/api/v1/events}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/events, POST} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/events, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: MofaController {/api/v1/mofa}:
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/mofa/country/:countryCode/summary, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/mofa/country/:countryCode/safety, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/mofa/country/:countryCode/entry, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/mofa/country/:countryCode/medical, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Mapped {/api/v1/mofa/country/:countryCode/contacts, GET} route
+2026-03-03 15:45:57 [[32minfo[39m]: Nest application successfully started
+2026-03-03 15:45:57 [[32minfo[39m]: SafeTrip API Server (NestJS) running on port 3001

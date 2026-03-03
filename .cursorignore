@@ -1,0 +1,16 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+
+# Build outputs
+**/dist/
+**/build/
+**/lib/ (compiled output)
+**/node_modules/
+**/.dart_tool/
+
+# Documentation generated files
+**/doc/api/
+
+# Temporary files
+*.bak
+*.tmp
+*.log

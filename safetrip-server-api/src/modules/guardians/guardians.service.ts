@@ -1,0 +1,186 @@
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThan } from 'typeorm';
+import {
+    Guardian, GuardianLink, GuardianPause,
+    GuardianLocationRequest, GuardianSnapshot,
+} from '../../entities/guardian.entity';
+import { User } from '../../entities/user.entity';
+
+@Injectable()
+export class GuardiansService {
+    constructor(
+        @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
+        @InjectRepository(GuardianLink) private linkRepo: Repository<GuardianLink>,
+        @InjectRepository(GuardianPause) private pauseRepo: Repository<GuardianPause>,
+        @InjectRepository(GuardianLocationRequest) private locReqRepo: Repository<GuardianLocationRequest>,
+        @InjectRepository(GuardianSnapshot) private snapshotRepo: Repository<GuardianSnapshot>,
+        @InjectRepository(User) private userRepo: Repository<User>,
+    ) { }
+
+    // [POST] /api/v1/trips/:tripId/guardians
+    async createLink(tripId: string, memberId: string, guardianPhone: string) {
+        // Find if target phone number is registered
+        const targetUser = await this.userRepo.findOne({ where: { phoneNumber: guardianPhone } });
+        if (!targetUser) {
+            throw new NotFoundException('해당 전화번호로 가입된 사용자를 찾을 수 없습니다');
+        }
+
+        if (targetUser.userId === memberId) {
+            throw new BadRequestException('본인을 가디언으로 추가할 수 없습니다');
+        }
+
+        // Limit check
+        const currentLinks = await this.linkRepo.count({
+            where: [
+                { memberId, tripId, status: 'pending' },
+                { memberId, tripId, status: 'accepted' },
+            ]
+        });
+
+        if (currentLinks >= 3) {
+            throw new BadRequestException('최대 3명까지 가디언 추가 가능합니다');
+        }
+
+        // Duplicate check
+        const existingLink = await this.linkRepo.findOne({
+            where: { tripId, memberId, guardianId: targetUser.userId }
+        });
+
+        if (existingLink) {
+            throw new ConflictException('이미 요청한 가디언입니다');
+        }
+
+        const link = this.linkRepo.create({
+            tripId,
+            memberId,
+            guardianId: targetUser.userId,
+            guardianPhone,
+            status: 'pending'
+        });
+
+        await this.linkRepo.save(link);
+
+        return {
+            link_id: link.linkId,
+            guardian_id: link.guardianId,
+            status: link.status
+        };
+    }
+
+    // [PATCH] /api/v1/trips/:tripId/guardians/:linkId/respond
+    async respondToLink(tripId: string, linkId: string, guardianId: string, action: 'accepted' | 'rejected') {
+        const link = await this.linkRepo.findOne({ where: { linkId, tripId } });
+        if (!link || link.status !== 'pending' || link.guardianId !== guardianId) {
+            throw new NotFoundException('처리할 수 없는 요청입니다 (존재하지 않거나 이미 처리됨)');
+        }
+
+        link.status = action;
+        if (action === 'accepted') {
+            link.acceptedAt = new Date();
+            // Ensure Guardian record exists
+            let guardian = await this.guardianRepo.findOne({ where: { userId: guardianId } });
+            if (!guardian) {
+                guardian = this.guardianRepo.create({ userId: guardianId });
+                await this.guardianRepo.save(guardian);
+            }
+        }
+        await this.linkRepo.save(link);
+
+        return {
+            link_id: link.linkId,
+            status: link.status
+        };
+    }
+
+    // [DELETE] /api/v1/trips/:tripId/guardians/:linkId
+    async deleteLink(tripId: string, linkId: string, userId: string) {
+        const link = await this.linkRepo.findOne({ where: { linkId, tripId } });
+        if (!link || (link.memberId !== userId && link.guardianId !== userId)) {
+            throw new NotFoundException('해당 가디언 연결을 찾을 수 없거나 권한이 없습니다');
+        }
+
+        await this.linkRepo.remove(link);
+    }
+
+    // [GET] /api/v1/trips/:tripId/guardians/me
+    async getMyGuardians(tripId: string, memberId: string) {
+        const links = await this.linkRepo.find({
+            where: { tripId, memberId },
+            order: { createdAt: 'DESC' }
+        });
+
+        const results = await Promise.all(links.map(async (link) => {
+            let guardianInfo: User | null = null;
+            if (link.guardianId) {
+                guardianInfo = await this.userRepo.findOne({ where: { userId: link.guardianId } });
+            }
+            return {
+                link_id: link.linkId,
+                guardian_id: link.guardianId,
+                status: link.status,
+                created_at: link.createdAt,
+                accepted_at: link.acceptedAt,
+                display_name: guardianInfo?.displayName || '',
+                phone_number: link.guardianPhone || guardianInfo?.phoneNumber || '',
+                profile_image_url: guardianInfo?.profileImageUrl || null
+            };
+        }));
+
+        return results;
+    }
+
+    // [GET] /api/v1/trips/:tripId/guardians/pending
+    async getPendingInvites(guardianId: string) {
+        const links = await this.linkRepo.find({
+            where: { guardianId, status: 'pending' }
+        });
+
+        // This query requires trip details and member details.
+        return links;
+    }
+
+    // [GET] /api/v1/trips/:tripId/guardians/linked-members
+    async getLinkedMembers(tripId: string, guardianId: string) {
+        const links = await this.linkRepo.find({
+            where: { tripId, guardianId, status: 'accepted' }
+        });
+        return links;
+    }
+
+    // ── 긴급 위치 요청 ──
+    async requestLocation(linkId: string, tripId: string, guardianUserId: string, memberId: string) {
+        // 시간당 제한 체크 (v3.2 사양: 시간당 3회)
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const recentCount = await this.locReqRepo.count({
+            where: {
+                guardianUserId,
+                requestedAt: MoreThan(oneHourAgo),
+            },
+        });
+        if (recentCount >= 3) {
+            throw new BadRequestException('Location request limit exceeded (max 3 per hour)');
+        }
+
+        const req = this.locReqRepo.create({ linkId, tripId, guardianUserId, memberId });
+        return this.locReqRepo.save(req);
+    }
+
+    async respondToLocationRequest(requestId: string, status: 'approved' | 'denied') {
+        await this.locReqRepo.update(requestId, { status, respondedAt: new Date() });
+        return this.locReqRepo.findOne({ where: { requestId } });
+    }
+
+    // ── 스냅샷 ──
+    async createSnapshot(linkId: string, tripId: string, memberId: string, lat: number, lng: number, accuracy?: number) {
+        const snapshot = this.snapshotRepo.create({
+            linkId, tripId, memberId,
+            latitude: lat, longitude: lng, accuracy,
+        });
+        return this.snapshotRepo.save(snapshot);
+    }
+
+    async getSnapshots(linkId: string) {
+        return this.snapshotRepo.find({ where: { linkId }, order: { capturedAt: 'DESC' }, take: 48 });
+    }
+}
