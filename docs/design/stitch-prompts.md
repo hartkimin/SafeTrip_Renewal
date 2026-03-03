@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (44개 — 43 확인 + 1 백그라운드)
+## 생성된 화면 목록 (47개 — 46 확인 + 1 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -48,7 +48,7 @@
 | 23 | C-08 | Permissions | `40d45bbc914b48dd93ed3bf02df72394` | ✅ |
 | 24 | C-09 | Demo Mode | `51a9c3ff8e5d4c4080f7bff0fc3381d2` | ✅ |
 
-### D. 여행 관리 (6개) — 5/6 확인
+### D. 여행 관리 (9개) — 8/9 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -56,6 +56,9 @@
 | 25 | D-02 | Add Schedule Modal | `4dbd1d0157b342f29d0bce200fe438d8` | ✅ |
 | 26 | D-03 | Quick Schedule Entry | `70caa97efe9f424c9b0acbb9f127eada` | ✅ |
 | 27 | D-05 | Schedule Detail | (background) | ⚠️ 백그라운드 |
+| 35 | D-06 | Add Place Map | `63b9da0e715d464b8aa949a507ce9671` | ✅ |
+| 36 | D-07 | Direct Place Entry | `0fc7fc46a3d74d1e9eb1285526233c49` | ✅ |
+| 37 | D-08 | Place Search | `b050923afab04c7fa62f820f70ca2251` | ✅ |
 | 14 | D-09 | Member List | `3d583bb4a2e446e38900649f53a9b4a6` | ✅ |
 | 15 | D-10 | Invite Code | `71a3ae9116b5497d897743f70757a6b5` | ✅ |
 
