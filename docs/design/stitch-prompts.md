@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (70개 — 69 확인 + 1 백그라운드)
+## 생성된 화면 목록 (76개 — 70 확인 + 6 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -34,7 +34,7 @@
 | 14 | B-07 | Invite Code Input | `914e49341aa14c3dbe580da4a6695228` | ✅ |
 | 15 | B-08 | Trip Preview | `52273ada04fe4f0692c825d259c6eccb` | ✅ |
 
-### C. 메인 맵 (9개) ✅ 전체 확인
+### C. 메인 맵 (12개) — 10/12 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -47,6 +47,9 @@
 | 22 | C-07 | Notifications | `26fea840435c44baa1ec4fb2df1b7ce5` | ✅ |
 | 23 | C-08 | Permissions | `40d45bbc914b48dd93ed3bf02df72394` | ✅ |
 | 24 | C-09 | Demo Mode | `51a9c3ff8e5d4c4080f7bff0fc3381d2` | ✅ |
+| 61 | C-10 | Event Log | (background) | ⚠️ 백그라운드 |
+| 62 | C-11 | Marker Detail | `d51abbb9ae3a4c229b9355b3ea95d19b` | ✅ |
+| 63 | C-12 | Map Controls | (background) | ⚠️ 백그라운드 |
 
 ### D. 여행 관리 (12개) ✅ 전체 확인
 
@@ -106,12 +109,15 @@
 | 57 | G-04 | Emergency Contacts | `249bc54fa4bf4596947cd070375229ff` | ✅ |
 | 58 | G-05 | SOS History | `849a635b88b64385b8e219041fd89b2c` | ✅ |
 
-### H. 출석 체크 (2개) ✅ 전체 확인
+### H. 출석 체크 (5개) — 2/5 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 59 | H-01 | Attendance Create | `fb814b2f0f5946b9b05ea5016877fb4f` | ✅ |
 | 60 | H-02 | Attendance Respond | `096548719d0342bdbb73051dc1754c7d` | ✅ |
+| 64 | H-03 | Attendance Progress | (background) | ⚠️ 백그라운드 |
+| 65 | H-04 | Attendance Result | (background) | ⚠️ 백그라운드 |
+| 66 | H-05 | Guardian Attendance View | (background) | ⚠️ 백그라운드 |
 
 ### J. 안전가이드 (6개) ✅ 전체 확인
 
