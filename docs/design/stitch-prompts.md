@@ -7,9 +7,9 @@
 
 ---
 
-## 생성된 화면 목록 (18개 확인)
+## 생성된 화면 목록 (21개 고유 화면 확인)
 
-### 온보딩 플로우 (7개) ✅ 전체 확인
+### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -21,39 +21,54 @@
 | 6 | A-06 | Profile Setup | `0f2652a3fc4b4c6d98837a0d3aabf2ef` | ✅ |
 | 7 | A-07 | Consent/Terms | `1aef6b94b52e4cbdaa275ced17db533e` | ✅ |
 
-### 여행 핵심 (4개) — 2/4 확인
+### B. 여행 생성 (4개) ✅ 전체 확인
 
-| # | 화면 | Screen ID | 상태 |
-|---|------|-----------|:----:|
-| 5 | Main Map | (background) | ⚠️ 백그라운드 생성 |
-| 6 | Trip Create | `89b2b832fb5141528f5ddfc5dcc9d865` | ✅ |
-| 7 | Member Tab | (background) | ⚠️ 백그라운드 생성 |
-| 8 | Schedule Tab | `ddf72a4582c54f3ead3f8cb45d8201db` | ✅ |
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 8 | B-01 | No Trip Home | `31f4e7d4d9514010807ae75d1117a02f` | ✅ |
+| 9 | B-02 | Trip Create Form | `89b2b832fb5141528f5ddfc5dcc9d865` | ✅ |
+| 10 | B-03 | Country Picker | `20c56522caac469aa1d72ad99f6b9b97` | ✅ |
+| 11 | B-04 | Privacy Level | `6a4321cc632440d88d6e7dee7e770d46` | ✅ |
 
-### 가디언 (2개) ✅ 전체 확인
+### C. 메인 맵 (1개)
 
-| # | 화면 | Screen ID | 상태 |
-|---|------|-----------|:----:|
-| 9 | Guardian Home | `772d95b3bd67495bb3df3a261436ce20` | ✅ |
-| 10 | Guardian Message | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 12 | C-01 | Main Map View | `68a428dc0232412a83defd86ec09a776` | ✅ |
 
-### 설정/기타 (3개) — 1/3 확인
+### D. 여행 관리 (3개) ✅ 전체 확인
 
-| # | 화면 | Screen ID | 상태 |
-|---|------|-----------|:----:|
-| 11 | Settings | `54cdf9a6ee67430ea21ee892ba28905e` | ✅ |
-| 12 | Profile | (background) | ⚠️ 백그라운드 생성 |
-| 13 | Safety Guide | (background) | ⚠️ 백그라운드 생성 |
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 13 | D-01 | Schedule Tab | `ddf72a4582c54f3ead3f8cb45d8201db` | ✅ |
+| 14 | D-09 | Member List | `3d583bb4a2e446e38900649f53a9b4a6` | ✅ |
+| 15 | D-10 | Invite Code | `71a3ae9116b5497d897743f70757a6b5` | ✅ |
 
-### SOS + 초대 (2개) ✅ 전체 확인
+### F. 가디언 (2개) ✅ 전체 확인
 
-| # | 화면 | Screen ID | 상태 |
-|---|------|-----------|:----:|
-| 14 | SOS Emergency | `5a6e36cbb1d64c24be6ab7bec3fac708` | ✅ |
-| 15 | Invite Code | `71a3ae9116b5497d897743f70757a6b5` | ✅ |
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 16 | F-04 | Guardian Home | `772d95b3bd67495bb3df3a261436ce20` | ✅ |
+| 17 | F-06 | Guardian Messages | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
 
-> ⚠️ "백그라운드 생성" 화면은 Stitch API가 응답 없이 반환했으나 서버에서 생성 중일 수 있음.
-> Stitch 프로젝트(`1860278016444342994`)에서 직접 확인 필요.
+### G. SOS (1개) ✅
+
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 18 | G-02 | SOS Emergency | `5a6e36cbb1d64c24be6ab7bec3fac708` | ✅ |
+
+### J. 안전가이드 (1개) ✅
+
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 19 | J-01 | Safety Guide | `579897452d46403e8da7d298ebf47007` | ✅ |
+
+### K. 설정 (2개) ✅ 전체 확인
+
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 20 | K-01 | Settings | `54cdf9a6ee67430ea21ee892ba28905e` | ✅ |
+| 21 | K-02 | User Profile | `767baf3d42684cac83afe1a74777028a` | ✅ |
 
 ---
 
