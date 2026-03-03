@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (50개 — 49 확인 + 1 백그라운드)
+## 생성된 화면 목록 (52개 — 51 확인 + 1 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -76,6 +76,13 @@
 | 32 | F-05 | Guardian Member Detail | `b328fa65f9c94fae9ab98f783fdf37f8` | ✅ |
 | 33 | F-06 | Guardian Messages | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
 | 34 | F-07 | Guardian Emergency Alert | `c9c4cfde43fd47aabe3973a8b4f0e707` | ✅ |
+
+### I. 채팅 (2개) ✅ 전체 확인
+
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 41 | I-01 | Group Chat Tab | `cf2e9884cd1f4b05ab2e71a13f359d5e` | ✅ |
+| 42 | I-02 | Chat Input States | `690419ec0e8a409faa93cea1b4da8849` | ✅ |
 
 ### G. SOS (1개) ✅
 
