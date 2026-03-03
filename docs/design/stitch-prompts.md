@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (65개 — 60 확인 + 5 백그라운드)
+## 생성된 화면 목록 (70개 — 69 확인 + 1 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -48,14 +48,14 @@
 | 23 | C-08 | Permissions | `40d45bbc914b48dd93ed3bf02df72394` | ✅ |
 | 24 | C-09 | Demo Mode | `51a9c3ff8e5d4c4080f7bff0fc3381d2` | ✅ |
 
-### D. 여행 관리 (12개) — 11/12 확인
+### D. 여행 관리 (12개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 13 | D-01 | Schedule Tab | `ddf72a4582c54f3ead3f8cb45d8201db` | ✅ |
 | 25 | D-02 | Add Schedule Modal | `4dbd1d0157b342f29d0bce200fe438d8` | ✅ |
 | 26 | D-03 | Quick Schedule Entry | `70caa97efe9f424c9b0acbb9f127eada` | ✅ |
-| 27 | D-05 | Schedule Detail | (background) | ⚠️ 백그라운드 |
+| 27 | D-05 | Schedule Detail | `868ae7c594a64031a1345eb9f2faea95` | ✅ |
 | 35 | D-06 | Add Place Map | `63b9da0e715d464b8aa949a507ce9671` | ✅ |
 | 36 | D-07 | Direct Place Entry | `0fc7fc46a3d74d1e9eb1285526233c49` | ✅ |
 | 37 | D-08 | Place Search | `b050923afab04c7fa62f820f70ca2251` | ✅ |
@@ -65,14 +65,14 @@
 | 39 | D-12 | Member Detail | `ad10a339905342f0ba4f1437d27eca8b` | ✅ |
 | 40 | D-13 | Leadership Transfer | `6f7a0aed19a44b429a3c218105ad51a4` | ✅ |
 
-### E. 위치공유/프라이버시 (8개) — 5/8 확인
+### E. 위치공유/프라이버시 (8개) — 7/8 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
-| 48 | E-01 | Location Sharing Main | (background) | ⚠️ 백그라운드 |
+| 48 | E-01 | Location Sharing Main | `88c3499d870a43d3a75ce491c00988b5` | ✅ |
 | 49 | E-02 | Sharing Schedule | `df12512374b34647b3ec28d4b2a06923` | ✅ |
 | 50 | E-03 | Event-Linked Sharing | `08f5f456610446cf9ee70389d630bba8` | ✅ |
-| 51 | E-04 | Visibility Range | (background) | ⚠️ 백그라운드 |
+| 51 | E-04 | Visibility Range | `f1cb2bc9cde14ad881365824897dd3da` | ✅ |
 | 52 | E-05 | Guardian Pause | `2c8b460c19324011b1998d3fba3daf25` | ✅ |
 | 53 | E-06 | Privacy Level Change | `f7333d5e957f4e39aa30b7ee4ffc214e` | ✅ |
 | 54 | E-07 | Mode Switch Confirm | `c6e1e9344ea248dab6a6d9505fb25d0c` | ✅ |
@@ -97,18 +97,28 @@
 | 41 | I-01 | Group Chat Tab | `cf2e9884cd1f4b05ab2e71a13f359d5e` | ✅ |
 | 42 | I-02 | Chat Input States | `690419ec0e8a409faa93cea1b4da8849` | ✅ |
 
-### G. SOS (1개) ✅
+### G. SOS (4개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 18 | G-02 | SOS Emergency | `5a6e36cbb1d64c24be6ab7bec3fac708` | ✅ |
+| 56 | G-03 | SOS Received Alert | `eaa2e47ab8ed4fac8bbbe9ead4248f80` | ✅ |
+| 57 | G-04 | Emergency Contacts | `249bc54fa4bf4596947cd070375229ff` | ✅ |
+| 58 | G-05 | SOS History | `849a635b88b64385b8e219041fd89b2c` | ✅ |
 
-### J. 안전가이드 (6개) — 5/6 확인
+### H. 출석 체크 (2개) ✅ 전체 확인
+
+| # | 화면 ID | 화면 | Screen ID | 상태 |
+|---|---------|------|-----------|:----:|
+| 59 | H-01 | Attendance Create | `fb814b2f0f5946b9b05ea5016877fb4f` | ✅ |
+| 60 | H-02 | Attendance Respond | `096548719d0342bdbb73051dc1754c7d` | ✅ |
+
+### J. 안전가이드 (6개) ✅ 전체 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 19 | J-01 | Safety Guide | `579897452d46403e8da7d298ebf47007` | ✅ |
-| 43 | J-02 | Country Overview | (background) | ⚠️ 백그라운드 |
+| 43 | J-02 | Country Overview | `6e7214df2a004a45ba45c33a78bbde3b` | ✅ |
 | 44 | J-03 | Safety Alerts | `f038c72dd02945eda01d63937bfda542` | ✅ |
 | 45 | J-04 | Entry/Visa Info | `c741d5b45a8c4265ae0b418c7d90e9e9` | ✅ |
 | 46 | J-05 | Medical/Health | `9060056d97614e7aa25b1e6a524a896e` | ✅ |
