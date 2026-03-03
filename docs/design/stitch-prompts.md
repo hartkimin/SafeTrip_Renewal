@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (76개 — 70 확인 + 6 백그라운드)
+## 생성된 화면 목록 (85개 — 77 확인 + 8 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -51,7 +51,7 @@
 | 62 | C-11 | Marker Detail | `d51abbb9ae3a4c229b9355b3ea95d19b` | ✅ |
 | 63 | C-12 | Map Controls | (background) | ⚠️ 백그라운드 |
 
-### D. 여행 관리 (12개) ✅ 전체 확인
+### D. 여행 관리 (15개) — 13/15 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -67,6 +67,9 @@
 | 38 | D-11 | Invite Code Manage | `805d42ee99cc4dd486ef390f0ae500c2` | ✅ |
 | 39 | D-12 | Member Detail | `ad10a339905342f0ba4f1437d27eca8b` | ✅ |
 | 40 | D-13 | Leadership Transfer | `6f7a0aed19a44b429a3c218105ad51a4` | ✅ |
+| 67 | D-14 | Trip Start Checklist | (background) | ⚠️ 백그라운드 |
+| 68 | D-15 | Trip Complete Summary | (background) | ⚠️ 백그라운드 |
+| 69 | D-16 | Trip Reactivation | `5d487116925942a78df89bf09472a931` | ✅ |
 
 ### E. 위치공유/프라이버시 (8개) — 7/8 확인
 
@@ -130,12 +133,18 @@
 | 46 | J-05 | Medical/Health | `9060056d97614e7aa25b1e6a524a896e` | ✅ |
 | 47 | J-06 | Emergency Contacts | `d886990b62374ced939d758bfc79d8a2` | ✅ |
 
-### K. 설정 (2개) ✅ 전체 확인
+### K. 설정 (8개) — 7/8 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
 | 20 | K-01 | Settings | `54cdf9a6ee67430ea21ee892ba28905e` | ✅ |
 | 21 | K-02 | User Profile | `767baf3d42684cac83afe1a74777028a` | ✅ |
+| 70 | K-03 | Location Settings | (background) | ⚠️ 백그라운드 |
+| 71 | K-04 | Notification Settings | `bb9b182a55a64ac7a152ee1eed36ecc3` | ✅ |
+| 72 | K-05 | App Info | `2c81a1e6b8224387845b30a1a0ecfd4a` | ✅ |
+| 73 | K-06 | Terms Re-consent | `7ad5d327b8504518b0daf1abdf359896` | ✅ |
+| 74 | K-07 | Account Delete | `708b92ee55184cc887814e39ada1505c` | ✅ |
+| 75 | K-08 | Delete Withdrawal | `3b33199fccf345ce9c264a4d47539b24` | ✅ |
 
 ---
 
