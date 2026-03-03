@@ -7,7 +7,7 @@
 
 ---
 
-## 생성된 화면 목록 (36개 — 32 확인 + 4 백그라운드)
+## 생성된 화면 목록 (38개 — 34 확인 + 4 백그라운드)
 
 ### A. 온보딩 플로우 (7개) ✅ 전체 확인
 
@@ -56,7 +56,7 @@
 | 14 | D-09 | Member List | `3d583bb4a2e446e38900649f53a9b4a6` | ✅ |
 | 15 | D-10 | Invite Code | `71a3ae9116b5497d897743f70757a6b5` | ✅ |
 
-### F. 가디언 (5개) — 4/5 확인
+### F. 가디언 (7개) — 6/7 확인
 
 | # | 화면 ID | 화면 | Screen ID | 상태 |
 |---|---------|------|-----------|:----:|
@@ -64,7 +64,9 @@
 | 26 | F-02 | Guardian Manage | (background) | ⚠️ 백그라운드 |
 | 27 | F-03 | Guardian Approval | `d911f8b9be57429b98a0e40177140be8` | ✅ |
 | 28 | F-04 | Guardian Home | `772d95b3bd67495bb3df3a261436ce20` | ✅ |
-| 29 | F-06 | Guardian Messages | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
+| 29 | F-05 | Guardian Member Detail | `b328fa65f9c94fae9ab98f783fdf37f8` | ✅ |
+| 30 | F-06 | Guardian Messages | `d6a8f571babd4b1b87816cbe51f05f90` | ✅ |
+| 31 | F-07 | Guardian Emergency Alert | `c9c4cfde43fd47aabe3973a8b4f0e707` | ✅ |
 
 ### G. SOS (1개) ✅
 
