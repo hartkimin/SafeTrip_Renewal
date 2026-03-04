@@ -15,8 +15,14 @@ export class TripsController {
     create(
         @CurrentUser() userId: string,
         @Body() body: {
-            tripName: string; destination?: string; destinationCountryCode?: string;
-            startDate: string; endDate: string; sharingMode?: string; privacyLevel?: string;
+            title: string;
+            country_code: string;
+            country_name?: string;
+            trip_type: string;
+            start_date: string;
+            end_date: string;
+            sharing_mode?: string;
+            privacy_level?: string;
         },
     ) {
         return this.tripsService.create(userId, body);
@@ -149,5 +155,15 @@ export class TripsController {
         @Body() body: { inviteType: string; invitePhone?: string },
     ) {
         return this.tripsService.createInvite(tripId, userId, body);
+    }
+
+    @Post(':tripId/bulk-invite')
+    @ApiOperation({ summary: 'B2B/단체 멤버 일괄 초대 (명단 기반)' })
+    bulkInvite(
+        @CurrentUser() userId: string,
+        @Param('tripId') tripId: string,
+        @Body() body: { invitees: { phone: string; name?: string; role: string }[] },
+    ) {
+        return this.tripsService.bulkInvite(tripId, userId, body.invitees);
     }
 }

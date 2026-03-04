@@ -3,6 +3,7 @@ import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../../entities/user.entity';
 import { FcmToken } from '../../entities/notification.entity';
+import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 import { NotFoundException } from '@nestjs/common';
 
 describe('UsersService', () => {
@@ -23,12 +24,22 @@ describe('UsersService', () => {
         update: jest.fn(),
     };
 
+    const mockGuardianRepo = {
+        findOne: jest.fn(),
+    };
+
+    const mockGuardianLinkRepo = {
+        findOne: jest.fn(),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 UsersService,
                 { provide: getRepositoryToken(User), useValue: mockUserRepo },
                 { provide: getRepositoryToken(FcmToken), useValue: mockFcmRepo },
+                { provide: getRepositoryToken(Guardian), useValue: mockGuardianRepo },
+                { provide: getRepositoryToken(GuardianLink), useValue: mockGuardianLinkRepo },
             ],
         }).compile();
 
@@ -59,6 +70,7 @@ describe('UsersService', () => {
             };
 
             mockUserRepo.findOne.mockResolvedValue(mockUser);
+            mockGuardianRepo.findOne.mockResolvedValue(null);
 
             const result = await service.findByPhone('+821012345678');
 
@@ -86,6 +98,7 @@ describe('UsersService', () => {
                 phoneNumber: '+821012345678',
             };
             mockUserRepo.findOne.mockResolvedValue(mockUser);
+            mockGuardianRepo.findOne.mockResolvedValue(null);
 
             const result = await service.getProfile('user123');
             expect(result.user_id).toBe('user123');

@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as admin from 'firebase-admin';
 import { FIREBASE_APP } from '../../config/firebase/firebase.module';
-import { Notification, FcmToken } from '../../entities/notification.entity';
+import { Notification, FcmToken, NotificationPreference } from '../../entities/notification.entity';
 
 @Injectable()
 export class NotificationsService {
     constructor(
         @InjectRepository(Notification) private notifRepo: Repository<Notification>,
         @InjectRepository(FcmToken) private tokenRepo: Repository<FcmToken>,
+        @InjectRepository(NotificationPreference) private prefRepo: Repository<NotificationPreference>,
         @Inject(FIREBASE_APP) private firebaseApp: admin.app.App,
     ) { }
 
@@ -100,7 +101,19 @@ export class NotificationsService {
         title: string; body: string; notificationType: string;
         referenceId?: string; referenceType?: string; tripId?: string;
     }) {
-        // DB 저장
+        // SOS는 설정을 무시하고 항상 전송 (Business Principles §05.1)
+        let isPushEnabled = true;
+        
+        if (data.notificationType !== 'SOS') {
+            const pref = await this.prefRepo.findOne({ 
+                where: { userId, notificationType: data.notificationType } 
+            });
+            if (pref && !pref.isPushEnabled) {
+                isPushEnabled = false;
+            }
+        }
+
+        // DB 저장 (앱 내 알림함)
         const notification = this.notifRepo.create({
             userId,
             title: data.title,
@@ -115,22 +128,25 @@ export class NotificationsService {
         await this.notifRepo.save(notification);
 
         // FCM 전송
-        try {
-            const tokens = await this.tokenRepo.find({ where: { userId, isActive: true } });
-            if (tokens.length > 0) {
-                await this.firebaseApp.messaging().sendEachForMulticast({
-                    tokens: tokens.map((t) => t.token),
-                    notification: { title: data.title, body: data.body },
-                    data: {
-                        type: data.notificationType,
-                        referenceId: data.referenceId || '',
-                        referenceType: data.referenceType || '',
-                    },
-                });
+        if (isPushEnabled) {
+            try {
+                const tokens = await this.tokenRepo.find({ where: { userId, isActive: true } });
+                if (tokens.length > 0) {
+                    await this.firebaseApp.messaging().sendEachForMulticast({
+                        tokens: tokens.map((t) => t.token),
+                        notification: { title: data.title, body: data.body },
+                        data: {
+                            type: data.notificationType,
+                            referenceId: data.referenceId || '',
+                            referenceType: data.referenceType || '',
+                            tripId: data.tripId || '',
+                        },
+                    });
+                }
+            } catch (error) {
+                // FCM 실패는 로그만 남기고 진행
+                console.error('FCM send error:', error);
             }
-        } catch (error) {
-            // FCM 실패는 로그만 남기고 진행
-            console.error('FCM send error:', error);
         }
 
         return notification;

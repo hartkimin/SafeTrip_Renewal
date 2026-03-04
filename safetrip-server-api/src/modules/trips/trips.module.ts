@@ -2,10 +2,16 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TripsController } from './trips.controller';
 import { TripsService } from './trips.service';
-import { Trip, Group, GroupMember, ChatRoom, GuardianLink, Schedule, TravelSchedule, InviteCode } from '../../entities';
+import { Trip, User, Group, GroupMember, ChatRoom, GuardianLink, Schedule, TravelSchedule, InviteCode } from '../../entities';
+import { PaymentsModule } from '../payments/payments.module';
+import { B2bModule } from '../b2b/b2b.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Trip, Group, GroupMember, ChatRoom, GuardianLink, Schedule, TravelSchedule, InviteCode])],
+    imports: [
+        TypeOrmModule.forFeature([Trip, User, Group, GroupMember, ChatRoom, GuardianLink, Schedule, TravelSchedule, InviteCode]),
+        PaymentsModule,
+        B2bModule
+    ],
     controllers: [TripsController],
     providers: [TripsService],
     exports: [TripsService],

@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as admin from 'firebase-admin';
 import { FIREBASE_APP } from '../../config/firebase/firebase.module';
-import { User } from '../../entities/user.entity';
+import { User, ParentalConsent } from '../../entities/user.entity';
 import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectRepository(User) private userRepo: Repository<User>,
+        @InjectRepository(ParentalConsent) private consentRepo: Repository<ParentalConsent>,
         @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
         @InjectRepository(GuardianLink) private guardianLinkRepo: Repository<GuardianLink>,
         @Inject(FIREBASE_APP) private firebaseApp: admin.app.App,
@@ -135,14 +136,82 @@ export class AuthService {
             profileImageUrl?: string;
         },
     ) {
+        const dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+        let minorStatus = 'adult';
+
+        if (dateOfBirth) {
+            const today = new Date();
+            let age = today.getFullYear() - dateOfBirth.getFullYear();
+            const m = today.getMonth() - dateOfBirth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dateOfBirth.getDate())) {
+                age--;
+            }
+
+            if (age < 18) {
+                minorStatus = 'minor';
+                // 14세 미만은 법정대리인 동의 필수 확인
+                if (age < 14) {
+                    const consent = await this.consentRepo.findOne({ where: { userId: uid, isVerified: true } });
+                    if (!consent) {
+                        throw new BadRequestException('Parental consent required for users under 14');
+                    }
+                }
+            }
+        }
+
         await this.userRepo.update(uid, {
             displayName: data.displayName || undefined,
-            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+            dateOfBirth: dateOfBirth || undefined,
             profileImageUrl: data.profileImageUrl || undefined,
+            minorStatus,
             isOnboardingComplete: true,
             onboardingStep: 'completed',
         });
         return this.userRepo.findOne({ where: { userId: uid } });
+    }
+
+    /**
+     * POST /auth/minor-consent-otp — 미성년자 보호자 동의 OTP 발송 (Mock)
+     */
+    async sendMinorConsentOtp(userId: string, phone: string) {
+        // 실제 운영 시에는 SMS 발송 API 연동
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        let consent = await this.consentRepo.findOne({ where: { userId } });
+        if (!consent) {
+            consent = this.consentRepo.create({ userId, parentPhone: phone, consentOtp: otp });
+        } else {
+            consent.parentPhone = phone;
+            consent.consentOtp = otp;
+        }
+        await this.consentRepo.save(consent);
+
+        console.log(`[Parental Consent OTP for ${userId}]: ${otp}`);
+        return { success: true, message: 'OTP sent successfully' };
+    }
+
+    /**
+     * POST /auth/submit-parental-consent — 법정대리인 동의 제출
+     */
+    async submitParentalConsent(userId: string, data: {
+        parentName: string;
+        parentPhone: string;
+        relationship: string;
+        otp: string;
+    }) {
+        const consent = await this.consentRepo.findOne({ where: { userId } });
+        if (!consent || consent.consentOtp !== data.otp) {
+            throw new BadRequestException('Invalid OTP or consent record not found');
+        }
+
+        consent.parentName = data.parentName;
+        consent.relationship = data.relationship;
+        consent.isVerified = true;
+        consent.verifiedAt = new Date();
+        consent.consentOtp = null; // Clear OTP after use
+        await this.consentRepo.save(consent);
+
+        return { success: true, message: 'Parental consent verified' };
     }
 
     /**

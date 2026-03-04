@@ -7,9 +7,13 @@ import {
     GuardianLocationRequest, GuardianSnapshot,
 } from '../../entities/guardian.entity';
 import { User } from '../../entities/user.entity';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Guardian, GuardianLink, GuardianPause, GuardianLocationRequest, GuardianSnapshot, User])],
+    imports: [
+        TypeOrmModule.forFeature([Guardian, GuardianLink, GuardianPause, GuardianLocationRequest, GuardianSnapshot, User]),
+        PaymentsModule
+    ],
     controllers: [GuardiansController],
     providers: [GuardiansService],
     exports: [GuardiansService],

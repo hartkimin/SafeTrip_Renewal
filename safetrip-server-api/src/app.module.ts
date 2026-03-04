@@ -30,6 +30,8 @@ import { CountriesModule } from './modules/countries/countries.module';
 import { GuidesModule } from './modules/guides/guides.module';
 import { EventLogModule } from './modules/event-log/event-log.module';
 import { MofaModule } from './modules/mofa/mofa.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
     imports: [
@@ -90,6 +92,8 @@ import { MofaModule } from './modules/mofa/mofa.module';
         GuidesModule,
         EventLogModule,
         MofaModule,
+        TasksModule,
+        AiModule,
     ],
 })
 export class AppModule { }

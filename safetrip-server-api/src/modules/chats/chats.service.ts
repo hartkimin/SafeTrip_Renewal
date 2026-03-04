@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { ChatRoom, ChatMessage, ChatReadStatus } from '../../entities/chat.entity';
+import { GroupMember } from '../../entities/group-member.entity';
+import { User } from '../../entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatsService {
@@ -9,6 +12,9 @@ export class ChatsService {
         @InjectRepository(ChatRoom) private roomRepo: Repository<ChatRoom>,
         @InjectRepository(ChatMessage) private messageRepo: Repository<ChatMessage>,
         @InjectRepository(ChatReadStatus) private readStatusRepo: Repository<ChatReadStatus>,
+        @InjectRepository(GroupMember) private memberRepo: Repository<GroupMember>,
+        @InjectRepository(User) private userRepo: Repository<User>,
+        private notifService: NotificationsService,
     ) { }
 
     async getRooms(tripId: string) {
@@ -31,12 +37,52 @@ export class ChatsService {
         messageType?: string; content?: string; mediaUrl?: string;
         latitude?: number; longitude?: number;
     }) {
+        const room = await this.roomRepo.findOne({ where: { roomId } });
+        if (!room) throw new NotFoundException('Chat room not found');
+
         const message = this.messageRepo.create({
             roomId, senderId,
             messageType: data.messageType || 'text',
             content: data.content,
         } as Partial<ChatMessage>);
-        return this.messageRepo.save(message);
+        const saved = await this.messageRepo.save(message);
+
+        // FCM 알림 발송 (다른 멤버들에게)
+        this.handleChatNotification(room, senderId, saved).catch(err => console.error('Chat FCM error:', err));
+
+        return saved;
+    }
+
+    private async handleChatNotification(room: ChatRoom, senderId: string, message: ChatMessage) {
+        try {
+            const sender = await this.userRepo.findOne({ where: { userId: senderId } });
+            const senderName = sender?.displayName || sender?.userName || 'Traveler';
+
+            const title = room.roomName || 'Group Chat';
+            const body = `${senderName}: ${message.messageType === 'text' ? message.content : '[' + message.messageType + ']'}`;
+
+            const members = await this.memberRepo.find({
+                where: { tripId: room.tripId, status: 'active' },
+                select: ['userId']
+            });
+
+            const recipientIds = members
+                .map(m => m.userId)
+                .filter(id => id !== senderId);
+
+            for (const recipientId of recipientIds) {
+                await this.notifService.send(recipientId, {
+                    title,
+                    body,
+                    notificationType: 'CHAT',
+                    referenceId: message.messageId,
+                    referenceType: 'CHAT_MESSAGE',
+                    tripId: room.tripId,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send chat notification:', error);
+        }
     }
 
     async markRead(roomId: string, userId: string, lastReadMessageId: string) {

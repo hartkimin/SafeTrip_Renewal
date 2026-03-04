@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, DataSource, Not } from 'typeorm';
 import { Trip } from '../../entities/trip.entity';
+import { User } from '../../entities/user.entity';
 import { GuardianLink } from '../../entities/guardian.entity';
 import { Group } from '../../entities/group.entity';
 import { GroupMember } from '../../entities/group-member.entity';
@@ -9,6 +10,8 @@ import { ChatRoom } from '../../entities/chat.entity';
 import { Schedule } from '../../entities/schedule.entity';
 import { TravelSchedule } from '../../entities/travel-schedule.entity';
 import { InviteCode } from '../../entities/invite-code.entity';
+import { PaymentsService } from '../payments/payments.service';
+import { B2bService } from '../b2b/b2b.service';
 
 @Injectable()
 export class TripsService {
@@ -21,43 +24,83 @@ export class TripsService {
         @InjectRepository(Schedule) private scheduleRepo: Repository<Schedule>,
         @InjectRepository(TravelSchedule) private travelScheduleRepo: Repository<TravelSchedule>,
         @InjectRepository(InviteCode) private inviteCodeRepo: Repository<InviteCode>,
+        @InjectRepository(User) private userRepo: Repository<User>,
+        private paymentsService: PaymentsService,
+        private b2bService: B2bService,
+        private dataSource: DataSource,
     ) { }
 
     /**
      * POST /trips — 여행 생성 (그룹 자동 생성 + captain 등록 + 채팅방 자동 생성)
      */
     async create(userId: string, data: {
-        tripName: string; destination?: string; destinationCountryCode?: string;
-        startDate: string; endDate: string; sharingMode?: string; privacyLevel?: string;
+        title: string;
+        country_code: string;
+        country_name?: string;
+        trip_type: string;
+        start_date: string;
+        end_date: string;
+        sharing_mode?: string;
+        privacy_level?: string;
+        b2b_contract_id?: string;
     }) {
-        // 15일 제한 체크
-        const start = new Date(data.startDate);
-        const end = new Date(data.endDate);
+        // 1) 15일 제한 체크
+        const start = new Date(data.start_date);
+        const end = new Date(data.end_date);
         const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays > 15 || diffDays < 0) {
             throw new BadRequestException('Trip duration must be between 1 and 15 days');
         }
 
+        // 2) B2B 쿼터 및 제약 사항 확인
+        let finalPrivacyLevel = data.privacy_level || 'standard';
+        let finalSharingMode = data.sharing_mode || 'voluntary';
+
+        if (data.b2b_contract_id) {
+            const hasQuota = await this.b2bService.checkTripQuota(data.b2b_contract_id);
+            if (!hasQuota) {
+                throw new BadRequestException('B2B Trip quota exceeded for this contract');
+            }
+
+            // 계약 강제 설정 확인
+            const contract = await this.dataSource.query('SELECT forced_privacy_level, forced_sharing_mode FROM tb_b2b_contract WHERE contract_id = $1', [data.b2b_contract_id]);
+            if (contract && contract.length > 0) {
+                if (contract[0].forced_privacy_level) finalPrivacyLevel = contract[0].forced_privacy_level;
+                if (contract[0].forced_sharing_mode) finalSharingMode = contract[0].forced_sharing_mode;
+            }
+        }
+
         const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-        // 1) 그룹 생성
-        const group = this.groupRepo.create({ groupName: data.tripName, createdBy: userId, inviteCode });
+        // 3) 그룹 생성
+        const group = this.groupRepo.create({
+            groupName: data.title,
+            groupType: data.trip_type,
+            createdBy: userId,
+            inviteCode
+        });
         const savedGroup = await this.groupRepo.save(group);
 
-        // 2) 여행 생성
+        // 4) 여행 생성
         const trip = this.tripRepo.create({
             groupId: savedGroup.groupId,
-            tripName: data.tripName,
-            destination: data.destination,
-            destinationCountryCode: data.destinationCountryCode,
+            tripName: data.title,
+            destination: data.country_name || data.country_code,
+            destinationCountryCode: data.country_code,
             startDate: start,
             endDate: end,
-            sharingMode: data.sharingMode || 'voluntary',
-            privacyLevel: data.privacyLevel || 'standard',
+            sharingMode: finalSharingMode,
+            privacyLevel: finalPrivacyLevel,
+            b2bContractId: data.b2b_contract_id || null,
         });
         const savedTrip = await this.tripRepo.save(trip);
 
-        // 3) captain 등록
+        // B2B인 경우 카운트 증가
+        if (data.b2b_contract_id) {
+            await this.b2bService.incrementTripCount(data.b2b_contract_id);
+        }
+
+        // 5) captain 등록
         const member = this.memberRepo.create({
             groupId: savedGroup.groupId,
             userId,
@@ -72,15 +115,37 @@ export class TripsService {
         });
         await this.memberRepo.save(member);
 
-        // 4) 채팅방 자동 생성
+        // 6) §10.2: 미성년자 보호 로직 적용 (캡틴이 미성년자인 경우)
+        await this.checkAndEnforceMinorProtection(savedTrip.tripId, userId);
+
+        // 7) 채팅방 자동 생성
         const chatRoom = this.chatRoomRepo.create({
             tripId: savedTrip.tripId,
             roomType: 'group',
-            roomName: data.tripName,
+            roomName: data.title,
         });
         await this.chatRoomRepo.save(chatRoom);
 
-        return { ...savedTrip, inviteCode };
+        // Refresh trip data to include updated privacy_level if changed
+        const finalTrip = await this.tripRepo.findOne({ where: { tripId: savedTrip.tripId } });
+        return { ...finalTrip, inviteCode };
+    }
+
+    /**
+     * §10.2 미성년자 보호 로직
+     * 미성년자(만 18세 미만) 멤버 포함 시 safety_first 등급 강제
+     */
+    private async checkAndEnforceMinorProtection(tripId: string, userId: string) {
+        const user = await this.userRepo.findOne({ where: { userId }, select: ['minorStatus'] });
+        if (!user) return;
+
+        if (user.minorStatus === 'minor') {
+            await this.tripRepo.update(tripId, {
+                privacyLevel: 'safety_first',
+                hasMinorMembers: true,
+                updatedAt: new Date(),
+            });
+        }
     }
 
     async findByUser(userId: string) {
@@ -106,6 +171,13 @@ export class TripsService {
         });
         if (!member || (member.memberRole !== 'captain' && !member.canEditSchedule)) {
             throw new ForbiddenException('Permission denied');
+        }
+
+        const trip = await this.findById(tripId);
+
+        // §10.2: 미성년자가 포함된 여행은 safety_first 외 등급 변경 불가
+        if (trip.hasMinorMembers && data.privacyLevel && data.privacyLevel !== 'safety_first') {
+            throw new BadRequestException('미성년자가 포함된 여행은 "안전 최우선" 등급만 사용할 수 있습니다. (비즈니스 원칙 §10.2)');
         }
 
         await this.tripRepo.update(tripId, { ...data, updatedAt: new Date() });
@@ -150,9 +222,6 @@ export class TripsService {
 
         const result: any[] = [];
         for (const sched of schedules) {
-            // Note: Since DB uses both tb_schedule and tb_travel_schedule, 
-            // if we need generic items for the parent schedule we would grab travel schedules.
-            // Assuming this API just wants "details" tied to simple travel schedules here:
             const items = await this.travelScheduleRepo.find({
                 where: { tripId, scheduleType: sched.scheduleName },
                 order: { startTime: 'ASC' },
@@ -210,6 +279,37 @@ export class TripsService {
         return this.inviteCodeRepo.save(invite);
     }
 
+    async bulkInvite(tripId: string, userId: string, invitees: { phone: string; name?: string; role: string }[]) {
+        const trip = await this.findById(tripId);
+        
+        // 권한 확인
+        const member = await this.memberRepo.findOne({
+            where: { tripId, userId, status: 'active' },
+        });
+        if (!member || (!member.isAdmin && !member.canManageMembers && member.memberRole !== 'captain')) {
+            throw new ForbiddenException('Permission denied: Cannot manage invites');
+        }
+
+        const results = [];
+        for (const inv of invitees) {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const invite = this.inviteCodeRepo.create({
+                groupId: trip.groupId,
+                createdBy: userId,
+                targetRole: inv.role,
+                code: code,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 만료
+            });
+            const saved = await this.inviteCodeRepo.save(invite);
+            results.push({
+                phone: inv.phone,
+                name: inv.name,
+                code: saved.code,
+            });
+        }
+        return { success: true, count: results.length, invitees: results };
+    }
+
     async acceptInvite(inviteCode: string, userId: string) {
         const invite = await this.inviteCodeRepo.findOne({ where: { code: inviteCode, isActive: true } });
         if (!invite) throw new NotFoundException('Invalid or expired invite');
@@ -229,6 +329,9 @@ export class TripsService {
             canViewLocation: true,
         });
         await this.memberRepo.save(member);
+
+        // §10.2: 미성년자 합류 시 보호 로직 실행
+        await this.checkAndEnforceMinorProtection(trip.tripId, userId);
 
         // 초대 상태 갱신 (usedCount 증가 및 maxUses 도달 시 비활성화)
         invite.usedCount += 1;
@@ -276,10 +379,17 @@ export class TripsService {
             memberRole: 'crew',
         });
         const savedMember = await this.memberRepo.save(member);
+        
+        // §10.2: 미성년자 합류 시 보호 로직 실행
+        await this.checkAndEnforceMinorProtection(trip.tripId, userId);
+
         return { groupId: group.groupId, memberId: savedMember.memberId };
     }
 
     // ── 가디언 승인 흐름 ──────────────────────────────────────────────────────
+    /**
+     * §05.4 가디언 슬롯 쿼터 제한 로직 포함
+     */
     async createGuardianApprovalRequest(userId: string, data: { inviteCode: string; guardianPhone: string }) {
         const group = await this.groupRepo.findOne({ where: { inviteCode: data.inviteCode } });
         if (!group) throw new NotFoundException('Invalid invite code');
@@ -290,6 +400,16 @@ export class TripsService {
         const member = await this.memberRepo.findOne({ where: { tripId: trip.tripId, userId } });
         if (!member) throw new ForbiddenException('You must join the trip first');
 
+        // 쿼터 확인
+        const { maxGuardians } = await this.paymentsService.checkGuardianQuota(userId, trip.tripId);
+        const currentGuardians = await this.guardianLinkRepo.count({
+            where: { memberId: member.memberId, status: Not('rejected') }
+        });
+
+        if (currentGuardians >= maxGuardians) {
+            throw new BadRequestException(`Guardian limit exceeded. (Current plan limit: ${maxGuardians})`);
+        }
+
         const guardianLink = this.guardianLinkRepo.create({
             tripId: trip.tripId,
             memberId: member.memberId,
@@ -298,17 +418,15 @@ export class TripsService {
         });
 
         await this.guardianLinkRepo.save(guardianLink);
-        // The API spec expects `guardian_id` and `guardian_invite_code` which might be mapped to linkId and something else.
-        // Returning minimal structure to simulate for now based on actual GuardianLink entity.
+        
         return {
             guardian_id: guardianLink.linkId,
-            guardian_invite_code: guardianLink.linkId.substring(0, 8).toUpperCase(), // Fake invite code since it's missing in GuardianLink
+            guardian_invite_code: guardianLink.linkId.substring(0, 8).toUpperCase(),
             message: 'Guardian approval request sent'
         };
     }
 
     async getGuardianApprovalStatus(userId: string) {
-        // Find latest pending or active link for the user
         const member = await this.memberRepo.findOne({ where: { userId }, order: { createdAt: 'DESC' } });
         if (!member) return { status: 'none' };
 

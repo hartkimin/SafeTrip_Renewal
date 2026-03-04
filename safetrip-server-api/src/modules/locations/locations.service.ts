@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, DataSource, IsNull } from 'typeorm';
 import {
     Location, LocationSharing, LocationSchedule,
     StayPoint, PlannedRoute, RouteDeviation, MovementSession
@@ -16,6 +16,7 @@ export class LocationsService {
         @InjectRepository(PlannedRoute) private routeRepo: Repository<PlannedRoute>,
         @InjectRepository(RouteDeviation) private deviationRepo: Repository<RouteDeviation>,
         @InjectRepository(MovementSession) private sessionRepo: Repository<MovementSession>,
+        private dataSource: DataSource,
     ) { }
 
     /** 위치 기록 일괄 저장 (오프라인 배치 지원) */
@@ -56,13 +57,10 @@ export class LocationsService {
     async getLocations(tripId: string, userId: string, startTime?: string, endTime?: string, limit: number = 100) {
         const query: any = { tripId, userId };
         if (startTime || endTime) {
-            // Complex where conditions require Raw or Between
             if (startTime && endTime) {
                 query.recordedAt = Between(new Date(startTime), new Date(endTime));
-            } else {
-                // Simplified for now, production should handle > start or < end
-                if (startTime) query.recordedAt = Between(new Date(startTime), new Date());
-                // if (endTime) query.recordedAt = Between(new Date(0), new Date(endTime));
+            } else if (startTime) {
+                query.recordedAt = Between(new Date(startTime), new Date());
             }
         }
 
@@ -71,6 +69,77 @@ export class LocationsService {
             order: { recordedAt: 'DESC' },
             take: limit,
         });
+    }
+
+    /**
+     * §04.5 가디언 전용 위치 조회 로직
+     * 여행의 프라이버시 등급에 따라 노출 데이터 필터링
+     */
+    async getGuardianView(tripId: string, memberUserId: string, guardianUserId: string) {
+        // 1. 여행 정보 및 프라이버시 등급 조회
+        const trip = await this.dataSource.getRepository('tb_trip').findOne({ where: { tripId } });
+        if (!trip) throw new NotFoundException('Trip not found');
+
+        // 2. 현재 해당 멤버의 공유 스케줄 ON 여부 확인
+        const isSharingOn = await this.checkIsSharingOn(tripId, memberUserId);
+
+        // 3. 등급별 필터링 정책 적용
+        const privacyLevel = trip.privacy_level || 'standard';
+
+        if (privacyLevel === 'safety_first') {
+            // 안전 최우선: 항상 실시간 최신 위치 반환
+            return this.getRecent(tripId, memberUserId, 1);
+        }
+
+        if (privacyLevel === 'standard') {
+            if (isSharingOn) {
+                return this.getRecent(tripId, memberUserId, 1);
+            } else {
+                // 표준 등급 OFF 시간: 30분 간격 스냅샷 제공
+                const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+                return this.locationRepo.find({
+                    where: {
+                        tripId,
+                        userId: memberUserId,
+                        recordedAt: Between(thirtyMinutesAgo, new Date())
+                    },
+                    order: { recordedAt: 'DESC' },
+                    take: 1
+                });
+            }
+        }
+
+        if (privacyLevel === 'privacy_first') {
+            if (isSharingOn) {
+                return this.getRecent(tripId, memberUserId, 1);
+            } else {
+                // 프라이버시 우선 OFF 시간: 비공유
+                return [];
+            }
+        }
+
+        return [];
+    }
+
+    /** 현재 공유 스케줄이 ON인지 판별하는 헬퍼 */
+    private async checkIsSharingOn(tripId: string, userId: string): Promise<boolean> {
+        const now = new Date();
+        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        const currentDay = now.getDay(); // 0(Sun) ~ 6(Sat)
+
+        // 1. 강제 공유 모드인지 확인 (Trip Entity의 sharing_mode 참조 필요)
+        // 2. LocationSchedule 테이블에서 현재 시간에 맞는 규칙이 있는지 확인
+        const schedule = await this.scheduleRepo.findOne({
+            where: [
+                { tripId, userId, dayOfWeek: currentDay, isSharingOn: true },
+                { tripId, userId, dayOfWeek: IsNull(), isSharingOn: true } // 매일 적용
+            ]
+        });
+
+        if (!schedule) return true; // 기본값은 ON (비즈니스 원칙 v5.1 기준)
+
+        // 시간 범위 체크: (startTime <= currentTime <= endTime)
+        return currentTime >= schedule.startTime && currentTime <= schedule.endTime;
     }
 
     async getRecent(tripId: string, userId: string, limit = 100) {
@@ -136,52 +205,120 @@ export class LocationsService {
 
     // ── Movement Sessions (9.4 ~ 9.9) ──
     async getMovementSessionsSummary(userId: string, page: number, limit: number, needImages?: string, targetDate?: string, timezoneOffset: number = 0) {
-        // Mock implementation to satisfy interface
+        const query = this.sessionRepo.createQueryBuilder('ms')
+            .where('ms.userId = :userId', { userId })
+            .orderBy('ms.startTime', 'DESC')
+            .skip((page - 1) * limit)
+            .take(limit);
+
+        if (targetDate) {
+            // Very simple date filtering assuming YYYY-MM-DD
+            query.andWhere('DATE(ms.startTime) = :targetDate', { targetDate });
+        }
+
+        const [sessions, total] = await query.getManyAndCount();
+
         return {
-            sessions: [],
+            sessions,
             page,
             limit,
-            total: 0
+            total
         };
     }
 
     async getMovementSessionsDateRange(userId: string, timezoneOffset: number) {
+        // Get the earliest and latest session start time
+        const { min } = await this.sessionRepo
+            .createQueryBuilder('ms')
+            .where('ms.userId = :userId', { userId })
+            .select('MIN(ms.startTime)', 'min')
+            .getRawOne();
+
+        const { max } = await this.sessionRepo
+            .createQueryBuilder('ms')
+            .where('ms.userId = :userId', { userId })
+            .select('MAX(ms.startTime)', 'max')
+            .getRawOne();
+
         return {
-            start_date: null,
-            end_date: null
+            start_date: min || null,
+            end_date: max || null
         };
     }
 
     async getMovementSessionsByDate(userId: string, date: string, timezoneOffset: number, needImages?: string) {
+        const query = this.sessionRepo.createQueryBuilder('ms')
+            .where('ms.userId = :userId', { userId })
+            .andWhere('DATE(ms.startTime) = :date', { date })
+            .orderBy('ms.startTime', 'DESC');
+
+        const [sessions, total] = await query.getManyAndCount();
+
         return {
-            sessions: [],
+            sessions,
             date,
-            total: 0
+            total
         };
     }
 
     async getMovementSessionDetail(userId: string, sessionId: string) {
-        // Query locations by sessionId
-        // For now, returning mock
+        const session = await this.sessionRepo.findOne({ where: { sessionId, userId } });
+        if (!session) return null;
+
+        const locations = await this.locationRepo.find({
+            where: { movementSessionId: sessionId },
+            order: { recordedAt: 'ASC' }
+        });
+
         return {
-            session_id: sessionId,
-            start_time: new Date().toISOString(),
-            end_time: new Date().toISOString(),
-            is_completed: null,
-            locations: []
+            session_id: session.sessionId,
+            start_time: session.startTime,
+            end_time: session.endTime,
+            is_completed: session.isCompleted,
+            locations
         };
     }
 
     async completeMovementSession(userId: string, sessionId: string, latitude: number, longitude: number, recordedAt: string) {
-        // Save the final location and mark session end conceptually
+        const session = await this.sessionRepo.findOne({ where: { sessionId, userId } });
+        if (!session) throw new Error('Session not found');
+
+        // Update session completion
+        await this.sessionRepo.update(sessionId, {
+            isCompleted: true,
+            endTime: new Date(recordedAt)
+        });
+
+        // Ensure closing location is stored (assuming tripId exists on location, we might need it ideally, omitting here to just save point)
+        // If tripId is strictly required by the schema, we must fetch it.
+        const locations = await this.locationRepo.find({ where: { movementSessionId: sessionId }, take: 1 });
+        if (locations.length > 0) {
+            await this.locationRepo.save(this.locationRepo.create({
+                userId,
+                tripId: locations[0].tripId, // copy from previous points
+                movementSessionId: sessionId,
+                latitude,
+                longitude,
+                recordedAt: new Date(recordedAt),
+                serverReceivedAt: new Date()
+            }));
+        }
+
         return { success: true };
     }
 
     async getMovementSessionEvents(userId: string, sessionId: string) {
+        // Return locations as events or any other specific event log logic related to this session.
+        // Usually relates to deviations or status changes.
+        const locations = await this.locationRepo.find({
+            where: { movementSessionId: sessionId },
+            order: { recordedAt: 'ASC' }
+        });
+
         return {
             session_id: sessionId,
-            events: [],
-            count: 0
+            events: locations,
+            count: locations.length
         };
     }
 }

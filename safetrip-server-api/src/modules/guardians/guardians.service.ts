@@ -6,6 +6,7 @@ import {
     GuardianLocationRequest, GuardianSnapshot,
 } from '../../entities/guardian.entity';
 import { User } from '../../entities/user.entity';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class GuardiansService {
@@ -16,11 +17,11 @@ export class GuardiansService {
         @InjectRepository(GuardianLocationRequest) private locReqRepo: Repository<GuardianLocationRequest>,
         @InjectRepository(GuardianSnapshot) private snapshotRepo: Repository<GuardianSnapshot>,
         @InjectRepository(User) private userRepo: Repository<User>,
+        private paymentsService: PaymentsService,
     ) { }
 
     // [POST] /api/v1/trips/:tripId/guardians
     async createLink(tripId: string, memberId: string, guardianPhone: string) {
-        // Find if target phone number is registered
         const targetUser = await this.userRepo.findOne({ where: { phoneNumber: guardianPhone } });
         if (!targetUser) {
             throw new NotFoundException('해당 전화번호로 가입된 사용자를 찾을 수 없습니다');
@@ -30,7 +31,9 @@ export class GuardiansService {
             throw new BadRequestException('본인을 가디언으로 추가할 수 없습니다');
         }
 
-        // Limit check
+        // §05.4 쿼터 확인
+        const { maxGuardians } = await this.paymentsService.checkGuardianQuota(memberId, tripId);
+        
         const currentLinks = await this.linkRepo.count({
             where: [
                 { memberId, tripId, status: 'pending' },
@@ -38,11 +41,10 @@ export class GuardiansService {
             ]
         });
 
-        if (currentLinks >= 3) {
-            throw new BadRequestException('최대 3명까지 가디언 추가 가능합니다');
+        if (currentLinks >= maxGuardians) {
+            throw new BadRequestException(`가디언 등록 제한을 초과했습니다. (현재 플랜 제한: ${maxGuardians}명)`);
         }
 
-        // Duplicate check
         const existingLink = await this.linkRepo.findOne({
             where: { tripId, memberId, guardianId: targetUser.userId }
         });
@@ -78,7 +80,6 @@ export class GuardiansService {
         link.status = action;
         if (action === 'accepted') {
             link.acceptedAt = new Date();
-            // Ensure Guardian record exists
             let guardian = await this.guardianRepo.findOne({ where: { userId: guardianId } });
             if (!guardian) {
                 guardian = this.guardianRepo.create({ userId: guardianId });
@@ -98,6 +99,14 @@ export class GuardiansService {
         const link = await this.linkRepo.findOne({ where: { linkId, tripId } });
         if (!link || (link.memberId !== userId && link.guardianId !== userId)) {
             throw new NotFoundException('해당 가디언 연결을 찾을 수 없거나 권한이 없습니다');
+        }
+
+        // §10.2: 미성년자 가디언 해제 제한
+        if (link.memberId === userId) {
+            const user = await this.userRepo.findOne({ where: { userId }, select: ['minorStatus'] });
+            if (user?.minorStatus === 'minor') {
+                throw new ForbiddenException('미성년자 사용자는 등록된 가디언을 임의로 해제할 수 없습니다. (비즈니스 원칙 §10.2)');
+            }
         }
 
         await this.linkRepo.remove(link);
@@ -176,7 +185,6 @@ export class GuardiansService {
 
     // ── 긴급 위치 요청 ──
     async requestLocation(linkId: string, tripId: string, guardianUserId: string, memberId: string) {
-        // 시간당 제한 체크 (v3.2 사양: 시간당 3회)
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         const recentCount = await this.locReqRepo.count({
             where: {

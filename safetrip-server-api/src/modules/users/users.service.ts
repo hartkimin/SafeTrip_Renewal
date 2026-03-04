@@ -29,13 +29,18 @@ export class UsersService {
 
     private async formatUserResponse(user: User) {
         const userRole = await this.getUserRole(user.userId);
+        let dobStr = null;
+        if (user.dateOfBirth) {
+            const dob = user.dateOfBirth instanceof Date ? user.dateOfBirth : new Date(user.dateOfBirth);
+            dobStr = dob.toISOString().split('T')[0];
+        }
         return {
             user_id: user.userId,
             phone_number: user.phoneNumber,
             phone_country_code: user.phoneCountryCode,
             display_name: user.displayName,
             profile_image_url: user.profileImageUrl,
-            date_of_birth: user.dateOfBirth ? user.dateOfBirth.toISOString().split('T')[0] : null,
+            date_of_birth: dobStr,
             location_sharing_mode: user.locationSharingMode,
             last_verification_at: user.lastVerificationAt,
             created_at: user.createdAt,

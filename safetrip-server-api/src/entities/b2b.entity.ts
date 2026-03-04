@@ -58,6 +58,13 @@ export class B2bContract {
     @Column({ name: 'max_members', type: 'int', default: 100 })
     maxMembers: number;
 
+    /** v3.4: 최대 여행 개수 제한 */
+    @Column({ name: 'max_trips', type: 'int', default: 10 })
+    maxTrips: number;
+
+    @Column({ name: 'current_trip_count', type: 'int', default: 0 })
+    currentTripCount: number;
+
     @Column({ name: 'status', type: 'varchar', length: 20, default: 'active' })
     status: string; // 'pending' | 'active' | 'expired' | 'terminated'
 

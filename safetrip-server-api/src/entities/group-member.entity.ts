@@ -27,13 +27,16 @@ export class GroupMember {
     tripId: string; // NOT NULL 확정 (v3.0)
 
     @Column({ name: 'member_role', type: 'varchar', length: 20, default: 'crew' })
-    memberRole: string; // 'captain' | 'crew_chief' | 'crew'
+    memberRole: string; // 'captain' | 'crew_chief' | 'crew' | 'guardian'
 
     @Column({ name: 'status', type: 'varchar', length: 20, default: 'active' })
     status: string; // 'active' | 'left' | 'removed'
 
     @Column({ name: 'is_admin', type: 'boolean', default: false })
     isAdmin: boolean;
+
+    @Column({ name: 'location_sharing_enabled', type: 'boolean', default: true })
+    locationSharingEnabled: boolean;
 
     @Column({ name: 'can_edit_schedule', type: 'boolean', default: false })
     canEditSchedule: boolean;

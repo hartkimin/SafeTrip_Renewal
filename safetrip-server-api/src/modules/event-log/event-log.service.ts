@@ -1,13 +1,20 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { EventLog } from '../../entities/event-log.entity';
+import { GroupMember } from '../../entities/group-member.entity';
+import { Geofence } from '../../entities/geofence.entity';
+import { User } from '../../entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class EventLogService {
     constructor(
-        @InjectRepository(EventLog)
-        private eventLogRepo: Repository<EventLog>,
+        @InjectRepository(EventLog) private eventLogRepo: Repository<EventLog>,
+        @InjectRepository(GroupMember) private memberRepo: Repository<GroupMember>,
+        @InjectRepository(Geofence) private geofenceRepo: Repository<Geofence>,
+        @InjectRepository(User) private userRepo: Repository<User>,
+        private notifService: NotificationsService,
     ) { }
 
     async create(body: any) {
@@ -37,12 +44,80 @@ export class EventLogService {
 
         const saved = await this.eventLogRepo.save(log);
 
-        // TODO: Async FCM triggers or linking logic
+        // Async FCM triggers
+        this.handleEventNotification(saved).catch(err => console.error('FCM trigger error:', err));
 
         return {
             event_id: saved.eventId,
             message: 'Event log recorded successfully',
         };
+    }
+
+    private async handleEventNotification(event: EventLog) {
+        // Geofence Events
+        if (event.eventType === 'GEOFENCE_ENTER' || event.eventType === 'GEOFENCE_EXIT') {
+            await this.notifyGeofenceEvent(event);
+        }
+        // Member Join/Leave Events (Client usually sends these when joining via invitation)
+        else if (event.eventType === 'MEMBER_JOIN' || event.eventType === 'MEMBER_LEAVE') {
+            await this.notifyMemberEvent(event);
+        }
+    }
+
+    private async notifyGeofenceEvent(event: EventLog) {
+        if (!event.groupId || !event.geofenceId) return;
+
+        const geofence = await this.geofenceRepo.findOne({ where: { geofenceId: event.geofenceId } });
+        if (!geofence) return;
+
+        const sender = await this.userRepo.findOne({ where: { userId: event.userId } });
+        const senderName = sender?.displayName || sender?.userName || 'Traveler';
+
+        const action = event.eventType === 'GEOFENCE_ENTER' ? 'entered' : 'exited';
+        const title = `📍 Geofence Alert: ${geofence.name}`;
+        const body = `${senderName} has ${action} ${geofence.name}.`;
+
+        await this.notifyAdmins(event.groupId, title, body, 'GEOFENCE', event.geofenceId);
+    }
+
+    private async notifyMemberEvent(event: EventLog) {
+        if (!event.groupId) return;
+
+        const sender = await this.userRepo.findOne({ where: { userId: event.userId } });
+        const senderName = sender?.displayName || sender?.userName || 'Traveler';
+
+        const action = event.eventType === 'MEMBER_JOIN' ? 'joined' : 'left';
+        const title = `👥 Member Update`;
+        const body = `${senderName} has ${action} the trip.`;
+
+        await this.notifyAdmins(event.groupId, title, body, 'MEMBER', event.userId);
+    }
+
+    private async notifyAdmins(groupId: string, title: string, body: string, refType: string, refId: string) {
+        // Captain과 Crew Chief 찾기
+        const admins = await this.memberRepo.find({
+            where: {
+                groupId,
+                status: 'active',
+                memberRole: In(['captain', 'crew_chief'])
+            },
+            select: ['userId', 'tripId']
+        });
+
+        if (admins.length === 0) return;
+
+        const tripId = admins[0].tripId;
+
+        for (const admin of admins) {
+            await this.notifService.send(admin.userId, {
+                title,
+                body,
+                notificationType: 'ALERT',
+                referenceId: refId,
+                referenceType: refType,
+                tripId: tripId,
+            });
+        }
     }
 
     async find(query: any) {

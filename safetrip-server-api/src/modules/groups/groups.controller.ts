@@ -15,6 +15,22 @@ export class GroupsController {
         return this.groupsService.create(userId, body.groupName, body.groupType);
     }
 
+    // ── Static routes first (before :groupId parameterized routes) ──
+
+    @Get('users/:userId/recent-groups')
+    @ApiOperation({ summary: '최근 그룹 조회' })
+    findRecentGroup(@Param('userId') userId: string) {
+        return this.groupsService.findRecentGroup(userId);
+    }
+
+    @Get('preview-by-code/:code')
+    @ApiOperation({ summary: '초대 코드 미리보기' })
+    previewByCode(@Param('code') code: string) {
+        return this.groupsService.previewByCode(code);
+    }
+
+    // ── Parameterized routes ──
+
     @Get(':groupId')
     @ApiOperation({ summary: '그룹 상세 조회' })
     findOne(@Param('groupId') groupId: string) {
@@ -29,12 +45,6 @@ export class GroupsController {
         @Query('user_id') queryUserId?: string,
     ) {
         return this.groupsService.findMyPermission(groupId, userId || queryUserId || '');
-    }
-
-    @Get('users/:userId/recent-groups')
-    @ApiOperation({ summary: '최근 그룹 조회' })
-    findRecentGroup(@Param('userId') userId: string) {
-        return this.groupsService.findRecentGroup(userId);
     }
 
     @Get(':tripId/members')
@@ -74,12 +84,6 @@ export class GroupsController {
     }
 
     // ── 초대 코드 (Role-based Invite Codes) ──
-    @Get('preview-by-code/:code')
-    @ApiOperation({ summary: '초대 코드 미리보기' })
-    previewByCode(@Param('code') code: string) {
-        return this.groupsService.previewByCode(code);
-    }
-
     @Post('join-by-code/:code')
     @ApiOperation({ summary: '신규 가입용 초대 코드로 가입' })
     joinByCode(

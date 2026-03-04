@@ -93,4 +93,24 @@ export class AuthController {
     async cancelDeletion(@CurrentUser() userId: string) {
         return this.authService.cancelDeletion(userId);
     }
+
+    @Post('minor-consent-otp')
+    @ApiBearerAuth('firebase-auth')
+    @ApiOperation({ summary: '미성년자 보호자 동의 OTP 발송' })
+    async sendMinorConsentOtp(
+        @CurrentUser() userId: string,
+        @Body() body: { phone: string }
+    ) {
+        return this.authService.sendMinorConsentOtp(userId, body.phone);
+    }
+
+    @Post('submit-parental-consent')
+    @ApiBearerAuth('firebase-auth')
+    @ApiOperation({ summary: '법정대리인 동의 제출' })
+    async submitParentalConsent(
+        @CurrentUser() userId: string,
+        @Body() body: { parentName: string, parentPhone: string, relationship: string, otp: string }
+    ) {
+        return this.authService.submitParentalConsent(userId, body);
+    }
 }

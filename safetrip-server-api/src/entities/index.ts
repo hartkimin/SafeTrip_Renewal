@@ -67,6 +67,9 @@ export {
 // Event Log Domain (L)
 export { EventLog } from './event-log.entity';
 
+// AI Domain (O)
+export { AiUsage } from './ai.entity';
+
 // Schedule Domain (M)
 export { Schedule } from './schedule.entity';
 export { TravelSchedule } from './travel-schedule.entity';

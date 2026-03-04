@@ -32,6 +32,20 @@ export class B2bService {
         return this.contractRepo.findOne({ where: { orgId, status: 'active' } });
     }
 
+    /** 
+     * §01.2 B2B 계약 쿼터 확인 
+     */
+    async checkTripQuota(contractId: string): Promise<boolean> {
+        const contract = await this.contractRepo.findOne({ where: { contractId } });
+        if (!contract) return false;
+        
+        return contract.currentTripCount < contract.maxTrips;
+    }
+
+    async incrementTripCount(contractId: string) {
+        await this.contractRepo.increment({ contractId }, 'currentTripCount', 1);
+    }
+
     // ── 관리자 ──
     async getAdmins(orgId: string) {
         return this.adminRepo.find({ where: { orgId, isActive: true } });

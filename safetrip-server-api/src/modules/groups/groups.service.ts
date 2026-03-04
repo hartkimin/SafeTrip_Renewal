@@ -69,6 +69,11 @@ export class GroupsService {
     }
 
     async addMember(groupId: string, tripId: string, userId: string, role = 'crew') {
+        // §02.2: 일정 겹침 체크 (captain/crew_chief/crew 대상)
+        if (['captain', 'crew_chief', 'crew'].includes(role)) {
+            await this.checkDateOverlap(userId, tripId);
+        }
+
         // captain 유일성 체크
         if (role === 'captain') {
             const existing = await this.memberRepo.findOne({
@@ -90,6 +95,39 @@ export class GroupsService {
             canManageGeofences: role === 'captain' || role === 'crew_chief',
         });
         return this.memberRepo.save(member);
+    }
+
+    /**
+     * §02.2 일정 충돌 검증 로직
+     * captain, crew_chief, crew는 겹치는 기간의 여행에 중복 참여 불가
+     */
+    private async checkDateOverlap(userId: string, targetTripId: string) {
+        const targetTrip = await this.tripRepo.findOne({ where: { tripId: targetTripId } });
+        if (!targetTrip) throw new NotFoundException('Target trip not found');
+
+        // 참여 중인 active/planning 상태의 여행 멤버 정보 조회
+        const allMyActive = await this.dataSource.query(`
+            SELECT t.start_date, t.end_date, t.trip_id, t.destination
+            FROM tb_group_member gm
+            JOIN tb_trip t ON gm.trip_id = t.trip_id
+            WHERE gm.user_id = $1 
+              AND gm.status = 'active'
+              AND gm.member_role IN ('captain', 'crew_chief', 'crew')
+              AND t.status IN ('planning', 'active')
+              AND t.trip_id != $2
+        `, [userId, targetTripId]);
+
+        for (const trip of allMyActive) {
+            const existingStart = new Date(trip.start_date);
+            const existingEnd = new Date(trip.end_date);
+            const targetStart = new Date(targetTrip.startDate);
+            const targetEnd = new Date(targetTrip.endDate);
+
+            // 겹침 조건: (StartA <= EndB) and (EndA >= StartB)
+            if (existingStart <= targetEnd && existingEnd >= targetStart) {
+                throw new BadRequestException(`일정이 겹치는 다른 여행(${trip.destination})에 이미 참여 중입니다. (비즈니스 원칙 §02.2)`);
+            }
+        }
     }
 
     async getMembers(tripId: string) {

@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, In } from 'typeorm';
 import { Emergency, EmergencyContact, SosEvent, NoResponseEvent } from '../../entities/emergency.entity';
+import { GroupMember } from '../../entities/group-member.entity';
+import { Guardian, GuardianLink } from '../../entities/guardian.entity';
+import { User } from '../../entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class EmergenciesService {
@@ -10,6 +14,11 @@ export class EmergenciesService {
         @InjectRepository(EmergencyContact) private contactRepo: Repository<EmergencyContact>,
         @InjectRepository(SosEvent) private sosRepo: Repository<SosEvent>,
         @InjectRepository(NoResponseEvent) private noResponseRepo: Repository<NoResponseEvent>,
+        @InjectRepository(GroupMember) private memberRepo: Repository<GroupMember>,
+        @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
+        @InjectRepository(GuardianLink) private linkRepo: Repository<GuardianLink>,
+        @InjectRepository(User) private userRepo: Repository<User>,
+        private notifService: NotificationsService,
     ) { }
 
     /** 긴급 상황 생성 (SOS 포함, 5분 쿨다운) */
@@ -48,10 +57,66 @@ export class EmergenciesService {
                 triggerMethod: data.triggerMethod || 'button',
             });
             await this.sosRepo.save(sos);
+
+            // SOS 알림 발송 로직
+            await this.handleSosNotification(userId, tripId, saved);
         }
 
-        // TODO: FCM 알림 발송 로직
         return saved;
+    }
+
+    private async handleSosNotification(senderId: string, tripId: string, emergency: Emergency) {
+        try {
+            // 발송자 이름 가져오기
+            const sender = await this.userRepo.findOne({ where: { userId: senderId } });
+            const senderName = sender?.displayName || sender?.userName || 'Traveler';
+
+            const title = `🚨 SOS EMERGENCY!`;
+            const body = `${senderName} is in an emergency! Please check the map immediately.`;
+
+            // 1. 그룹 전체 멤버 (본인 제외)
+            const members = await this.memberRepo.find({
+                where: { tripId, status: 'active' },
+                select: ['userId']
+            });
+            const memberUserIds = members
+                .map(m => m.userId)
+                .filter(id => id !== senderId);
+
+            // 2. 발송자의 가디언 (가입된 유저만)
+            const links = await this.linkRepo.find({
+                where: { tripId, memberId: senderId, status: 'active' },
+                select: ['guardianId']
+            });
+            const guardianIds = links.map(l => l.guardianId).filter(id => id !== null);
+            
+            let guardianUserIds: string[] = [];
+            if (guardianIds.length > 0) {
+                const guardians = await this.guardianRepo.find({
+                    where: { guardianId: In(guardianIds) },
+                    select: ['userId']
+                });
+                guardianUserIds = guardians.map(g => g.userId);
+            }
+
+            // 중복 제거 및 최종 수신자 명단
+            const recipientUserIds = Array.from(new Set([...memberUserIds, ...guardianUserIds]));
+
+            // 순차적 발송 (NotificationsService.send가 DB 저장까지 함)
+            // 대량 발송의 경우 성능 이슈가 있을 수 있으나 현재는 P0 구현에 집중
+            for (const recipientId of recipientUserIds) {
+                await this.notifService.send(recipientId, {
+                    title,
+                    body,
+                    notificationType: 'SOS',
+                    referenceId: emergency.emergencyId,
+                    referenceType: 'EMERGENCY',
+                    tripId,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send SOS notification:', error);
+        }
     }
 
     async getEmergencies(tripId: string) {

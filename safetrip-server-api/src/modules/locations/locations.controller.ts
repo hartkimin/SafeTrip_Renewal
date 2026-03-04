@@ -58,6 +58,20 @@ export class LocationsController {
         };
     }
 
+    @Get('trips/:tripId/locations/guardian-view')
+    @ApiOperation({ summary: '가디언용 멤버 최신 위치 조회 (프라이버시 등급 반영)' })
+    async getGuardianView(
+        @CurrentUser() guardianUserId: string,
+        @Param('tripId') tripId: string,
+        @Query('member_user_id') memberUserId: string,
+    ) {
+        const result = await this.locationsService.getGuardianView(tripId, memberUserId, guardianUserId);
+        return {
+            success: true,
+            data: result
+        };
+    }
+
     @Get('trips/:tripId/locations/sharing-settings')
     @ApiOperation({ summary: '9.A.4 내 위치 공유 설정 조회' })
     async getSharingSettings(

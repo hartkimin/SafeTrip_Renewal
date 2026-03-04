@@ -26,8 +26,7 @@ export class User {
     @Column({ name: 'date_of_birth', type: 'date', nullable: true })
     dateOfBirth: Date | null;
 
-    @Column({ name: 'user_role', type: 'varchar', length: 20, default: 'crew' })
-    userRole: string; // 'crew' | 'guardian'
+    currentUserRole: string; // Not a DB column, renamed to avoid TypeORM conflict
 
     @Column({ name: 'install_id', type: 'varchar', length: 128, nullable: true })
     installId: string | null;
@@ -69,4 +68,35 @@ export class User {
 
     @Column({ name: 'last_active_at', type: 'timestamptz', nullable: true })
     lastActiveAt: Date | null;
+}
+
+/**
+ * TB_PARENTAL_CONSENT — 법정대리인 동의 기록 (도메인 A)
+ * DB 설계 v3.4 §4.1a
+ */
+@Entity('tb_parental_consent')
+export class ParentalConsent {
+    @PrimaryColumn({ name: 'user_id', type: 'varchar', length: 128 })
+    userId: string;
+
+    @Column({ name: 'parent_name', type: 'varchar', length: 50, nullable: true })
+    parentName: string | null;
+
+    @Column({ name: 'parent_phone', type: 'varchar', length: 20, nullable: true })
+    parentPhone: string | null;
+
+    @Column({ name: 'relationship', type: 'varchar', length: 20, nullable: true })
+    relationship: string | null;
+
+    @Column({ name: 'consent_otp', type: 'varchar', length: 10, nullable: true })
+    consentOtp: string | null;
+
+    @Column({ name: 'is_verified', type: 'boolean', default: false })
+    isVerified: boolean;
+
+    @Column({ name: 'verified_at', type: 'timestamptz', nullable: true })
+    verifiedAt: Date | null;
+
+    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    createdAt: Date;
 }
