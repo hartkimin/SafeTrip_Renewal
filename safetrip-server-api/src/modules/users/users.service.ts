@@ -3,15 +3,32 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Not } from 'typeorm';
 import { User } from '../../entities/user.entity';
 import { FcmToken } from '../../entities/notification.entity';
+import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(FcmToken) private fcmRepo: Repository<FcmToken>,
+        @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
+        @InjectRepository(GuardianLink) private guardianLinkRepo: Repository<GuardianLink>,
     ) { }
 
-    private formatUserResponse(user: User) {
+    /**
+     * 사용자가 활성 가디언 링크를 가진 가디언인지 확인
+     */
+    private async getUserRole(userId: string): Promise<'guardian' | 'crew'> {
+        const guardian = await this.guardianRepo.findOne({ where: { userId } });
+        if (!guardian) return 'crew';
+
+        const activeLink = await this.guardianLinkRepo.findOne({
+            where: { guardianId: guardian.guardianId, status: 'active' },
+        });
+        return activeLink ? 'guardian' : 'crew';
+    }
+
+    private async formatUserResponse(user: User) {
+        const userRole = await this.getUserRole(user.userId);
         return {
             user_id: user.userId,
             phone_number: user.phoneNumber,
@@ -23,7 +40,7 @@ export class UsersService {
             last_verification_at: user.lastVerificationAt,
             created_at: user.createdAt,
             last_active_at: user.lastActiveAt,
-            user_role: 'crew', // TODO: guardian
+            user_role: userRole,
         };
     }
 
@@ -63,7 +80,7 @@ export class UsersService {
         }
 
         const saved = await this.userRepo.findOne({ where: { userId: uid } });
-        return this.formatUserResponse(saved!);
+        return await this.formatUserResponse(saved!);
     }
 
     async findByPhone(phoneNumber: string, countryCode?: string) {
@@ -75,7 +92,7 @@ export class UsersService {
             throw new NotFoundException('해당 전화번호 사용자 없음');
         }
 
-        return this.formatUserResponse(user);
+        return await this.formatUserResponse(user);
     }
 
     async searchUsers(query: string, excludeUserId: string) {
@@ -97,7 +114,7 @@ export class UsersService {
     async getProfile(userId: string) {
         const user = await this.userRepo.findOne({ where: { userId, ...(false ? { isActive: true } : {}) } }); // soft-deleted logic check needed if isActive exists
         if (!user) throw new NotFoundException('User not found');
-        return this.formatUserResponse(user);
+        return await this.formatUserResponse(user);
     }
 
     async updateProfile(userId: string, data: any) {
@@ -107,7 +124,7 @@ export class UsersService {
 
         await this.userRepo.update(userId, { ...data, updatedAt: new Date() });
         const updated = await this.userRepo.findOne({ where: { userId } });
-        return this.formatUserResponse(updated!);
+        return await this.formatUserResponse(updated!);
     }
 
     async updateLocationSharingMode(userId: string, mode: string) {
@@ -124,7 +141,7 @@ export class UsersService {
         // check if user exists
         const user = await this.userRepo.findOne({ where: { userId } });
         if (!user) {
-            throw new InternalServerErrorException(`User not found: ${userId}`);
+            throw new NotFoundException(`User not found: ${userId}`);
         }
 
         let fcmToken = await this.fcmRepo.findOne({

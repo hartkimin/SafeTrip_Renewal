@@ -4,13 +4,29 @@ import { Repository } from 'typeorm';
 import * as admin from 'firebase-admin';
 import { FIREBASE_APP } from '../../config/firebase/firebase.module';
 import { User } from '../../entities/user.entity';
+import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectRepository(User) private userRepo: Repository<User>,
+        @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
+        @InjectRepository(GuardianLink) private guardianLinkRepo: Repository<GuardianLink>,
         @Inject(FIREBASE_APP) private firebaseApp: admin.app.App,
     ) { }
+
+    /**
+     * 사용자가 활성 가디언 링크를 가진 가디언인지 확인
+     */
+    private async getUserRole(userId: string): Promise<'guardian' | 'crew'> {
+        const guardian = await this.guardianRepo.findOne({ where: { userId } });
+        if (!guardian) return 'crew';
+
+        const activeLink = await this.guardianLinkRepo.findOne({
+            where: { guardianId: guardian.guardianId, status: 'active' },
+        });
+        return activeLink ? 'guardian' : 'crew';
+    }
 
     /**
      * POST /auth/firebase-verify
@@ -72,6 +88,8 @@ export class AuthService {
                 user.lastActiveAt = new Date();
             }
 
+            const userRole = await this.getUserRole(user.userId);
+
             return {
                 success: true,
                 data: {
@@ -85,7 +103,7 @@ export class AuthService {
                     last_verification_at: user.lastVerificationAt,
                     created_at: user.createdAt,
                     last_active_at: user.lastActiveAt,
-                    user_role: 'crew', // TODO: guardian check if exists
+                    user_role: userRole,
                     is_new_user: isNewUser
                 }
             };
