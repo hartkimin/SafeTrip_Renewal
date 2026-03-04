@@ -84,6 +84,7 @@ export class TripsController {
     }
 
     // ── 파라미터 라우트 (반드시 정적 라우트 뒤에 위치) ──
+    @Public()
     @Get(':tripId')
     @ApiOperation({ summary: '여행 상세 조회' })
     findOne(@Param('tripId') tripId: string) {
