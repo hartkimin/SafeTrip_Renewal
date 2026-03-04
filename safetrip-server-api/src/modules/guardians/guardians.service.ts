@@ -133,19 +133,45 @@ export class GuardiansService {
     // [GET] /api/v1/trips/:tripId/guardians/pending
     async getPendingInvites(guardianId: string) {
         const links = await this.linkRepo.find({
-            where: { guardianId, status: 'pending' }
+            where: { guardianId, status: 'pending' },
+            order: { createdAt: 'DESC' }
         });
 
-        // This query requires trip details and member details.
-        return links;
+        return Promise.all(links.map(async (link) => {
+            const memberUser = await this.userRepo.findOne({ where: { userId: link.memberId } });
+            return {
+                link_id: link.linkId,
+                trip_id: link.tripId,
+                member_id: link.memberId,
+                status: link.status,
+                created_at: link.createdAt,
+                member_display_name: memberUser?.displayName || '',
+                member_phone_number: memberUser?.phoneNumber || '',
+                member_profile_image_url: memberUser?.profileImageUrl || null,
+            };
+        }));
     }
 
     // [GET] /api/v1/trips/:tripId/guardians/linked-members
     async getLinkedMembers(tripId: string, guardianId: string) {
         const links = await this.linkRepo.find({
-            where: { tripId, guardianId, status: 'accepted' }
+            where: { tripId, guardianId, status: 'accepted' },
+            order: { acceptedAt: 'DESC' }
         });
-        return links;
+
+        return Promise.all(links.map(async (link) => {
+            const memberUser = await this.userRepo.findOne({ where: { userId: link.memberId } });
+            return {
+                link_id: link.linkId,
+                member_id: link.memberId,
+                status: link.status,
+                accepted_at: link.acceptedAt,
+                created_at: link.createdAt,
+                display_name: memberUser?.displayName || '',
+                phone_number: memberUser?.phoneNumber || '',
+                profile_image_url: memberUser?.profileImageUrl || null,
+            };
+        }));
     }
 
     // ── 긴급 위치 요청 ──

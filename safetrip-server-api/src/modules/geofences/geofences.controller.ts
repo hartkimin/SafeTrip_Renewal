@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req, BadRequestException, NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Public } from '../../common/decorators/public.decorator';
 import { GeofencesService } from './geofences.service';
 
 @ApiTags('Geofences')
@@ -7,11 +8,11 @@ import { GeofencesService } from './geofences.service';
 export class GeofencesController {
     constructor(private readonly geofencesService: GeofencesService) { }
 
-    @Post('api/v1/groups/:group_id/geofences')
+    @Public()
+    @Post('groups/:group_id/geofences')
     @ApiOperation({ summary: '10.1 지오펜스 생성 (그룹 멤버 등재 확인, 권한 확인 생략)' })
     @ApiParam({ name: 'group_id', type: 'string' })
     async createGeofence(@Param('group_id') groupId: string, @Req() req: any, @Body() body: any) {
-        // 실제로는 authenticate 미들웨어 없이 req.body.user_id 혹은 req.userId 확인
         const userId = req.userId || body.user_id || (req.user && req.user.user_id);
         if (!userId) {
             throw new BadRequestException('user_id is required');
@@ -34,15 +35,13 @@ export class GeofencesController {
 
         const geofence = await this.geofencesService.create(userId, groupId, body);
         return {
-            success: true,
-            data: {
-                geofence_id: geofence.geofenceId
-            },
+            geofence_id: geofence.geofenceId,
             message: 'Geofence created successfully'
         };
     }
 
-    @Get('api/v1/geofences')
+    @Public()
+    @Get('geofences')
     @ApiOperation({ summary: '10.2 지오펜스 목록 조회' })
     @ApiQuery({ name: 'group_id', type: 'string', required: true })
     async getGeofences(@Query('group_id') groupId: string) {
@@ -52,21 +51,19 @@ export class GeofencesController {
 
         const geofences: any[] = []; // await this.geofencesService.findByGroupId(groupId);
         return {
-            success: true,
-            data: {
-                geofences: geofences,
-                total: geofences.length
-            }
+            geofences: geofences,
+            total: geofences.length
         };
     }
 
-    @Get('api/v1/geofences/:id')
+    @Public()
+    @Get('geofences/:id')
     @ApiOperation({ summary: '10.3 지오펜스 상세 조회' })
     @ApiParam({ name: 'id', type: 'string' })
     @ApiQuery({ name: 'group_id', type: 'string', required: true })
     async getGeofenceDetail(@Param('id') id: string, @Query('group_id') groupId: string) {
         if (!id || !groupId) {
-            throw new BadRequestException('geofence_id and group_id are required'); // 명세에서는 이렇게, 실 사용은 알아서
+            throw new BadRequestException('geofence_id and group_id are required');
         }
 
         const geofence = null; // await this.geofencesService.findByIdAndGroupId(id, groupId);
@@ -74,19 +71,17 @@ export class GeofencesController {
             throw new NotFoundException('Geofence not found');
         }
 
-        return {
-            success: true,
-            data: geofence
-        }
+        return geofence;
     }
 
-    @Patch('api/v1/geofences/:id')
+    @Public()
+    @Patch('geofences/:id')
     @ApiOperation({ summary: '10.4 지오펜스 수정' })
     @ApiParam({ name: 'id', type: 'string' })
     @ApiQuery({ name: 'group_id', type: 'string', required: true })
     async updateGeofence(@Param('id') id: string, @Query('group_id') groupId: string, @Body() body: any) {
         if (!id || !groupId) {
-            throw new BadRequestException('geofence_id or group_id missing'); // 대략적 처리
+            throw new BadRequestException('geofence_id or group_id missing');
         }
 
         if (body.center_latitude !== undefined && (body.center_latitude < -90 || body.center_latitude > 90)) {
@@ -102,15 +97,13 @@ export class GeofencesController {
         }
 
         return {
-            success: true,
-            data: {
-                geofence_id: updated.geofenceId,
-                message: 'Geofence updated successfully'
-            }
-        }
+            geofence_id: updated.geofenceId,
+            message: 'Geofence updated successfully'
+        };
     }
 
-    @Delete('api/v1/geofences/:id')
+    @Public()
+    @Delete('geofences/:id')
     @ApiOperation({ summary: '10.5 지오펜스 삭제' })
     @ApiParam({ name: 'id', type: 'string' })
     @ApiQuery({ name: 'group_id', type: 'string', required: true })
@@ -125,15 +118,13 @@ export class GeofencesController {
         }
 
         return {
-            success: true,
-            data: {
-                geofence_id: id,
-                message: 'Geofence deleted successfully'
-            }
-        }
+            geofence_id: id,
+            message: 'Geofence deleted successfully'
+        };
     }
 
-    @Post('api/v1/geofences/events')
+    @Public()
+    @Post('geofences/events')
     @ApiOperation({ summary: '10.6 지오펜스 이벤트 기록' })
     async recordEvent(@Req() req: any, @Body() body: any) {
         const userId = req.userId || (body.params && body.params.user_id);
@@ -157,10 +148,7 @@ export class GeofencesController {
         ); */
 
         return {
-            success: true,
-            data: {
-                message: 'Geofence event recorded'
-            }
+            message: 'Geofence event recorded'
         };
     }
 }

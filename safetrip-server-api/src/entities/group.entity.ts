@@ -29,6 +29,9 @@ export class Group {
     @Column({ name: 'current_member_count', type: 'int', default: 1 })
     currentMemberCount: number;
 
+    @Column({ name: 'owner_user_id', type: 'varchar', length: 128, nullable: true })
+    ownerUserId: string;
+
     @Column({ name: 'invite_code', type: 'varchar', length: 20, nullable: true })
     inviteCode: string;
 

@@ -20,32 +20,7 @@ export class GuidesController {
         if (!query) {
             throw new BadRequestException('Query parameter (q) is required');
         }
-
-        const results = await this.guidesService.search(query, country);
-        return {
-            success: true,
-            data: results
-        };
-    }
-
-    @Public()
-    @Get(':countryCode')
-    @ApiOperation({ summary: '국가별 가이드 조회' })
-    @ApiParam({ name: 'countryCode', required: true, description: 'ISO alpha-2 국가 코드' })
-    async getGuideByCountry(@Param('countryCode') countryCode: string) {
-        if (!countryCode) {
-            throw new BadRequestException('countryCode is required');
-        }
-
-        const guide = await this.guidesService.findByCountryCode(countryCode.toUpperCase());
-        if (!guide) {
-            throw new NotFoundException('Guide not found for the specified country');
-        }
-
-        return {
-            success: true,
-            data: guide
-        };
+        return this.guidesService.search(query, country);
     }
 
     @Public()
@@ -56,15 +31,25 @@ export class GuidesController {
         if (!countryCode) {
             throw new BadRequestException('countryCode is required');
         }
-
         const emergencyContacts = await this.guidesService.getEmergencyContacts(countryCode.toUpperCase());
         if (!emergencyContacts) {
             throw new NotFoundException('Emergency contacts not found for the specified country');
         }
+        return emergencyContacts;
+    }
 
-        return {
-            success: true,
-            data: emergencyContacts
-        };
+    @Public()
+    @Get(':countryCode')
+    @ApiOperation({ summary: '국가별 가이드 조회' })
+    @ApiParam({ name: 'countryCode', required: true, description: 'ISO alpha-2 국가 코드' })
+    async getGuideByCountry(@Param('countryCode') countryCode: string) {
+        if (!countryCode) {
+            throw new BadRequestException('countryCode is required');
+        }
+        const guide = await this.guidesService.findByCountryCode(countryCode.toUpperCase());
+        if (!guide) {
+            throw new NotFoundException('Guide not found for the specified country');
+        }
+        return guide;
     }
 }

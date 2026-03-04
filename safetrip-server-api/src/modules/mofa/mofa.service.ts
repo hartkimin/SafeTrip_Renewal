@@ -91,4 +91,23 @@ export class MofaService {
             local_contact: local_contact || { items: [], totalCount: 0 }
         };
     }
+
+    async getAll(countryCode: string) {
+        const [summary, safety, entry, medical, contacts] = await Promise.all([
+            this.getSummary(countryCode),
+            this.getSafetyInfo(countryCode),
+            this.getEntryInfo(countryCode),
+            this.getMedicalInfo(countryCode),
+            this.getContacts(countryCode),
+        ]);
+
+        return {
+            country_code: countryCode,
+            summary,
+            safety,
+            entry,
+            medical,
+            contacts,
+        };
+    }
 }

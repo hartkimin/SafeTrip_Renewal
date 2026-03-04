@@ -268,7 +268,7 @@ export class GroupsService {
             throw new ForbiddenException('Permission denied: admin role required');
         }
 
-        const codes = await this.inviteCodeRepo.find({ where: { groupId, isActive: true } });
+        const codes = await this.inviteCodeRepo.find({ where: { groupId } });
         return { invite_codes: codes };
     }
 
@@ -335,7 +335,7 @@ export class GroupsService {
 
             await queryRunner.manager.update(Group,
                 { groupId },
-                { /*ownerUserId: targetUserId*/ } as any
+                { ownerUserId: targetUserId }
             );
 
             // Log transfer

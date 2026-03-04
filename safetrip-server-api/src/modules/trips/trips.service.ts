@@ -112,6 +112,35 @@ export class TripsService {
         return this.findById(tripId);
     }
 
+    // ── 멤버 관리 ─────────────────────────────────────────────────
+    async updateMember(tripId: string, memberId: string, updaterId: string, data: Partial<GroupMember>) {
+        const updater = await this.memberRepo.findOne({
+            where: { tripId, userId: updaterId, status: 'active' },
+        });
+
+        if (!updater || (!updater.isAdmin && !updater.canManageMembers && updater.memberRole !== 'captain')) {
+            throw new ForbiddenException('Permission denied: Cannot manage members');
+        }
+
+        const targetMember = await this.memberRepo.findOne({
+            where: { tripId, memberId }
+        });
+
+        if (!targetMember) {
+            throw new NotFoundException('Member not found in this trip');
+        }
+
+        // Apply allowed updates
+        const allowedFields = ['memberRole', 'canEditSchedule', 'canManageMembers', 'canSendNotifications', 'canViewLocation', 'canManageGeofences', 'isAdmin'];
+        for (const key of allowedFields) {
+            if (data[key] !== undefined) {
+                (targetMember as any)[key] = data[key];
+            }
+        }
+
+        return this.memberRepo.save(targetMember);
+    }
+
     // ── 일정 관리 ─────────────────────────────────────────────────
     async getSchedules(tripId: string) {
         const schedules = await this.scheduleRepo.find({
@@ -227,7 +256,10 @@ export class TripsService {
 
     async verifyInviteCode(code: string) {
         const group = await this.groupRepo.findOne({ where: { inviteCode: code } });
-        return { exists: !!group };
+        return {
+            exists: !!group,
+            expired: group ? !group.isActive : false,
+        };
     }
 
     async joinTrip(inviteCode: string, userId: string) {

@@ -110,7 +110,7 @@ export class LocationsController {
             data: result
         };
     }
-    @Get('api/v1/locations/users/:userId/movement-sessions/summary')
+    @Get('locations/users/:userId/movement-sessions/summary')
     @ApiOperation({ summary: '9.4 이동 세션 요약 목록 조회' })
     async getMovementSessionsSummary(
         @Param('userId') userId: string,
@@ -124,7 +124,7 @@ export class LocationsController {
         return { success: true, data: result };
     }
 
-    @Get('api/v1/locations/users/:userId/movement-sessions/date-range')
+    @Get('locations/users/:userId/movement-sessions/date-range')
     @ApiOperation({ summary: '9.5 이동 세션 날짜 범위 조회' })
     async getMovementSessionsDateRange(
         @Param('userId') userId: string,
@@ -134,7 +134,7 @@ export class LocationsController {
         return { success: true, data: result };
     }
 
-    @Get('api/v1/locations/users/:userId/movement-sessions/by-date')
+    @Get('locations/users/:userId/movement-sessions/by-date')
     @ApiOperation({ summary: '9.6 날짜별 이동 세션 목록 조회' })
     async getMovementSessionsByDate(
         @Param('userId') userId: string,
@@ -149,7 +149,7 @@ export class LocationsController {
         return { success: true, data: result };
     }
 
-    @Get('api/v1/locations/users/:userId/movement-sessions/:sessionId')
+    @Get('locations/users/:userId/movement-sessions/:sessionId')
     @ApiOperation({ summary: '9.7 이동 세션 상세 조회' })
     async getMovementSessionDetail(
         @Param('userId') userId: string,
@@ -160,7 +160,7 @@ export class LocationsController {
         return { success: true, data: result };
     }
 
-    @Patch('api/v1/locations/users/:userId/movement-sessions/:sessionId/complete')
+    @Patch('locations/users/:userId/movement-sessions/:sessionId/complete')
     @ApiOperation({ summary: '9.8 이동 세션 완료 처리' })
     async completeMovementSession(
         @Param('userId') userId: string,
@@ -176,7 +176,7 @@ export class LocationsController {
         return { success: true, data: { success: true } };
     }
 
-    @Get('api/v1/locations/users/:userId/movement-sessions/:sessionId/events')
+    @Get('locations/users/:userId/movement-sessions/:sessionId/events')
     @ApiOperation({ summary: '9.9 이동 세션 이벤트 목록 조회' })
     async getMovementSessionEvents(
         @Param('userId') userId: string,

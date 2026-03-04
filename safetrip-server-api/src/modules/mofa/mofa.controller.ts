@@ -16,13 +16,21 @@ export class MofaController {
     }
 
     @Public()
+    @Get('country/:countryCode/all')
+    @ApiOperation({ summary: '국가 전체 정보 통합 조회 (MOFA)' })
+    @ApiParam({ name: 'countryCode', required: true, description: 'ISO alpha-2 국가 코드' })
+    async getAll(@Param('countryCode') countryCode: string) {
+        const code = this.validateCountryCode(countryCode);
+        return this.mofaService.getAll(code);
+    }
+
+    @Public()
     @Get('country/:countryCode/summary')
     @ApiOperation({ summary: '국가 종합 요약 (MOFA)' })
     @ApiParam({ name: 'countryCode', required: true, description: 'ISO alpha-2 국가 코드 (정확히 2자리)' })
     async getSummary(@Param('countryCode') countryCode: string) {
         const code = this.validateCountryCode(countryCode);
-        const data = await this.mofaService.getSummary(code);
-        return { success: true, data };
+        return this.mofaService.getSummary(code);
     }
 
     @Public()
@@ -31,8 +39,7 @@ export class MofaController {
     @ApiParam({ name: 'countryCode', required: true })
     async getSafetyInfo(@Param('countryCode') countryCode: string) {
         const code = this.validateCountryCode(countryCode);
-        const data = await this.mofaService.getSafetyInfo(code);
-        return { success: true, data };
+        return this.mofaService.getSafetyInfo(code);
     }
 
     @Public()
@@ -41,8 +48,7 @@ export class MofaController {
     @ApiParam({ name: 'countryCode', required: true })
     async getEntryInfo(@Param('countryCode') countryCode: string) {
         const code = this.validateCountryCode(countryCode);
-        const data = await this.mofaService.getEntryInfo(code);
-        return { success: true, data };
+        return this.mofaService.getEntryInfo(code);
     }
 
     @Public()
@@ -51,8 +57,7 @@ export class MofaController {
     @ApiParam({ name: 'countryCode', required: true })
     async getMedicalInfo(@Param('countryCode') countryCode: string) {
         const code = this.validateCountryCode(countryCode);
-        const data = await this.mofaService.getMedicalInfo(code);
-        return { success: true, data };
+        return this.mofaService.getMedicalInfo(code);
     }
 
     @Public()
@@ -61,7 +66,6 @@ export class MofaController {
     @ApiParam({ name: 'countryCode', required: true })
     async getContacts(@Param('countryCode') countryCode: string) {
         const code = this.validateCountryCode(countryCode);
-        const data = await this.mofaService.getContacts(code);
-        return { success: true, data };
+        return this.mofaService.getContacts(code);
     }
 }
