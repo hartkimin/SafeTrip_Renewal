@@ -1,84 +1,77 @@
-# H. 출석 체크
+# SafeTrip 출석 체크 와이어프레임
 
-> **버전:** v1.0 | **작성일:** 2026-03-03
->
-> 이 문서는 SafeTrip 앱의 출석 체크 플로우 5개 화면을 정의한다.
-> 각 화면은 5-섹션 템플릿(메타데이터, 레이아웃, 컴포넌트 명세, 상태 분기, 인터랙션)으로 구성된다.
+| 항목 | 내용 |
+|------|------|
+| 문서 ID | WF-ATT-H |
+| 계층 | 와이어프레임 (화면구성원칙 하위) |
+| 버전 | v2.0 |
+| 작성일 | 2026-03-04 |
+| 기준 문서 | 비즈니스원칙 v5.1, 화면구성원칙 v1.1, 19_멤버탭_원칙 |
 
-**참조 문서:**
+---
+
+## 1. 개요
+
+출석 체크는 6인 이상 유료 여행에서 캡틴/크루장이 크루의 현황을 파악하기 위한 안전 관리 기능이다. 캡틴 또는 크루장이 출석 체크를 생성하면 전체 크루에게 FCM 알림이 발송되며, 설정된 마감 시간 내에 크루가 응답한다. 마감 경과 시 미응답자는 자동으로 `absent` 처리되고 캡틴에게 결과 요약이 전달된다. 출석 체크는 위치 공유 설정 및 프라이버시 등급과 무관하게 동작한다 (비즈니스 원칙 §05.5).
+
+| 항목 | 내용 |
+|------|------|
+| 화면 수 | 4개 (H-01 ~ H-04) |
+| Phase | 전체 P1 |
+| 과금 조건 | 6명 이상 유료 여행 (§09.2) |
+| 기본 제한 시간 | 10분 (캡틴/크루장 설정 가능) |
+| 생성 권한 | 캡틴, 크루장 |
+| 응답 권한 | 크루 |
+| 연관 테이블 | `TB_ATTENDANCE_CHECK`, `TB_ATTENDANCE_RESPONSE` |
+| API 엔드포인트 | `POST /api/v1/groups/:group_id/attendance/start` |
+
+### 참조 문서
 
 | 문서 | 경로 |
 |------|------|
 | 글로벌 스타일 가이드 | `docs/wireframes/00_Global_Style_Guide.md` |
 | 비즈니스 원칙 v5.1 | `Master_docs/01_T1_SafeTrip_비즈니스_원칙_v5.1.md` |
-| DB 설계 v3.5 | `Master_docs/07_T2_DB_설계_및_관계_v3_5.md` |
-| API 명세서 Part2 | `Master_docs/37_T2_API_명세서_Part2.md` |
-| 화면 목업 계획 | `docs/plans/2026-03-03-screen-design-mockup-plan.md` |
+| 멤버탭 원칙 | `Master_docs/19_T3_멤버탭_원칙.md` |
+| DB 설계 v3.4 | `Master_docs/07_T2_DB_설계_및_관계_v3_4.md` |
+| 화면 구성 원칙 | `Master_docs/10_T2_화면구성원칙.md` |
 
----
-
-## 개요
-
-- **화면 수:** 5개 (H-01 ~ H-05)
-- **Phase:** 전체 P1
-- **핵심 역할:** 캡틴/크루장 (생성), 크루 (응답), 가디언 (결과 조회)
-- **연관 테이블:** `TB_ATTENDANCE_CHECK`, `TB_ATTENDANCE_RESPONSE`
-- **API 엔드포인트:** `POST /api/v1/groups/:group_id/attendance/start`
-
----
-
-## User Journey Flow
+### User Journey Flow
 
 ```
-[캡틴/크루장]                    [크루]                      [가디언]
-     │                            │                           │
-  H-01 출석 체크 생성              │                           │
-     │                            │                           │
-     ├── [출석 시작] ──→ FCM Push ──→ H-02 출석 응답             │
-     │                            │                           │
-     │                      [출석/결석 응답]                    │
-     │                            │                           │
-  H-03 출석 진행 현황 ←──── 실시간 업데이트 ──────────────────────│
-     │                                                        │
-     ├── [마감 시간 경과]                                      │
-     │                                                        │
-  H-04 출석 결과 ──────────────────────────────────→ H-05 가디언 출석 결과
+[캡틴/크루장]                          [크루]
+     |                                  |
+  H-01 출석 체크 생성                    |
+     |                                  |
+     +-- [출석 시작] --> FCM Push -----> H-02 출석 응답
+     |                                  |
+     |                           [출석/결석 응답]
+     |                                  |
+  H-03 출석 진행 현황 <-- 실시간 업데이트 --+
+     |
+     +-- [마감 시간 경과 / 즉시 마감]
+     |
+  H-04 출석 결과
 ```
 
----
-
-## 외부 진입/이탈 참조
-
-| 출발 | 조건 | 도착 | 카테고리 |
-|------|------|------|---------|
-| D-01 멤버탭 | 캡틴/크루장 "출석 체크" 액션 | H-01 출석 체크 생성 | H |
-| FCM Push 알림 | 크루 알림 탭 | H-02 출석 응답 | H |
-| H-01 | 출석 시작 완료 | H-03 출석 진행 현황 | H |
-| H-03 | 마감 시간 경과 | H-04 출석 결과 | H |
-| F-04 가디언홈 | 출석 결과 알림 | H-05 가디언 출석 결과 | H |
-| H-04 | 완료 | D-01 멤버탭 | D |
-
----
-
-## 디자인 토큰 (출석 전용)
+### 디자인 토큰 (출석 전용)
 
 | 토큰명 | HEX | 용도 |
 |--------|-----|------|
 | `attendanceGreen` | `#4CAF50` | 출석 상태 배경, 출석 버튼 |
-| `absentRed` | `#DA4C51` | 결석 상태 배경, 결석 버튼 (`semanticError`) |
-| `noResponseGray` | `#8E8E93` | 미응답 상태 배경 (`onSurfaceVariant`) |
-| `timerUrgent` | `#FF807B` | 마감 5분 이내 카운트다운 (`primaryCoral`) |
-| `progressTrack` | `#EDEDED` | 진행률 바 트랙 (`outline`) |
+| `absentRed` | `#DA4C51` | 결석 상태 배경, 결석 버튼 |
+| `noResponseGray` | `#8E8E93` | 미응답 상태 배경 |
+| `timerUrgent` | `#FF807B` | 마감 5분 이내 카운트다운 |
+| `progressTrack` | `#EDEDED` | 진행률 바 트랙 |
 
 ---
 
-## 화면 상세
+## 2. 화면 정의
 
 ---
 
-### H-01 출석 체크 생성 (Attendance Create)
+### 2.1 [H-01] 출석 체크 생성
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
@@ -86,10 +79,10 @@
 | 화면명 | 출석 체크 생성 (Attendance Create) |
 | Phase | P1 |
 | 역할 | 캡틴, 크루장 |
-| 진입 경로 | D-01 멤버탭 → "출석 체크" 액션 → H-01 |
-| 이탈 경로 | H-01 → H-03 (출석 시작 성공) / H-01 → D-01 (취소) |
+| 진입 경로 | D-09 멤버탭 → "출석 체크" 액션 → H-01 |
+| 이탈 경로 | H-01 → H-03 (출석 시작 성공) / H-01 → D-09 (취소) |
 
-**레이아웃**
+#### 레이아웃
 
 ```
 ┌─────────────────────────────┐
@@ -104,11 +97,11 @@
 │  ┌─ 마감 시간 ──────────────┐│
 │  │ ⏰  마감 시간 설정         ││ Card_Standard
 │  │                          ││
-│  │    14:30                 ││ headlineMedium, primaryTeal
-│  │    (30분 후)              ││ bodySmall, onSurfaceVariant
+│  │    14:10                 ││ headlineMedium, primaryTeal
+│  │    (10분 후)              ││ bodySmall, onSurfaceVariant
 │  │                          ││
-│  │  [15분] [30분] [1시간]    ││ Chip_Tag (퀵 선택)
-│  │  [직접 입력]              ││ Chip_Tag (outlined)
+│  │  [10분] [15분] [30분]     ││ Chip_Tag (퀵 선택)
+│  │  [1시간] [직접 입력]       ││ Chip_Tag (outlined)
 │  └──────────────────────────┘│
 │                             │ spacing16
 │  ┌─ 대상 멤버 ──────────────┐│
@@ -116,8 +109,7 @@
 │  │                          ││
 │  │  ☑ 전체 선택 (8명)        ││ CheckboxListTile (master)
 │  │  ─────────────────────── ││ Divider
-│  │  ☑ 👤 홍길동    캡틴       ││ CheckboxListTile + Badge_Role
-│  │  ☑ 👤 김철수    크루장     ││ CheckboxListTile + Badge_Role
+│  │  ☑ 👤 홍길동    크루       ││ CheckboxListTile + Badge_Role
 │  │  ☑ 👤 이영희    크루       ││ CheckboxListTile + Badge_Role
 │  │  ☑ 👤 박민수    크루       ││ CheckboxListTile + Badge_Role
 │  │  ...                     ││
@@ -134,64 +126,66 @@
 └─────────────────────────────┘
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "출석 체크 생성", leading: BackButton, style: AppBar_Standard |
-| 제목 | `Text` | style: headlineMedium (24sp, SemiBold), color: onSurface |
-| 설명 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant |
-| 마감 시간 카드 | `Card` | style: Card_Standard, padding: spacing16 |
-| 시간 표시 | `Text` | style: headlineMedium (24sp, SemiBold), color: primaryTeal, 탭 시 TimePicker 표시 |
-| 상대 시간 표시 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, "(N분 후)" 형식 |
-| 퀵 선택 칩 | `Chip` | style: Chip_Tag, items: ["15분", "30분", "1시간", "직접 입력"], 선택 시 secondaryAmber 배경 |
-| 대상 멤버 카드 | `Card` | style: Card_Standard, padding: spacing16 |
-| 전체 선택 | `CheckboxListTile` | activeColor: primaryTeal, title: "전체 선택 (N명)" (titleMedium, SemiBold) |
-| 구분선 | `Divider` | color: outline (#EDEDED), height: 1 |
-| 멤버 항목 | `CheckboxListTile` | activeColor: primaryTeal, leading: CircleAvatar (40dp), subtitle: Badge_Role |
-| 메시지 입력 | `TextFormField` | style: Input_Text, maxLines: 3, hintText: "출석체크를 확인해주세요", maxLength: 200 |
-| 출석 시작 버튼 | `ElevatedButton` | style: Button_Primary, text: "출석 시작", enabled: 마감 시간 설정 + 1명 이상 선택 시 |
+| 역할 | 접근 | 동작 |
+|------|:----:|------|
+| 캡틴 | ✅ | 출석 체크 생성 및 대상 멤버 선택 가능. 마감 시간 설정 가능. |
+| 크루장 | ✅ | 캡틴과 동일한 생성 권한. |
+| 크루 | ❌ | 이 화면에 접근 불가. 멤버탭에서 "출석 체크" 액션 버튼이 표시되지 않음. |
+| 가디언 | ❌ | 멤버탭 자체에 접근 불가. |
 
-**상태 분기**
+#### 여행상태별 분기
 
-| 상태 | UI 변화 |
-|------|---------|
-| 초기 | 마감 시간 기본값 30분 후, 전체 선택 체크됨, 메시지 비어있음, 출석 시작 버튼 활성 |
-| 퀵 선택 탭 (15분/30분/1시간) | 해당 칩 selected (secondaryAmber), 시간 표시 업데이트, 상대 시간 갱신 |
-| 직접 입력 탭 | showTimePicker 다이얼로그 → 선택 시간 반영, "직접 입력" 칩 selected |
-| 전체 선택 토글 | 모든 멤버 체크/해제, "(N명)" 카운트 갱신 |
-| 개별 멤버 해제 | 전체 선택 indeterminate (─), 선택 인원 카운트 갱신 |
-| 선택 멤버 0명 | 출석 시작 버튼 비활성 (opacity 0.4) |
-| 전송 중 | 출석 시작 버튼 → CircularProgressIndicator (white, 24dp) |
-| 전송 성공 | Toast "출석 체크가 시작되었습니다", Navigator.pushReplacement → H-03 |
-| 전송 실패 | SnackBar "출석 체크 시작에 실패했습니다. 다시 시도해주세요." |
+| 여행 상태 | 동작 |
+|----------|------|
+| none | 여행 미참여 상태. 출석 체크 접근 불가. |
+| planning | 여행 준비 중. 출석 체크 버튼 비활성. Toast "여행이 시작된 후 출석 체크를 사용할 수 있습니다." |
+| active | 출석 체크 생성 가능. 정상 동작. |
+| completed | 여행 종료. 출석 체크 버튼 비활성. Toast "종료된 여행에서는 출석 체크를 사용할 수 없습니다." |
 
-**인터랙션**
+#### 프라이버시등급별 분기
 
-- [탭] 퀵 선택 칩 → 마감 시간 = 현재 시각 + 선택 값 (15분/30분/1시간)
-- [탭] "직접 입력" 칩 → `showTimePicker()` → 선택 시간 반영
-- [탭] 시간 표시 영역 → `showTimePicker()` → 선택 시간 반영
-- [탭] 전체 선택 → 모든 멤버 일괄 체크/해제
-- [탭] 개별 멤버 체크박스 → 해당 멤버만 토글
-- [탭] 출석 시작 → POST /api/v1/groups/:group_id/attendance/start → 성공 시 H-03
-- [뒤로가기] → Dialog_Confirm "출석 체크 생성을 취소할까요?" (확인 → D-01 / 취소 → 유지)
+출석 체크는 프라이버시 등급과 무관하게 동일하게 동작한다 (비즈니스 원칙 §05.5).
+
+| 프라이버시 등급 | 동작 |
+|--------------|------|
+| 안전최우선 (safety_first) | 동일 동작 |
+| 표준 (standard) | 동일 동작 |
+| 프라이버시우선 (privacy_first) | 동일 동작 |
+
+#### 인터랙션
+
+| # | 액션 | 결과 | 조건 |
+|---|------|------|------|
+| 1 | [탭] 퀵 선택 칩 (10분/15분/30분/1시간) | 마감 시간 = 현재 시각 + 선택 값. 해당 칩 selected (secondaryAmber 배경). 시간 표시 및 상대 시간 갱신. | — |
+| 2 | [탭] "직접 입력" 칩 | `showTimePicker()` 다이얼로그 표시. 선택 시간 반영. "직접 입력" 칩 selected. | — |
+| 3 | [탭] 시간 표시 영역 | `showTimePicker()` 다이얼로그 표시. 선택 시간 반영. | — |
+| 4 | [탭] 전체 선택 | 모든 크루 멤버 일괄 체크/해제. "(N명)" 카운트 갱신. | — |
+| 5 | [탭] 개별 멤버 체크박스 | 해당 멤버만 토글. 전체 선택 상태 갱신 (indeterminate 또는 전체 선택). | — |
+| 6 | [탭] 출석 시작 | `POST /api/v1/groups/:group_id/attendance/start` 호출. 성공 시 Toast "출석 체크가 시작되었습니다" + H-03 전환. | 마감 시간 설정 완료 + 1명 이상 선택 시 활성. 선택 0명이면 버튼 비활성 (opacity 0.4). |
+| 7 | [뒤로가기] | Dialog_Confirm "출석 체크 생성을 취소할까요?" 확인 → D-09 / 취소 → 유지 | — |
+| 8 | 전송 중 | 출석 시작 버튼 → CircularProgressIndicator (white, 24dp). | — |
+| 9 | 전송 실패 | SnackBar "출석 체크 시작에 실패했습니다. 다시 시도해주세요." | 네트워크 오류 등 |
 
 ---
 
-### H-02 출석 응답 (Attendance Respond)
+### 2.2 [H-02] 출석 응답
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
 | ID | H-02 |
-| 화면명 | 출석 응답 (Attendance Respond) |
+| 화면명 | 출석 응답 (Attendance Response) |
 | Phase | P1 |
 | 역할 | 크루 |
 | 진입 경로 | FCM Push 알림 → H-02 / 알림 탭 → H-02 |
 | 이탈 경로 | H-02 → C-01 메인맵 (응답 완료 후) |
 
-**레이아웃**
+#### 레이아웃
+
+**미응답 상태:**
 
 ```
 ┌─────────────────────────────┐
@@ -202,9 +196,9 @@
 │        ┌───────────┐        │
 │        │           │        │
 │        │   ⏱️       │        │ 카운트다운 타이머
-│        │  14:32    │        │ displayLarge (36sp, Bold)
+│        │  07:23    │        │ displayLarge (36sp, Bold)
 │        │           │        │ primaryTeal (> 5분)
-│        │           │        │ primaryCoral (≤ 5분)
+│        │           │        │ timerUrgent (≤ 5분)
 │        └───────────┘        │
 │                             │
 │      마감까지 남은 시간        │ bodyMedium, onSurfaceVariant
@@ -221,19 +215,18 @@
 │  └─────────────────────────┘│
 │                             │
 │                             │
-│                             │
 │  ┌─────────────────────────┐│
-│  │        출석              ││ ElevatedButton
+│  │      ✅ 확인              ││ ElevatedButton
 │  └─────────────────────────┘│ 배경 #4CAF50, 텍스트 #FFFFFF
 │                             │ spacing12
 │  ┌─────────────────────────┐│
-│  │        결석              ││ OutlinedButton
+│  │      ❌ 부재              ││ OutlinedButton
 │  └─────────────────────────┘│ 보더 #DA4C51, 텍스트 #DA4C51
 │                             │
 └─────────────────────────────┘
 ```
 
-> **응답 완료 후 레이아웃:**
+**응답 완료 후:**
 
 ```
 ┌─────────────────────────────┐
@@ -243,7 +236,7 @@
 │                             │
 │        ┌───────────┐        │
 │        │           │        │
-│        │    ✅      │        │ 출석 완료 아이콘
+│        │    ✅      │        │ 확인 완료 아이콘
 │        │           │        │ 80 x 80dp, #4CAF50
 │        └───────────┘        │
 │                             │
@@ -266,53 +259,55 @@
 └─────────────────────────────┘
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "출석 체크", leading: BackButton, style: AppBar_Standard |
-| 카운트다운 타이머 | `Text` + `Timer` | style: displayLarge (36sp, Bold 700), color: primaryTeal (#00A2BD) → primaryCoral (#FF807B, 5분 이내), format: "MM:SS" |
-| 타이머 안내 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant, text: "마감까지 남은 시간" |
-| 구분선 | `Divider` | color: outline (#EDEDED), height: 1 |
-| 메시지 카드 | `Card` | style: Card_Standard, padding: spacing16 |
-| 메시지 내용 | `Text` | style: bodyLarge (16sp), color: onSurface |
-| 발신자 정보 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, format: "이름 (역할) -- HH:MM" |
-| 출석 버튼 | `ElevatedButton` | height: 52px, width: 전체 너비, radius12, backgroundColor: attendanceGreen (#4CAF50), text: "출석", textColor: #FFFFFF, labelLarge (16sp, SemiBold) |
-| 결석 버튼 | `OutlinedButton` | height: 52px, width: 전체 너비, radius12, borderColor: absentRed (#DA4C51), text: "결석", textColor: #DA4C51, labelLarge (16sp, SemiBold) |
-| 완료 아이콘 | `Icon` | Icons.check_circle, size: 80dp, color: attendanceGreen (#4CAF50) 또는 absentRed (#DA4C51) |
-| 완료 텍스트 | `Text` | style: titleLarge (20sp, SemiBold), color: onSurface |
-| 응답 시간 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant, format: "HH:MM 응답" |
-| 확인 버튼 | `ElevatedButton` | style: Button_Primary, text: "확인" |
+| 역할 | 접근 | 동작 |
+|------|:----:|------|
+| 캡틴 | ❌ | 출석 응답 화면 미표시. 캡틴은 H-03 진행 현황에서 모니터링. |
+| 크루장 | ❌ | 출석 응답 화면 미표시. 크루장은 H-03 진행 현황에서 모니터링. |
+| 크루 | ✅ | FCM 알림 수신 후 진입. ✅ 확인 / ❌ 부재 응답 가능. |
+| 가디언 | ❌ | 출석 응답 대상이 아님. |
 
-**상태 분기**
+#### 여행상태별 분기
 
-| 상태 | UI 변화 |
-|------|---------|
-| 초기 (미응답) | 카운트다운 타이머 활성, 출석/결석 버튼 표시, 메시지 카드 표시 |
-| 타이머 > 5분 | 타이머 색상 primaryTeal (#00A2BD) |
-| 타이머 <= 5분 | 타이머 색상 primaryCoral (#FF807B), 1초마다 깜빡이는 애니메이션 |
-| 출석 탭 | Dialog_Confirm "출석으로 응답하시겠습니까?" → 확인 → 출석 완료 화면 |
-| 결석 탭 | Dialog_Confirm "결석으로 응답하시겠습니까?" → 확인 → 결석 완료 화면 |
-| 출석 완료 | 카운트다운 영역 → ✅ 아이콘 (#4CAF50) + "출석이 확인되었습니다" + 응답 시간 |
-| 결석 완료 | 카운트다운 영역 → ❌ 아이콘 (#DA4C51) + "결석으로 응답했습니다" + 응답 시간 |
-| 응답 전송 중 | 선택 버튼 → CircularProgressIndicator |
-| 응답 실패 | SnackBar "응답에 실패했습니다. 다시 시도해주세요." |
-| 타이머 만료 (0:00) | 출석/결석 버튼 비활성 (opacity 0.4), "마감 시간이 경과했습니다" 안내 표시 |
-| 메시지 없음 | 메시지 카드 영역 숨김 |
+| 여행 상태 | 동작 |
+|----------|------|
+| none | 접근 불가. |
+| planning | 접근 불가 (출석 체크가 생성되지 않음). |
+| active | FCM 알림 수신 → 정상 진입 및 응답 가능. |
+| completed | 여행 종료 후 알림 탭에서 이력 조회만 가능. 응답 불가. |
 
-**인터랙션**
+#### 프라이버시등급별 분기
 
-- [자동] 화면 진입 → 남은 시간 계산 (deadline_at - now) → 카운트다운 시작
-- [탭] 출석 → Dialog_Confirm → PATCH /api/v1/groups/:group_id/attendance/:check_id/respond { response_type: 'present' }
-- [탭] 결석 → Dialog_Confirm → PATCH /api/v1/groups/:group_id/attendance/:check_id/respond { response_type: 'absent' }
-- [탭] 확인 (응답 완료 후) → Navigator.pop → C-01 메인맵
-- [뒤로가기] → 미응답 상태 유지, Navigator.pop (알림 탭에서 재진입 가능)
+출석 체크는 프라이버시 등급과 무관하게 동일하게 동작한다 (비즈니스 원칙 §05.5).
+
+| 프라이버시 등급 | 동작 |
+|--------------|------|
+| 안전최우선 (safety_first) | 동일 동작 |
+| 표준 (standard) | 동일 동작 |
+| 프라이버시우선 (privacy_first) | 동일 동작 |
+
+#### 인터랙션
+
+| # | 액션 | 결과 | 조건 |
+|---|------|------|------|
+| 1 | [자동] 화면 진입 | 남은 시간 계산 (`deadline_at - now`). 카운트다운 MM:SS 시작. | — |
+| 2 | [자동] 타이머 > 5분 | 타이머 색상 primaryTeal (`#00A2BD`). | — |
+| 3 | [자동] 타이머 <= 5분 | 타이머 색상 timerUrgent (`#FF807B`). 1초마다 깜빡이는 애니메이션. | — |
+| 4 | [탭] ✅ 확인 | Dialog_Confirm "확인으로 응답하시겠습니까?" → 확인 → `PATCH /api/v1/groups/:group_id/attendance/:check_id/respond { response_type: 'present' }` → 확인 완료 화면 (✅ 아이콘 + "출석이 확인되었습니다" + 응답 시간). | 마감 시간 이전 |
+| 5 | [탭] ❌ 부재 | Dialog_Confirm "부재로 응답하시겠습니까?" → 확인 → `PATCH /api/v1/groups/:group_id/attendance/:check_id/respond { response_type: 'absent' }` → 부재 완료 화면 (❌ 아이콘 + "부재로 응답했습니다" + 응답 시간). | 마감 시간 이전 |
+| 6 | [탭] 확인 (응답 완료 후) | `Navigator.pop` → C-01 메인맵. | 응답 완료 상태 |
+| 7 | [자동] 타이머 만료 (0:00) | ✅ 확인 / ❌ 부재 버튼 비활성 (opacity 0.4). "마감 시간이 경과했습니다" 안내 텍스트 표시. | — |
+| 8 | [뒤로가기] | 미응답 상태 유지. `Navigator.pop`. 알림 탭에서 재진입 가능. | — |
+| 9 | 응답 전송 중 | 선택 버튼 → CircularProgressIndicator. | — |
+| 10 | 응답 전송 실패 | SnackBar "응답에 실패했습니다. 다시 시도해주세요." | 네트워크 오류 등 |
+| 11 | 메시지 없음 | 메시지 카드 영역 숨김. | 캡틴/크루장이 메시지 미입력 시 |
 
 ---
 
-### H-03 출석 진행 현황 (Attendance Progress)
+### 2.3 [H-03] 출석 진행 현황
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
@@ -321,40 +316,44 @@
 | Phase | P1 |
 | 역할 | 캡틴, 크루장 |
 | 진입 경로 | H-01 출석 시작 성공 → H-03 |
-| 이탈 경로 | H-03 → H-04 (마감 시간 경과) / H-03 → D-01 (뒤로가기) |
+| 이탈 경로 | H-03 → H-04 (마감 시간 경과 또는 즉시 마감) / H-03 → D-09 (뒤로가기) |
 
-**레이아웃**
+#### 레이아웃
 
 ```
 ┌─────────────────────────────┐
 │ [←] 출석 진행 현황       [⋮]  │ AppBar_Standard + 더보기 메뉴
 ├─────────────────────────────┤
 │                             │
-│  ┌─ 진행 상태 ──────────────┐│
-│  │                          ││ Card_Standard
-│  │  ⏱️ 남은 시간: 12:45      ││ bodyLarge, primaryCoral
+│  ┌─ 진행 배너 ──────────────┐│
+│  │                          ││ Card_Standard (상단 고정)
+│  │  출석 체크 진행 중         ││ titleMedium (18sp, SemiBold)
+│  │  남은 시간: 7:23          ││ bodyLarge, primaryTeal / timerUrgent
 │  │                          ││
-│  │  ▓▓▓▓▓▓▓▓▓░░░░░░  5/8   ││ LinearProgressIndicator
-│  │                          ││ 62.5%, primaryTeal
-│  │  응답 5명 / 전체 8명       ││ bodySmall, onSurfaceVariant
+│  │  ✅ 확인 5명  ⏳ 미응답 3명 ││ 실시간 카운트
+│  │  ❌ 부재 1명              ││ bodyMedium, 각 상태별 색상
+│  │                          ││
+│  │  ▓▓▓▓▓▓▓▓▓░░░░░░  6/9   ││ LinearProgressIndicator
+│  │                          ││ responded/total, primaryTeal
 │  └──────────────────────────┘│
 │                             │ spacing16
 │  ┌─ 응답 현황 ──────────────┐│
 │  │                          ││
-│  │  [출석 3] [결석 1] [미응답 4]│ 탭 형태 필터
+│  │  [전체] [확인] [부재] [미응답]│ 탭 형태 필터
 │  │                          ││
-│  │  ── 출석 (3명) ────────── ││ Section Header, #4CAF50
-│  │  👤 김철수    크루장  14:02 ││ ListTile_Member
+│  │  ── ✅ 확인 (5명) ─────── ││ Section Header, #4CAF50
+│  │  👤 김철수    크루    14:02 ││ ListTile_Member
 │  │  👤 이영희    크루    14:05 ││ + 응답 시간
 │  │  👤 박민수    크루    14:08 ││
+│  │  👤 최수진    크루    14:09 ││
+│  │  👤 한지민    크루    14:10 ││
 │  │                          ││
-│  │  ── 결석 (1명) ────────── ││ Section Header, #DA4C51
+│  │  ── ❌ 부재 (1명) ─────── ││ Section Header, #DA4C51
 │  │  👤 최지훈    크루    14:03 ││ ListTile_Member
 │  │                          ││
-│  │  ── 미응답 (4명) ──────── ││ Section Header, #8E8E93
+│  │  ── ⏳ 미응답 (3명) ───── ││ Section Header, #8E8E93
 │  │  👤 정수진    크루     --   ││ ListTile_Member
-│  │  👤 한지민    크루     --   ││ (회색 텍스트)
-│  │  👤 윤서연    크루     --   ││
+│  │  👤 윤서연    크루     --   ││ (회색 텍스트)
 │  │  👤 강도윤    크루     --   ││
 │  │                          ││
 │  └──────────────────────────┘│
@@ -366,56 +365,54 @@
 └─────────────────────────────┘
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "출석 진행 현황", leading: BackButton, actions: [PopupMenuButton], style: AppBar_Standard |
-| 더보기 메뉴 | `PopupMenuButton` | items: ["취소"] |
-| 진행 상태 카드 | `Card` | style: Card_Standard, padding: spacing16 |
-| 남은 시간 | `Text` + `Timer` | style: bodyLarge (16sp, SemiBold), color: primaryCoral (#FF807B, 5분 이내) / primaryTeal (> 5분), icon: ⏱️, format: "남은 시간: MM:SS" |
-| 진행률 바 | `LinearProgressIndicator` | height: 8dp, radius4, color: primaryTeal (#00A2BD), backgroundColor: outline (#EDEDED), value: responded/total |
-| 응답 카운트 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, format: "응답 N명 / 전체 N명" |
-| 탭 필터 | `Row` < `FilterChip` > | 3개: "출석 N" (#4CAF50), "결석 N" (#DA4C51), "미응답 N" (#8E8E93) |
-| 섹션 헤더 (출석) | `Text` | style: labelMedium (14sp, Medium 500), color: attendanceGreen (#4CAF50), text: "출석 (N명)" |
-| 섹션 헤더 (결석) | `Text` | style: labelMedium (14sp, Medium 500), color: absentRed (#DA4C51), text: "결석 (N명)" |
-| 섹션 헤더 (미응답) | `Text` | style: labelMedium (14sp, Medium 500), color: noResponseGray (#8E8E93), text: "미응답 (N명)" |
-| 멤버 항목 | `ListTile` | style: ListTile_Member 변형, leading: CircleAvatar (40dp), title: 이름 (bodyLarge), subtitle: Badge_Role, trailing: 응답 시간 (bodySmall) |
-| 출석 멤버 항목 | `ListTile` | 좌측 4px 보더 attendanceGreen (#4CAF50), trailing: 응답 시간 (bodySmall, #4CAF50) |
-| 결석 멤버 항목 | `ListTile` | 좌측 4px 보더 absentRed (#DA4C51), trailing: 응답 시간 (bodySmall, #DA4C51) |
-| 미응답 멤버 항목 | `ListTile` | opacity: 0.5, trailing: "--" (bodySmall, #8E8E93) |
-| 즉시 마감 버튼 | `ElevatedButton` | style: Button_Destructive, text: "즉시 마감" |
+| 역할 | 접근 | 동작 |
+|------|:----:|------|
+| 캡틴 | ✅ | 실시간 진행 현황 모니터링. 즉시 마감 가능. 더보기 메뉴에서 출석 체크 취소 가능. |
+| 크루장 | ✅ | 캡틴과 동일한 모니터링 권한. 즉시 마감 가능. |
+| 크루 | ❌ | 진행 현황 화면 접근 불가. H-02에서 응답만 가능. |
+| 가디언 | ❌ | 접근 불가. |
 
-**상태 분기**
+#### 여행상태별 분기
 
-| 상태 | UI 변화 |
-|------|---------|
-| 초기 | 전체 멤버 미응답 상태, 진행률 0%, 타이머 활성 |
-| 실시간 응답 수신 | RTDB 리스너로 응답 수신 → 해당 멤버 섹션 이동 (미응답 → 출석/결석), 진행률 바 갱신, 카운트 갱신 |
-| 전원 응답 완료 | Toast "전원 응답 완료!", 자동으로 H-04 출석 결과 화면 전환 (2초 후) |
-| 타이머 > 5분 | 남은 시간 색상 primaryTeal |
-| 타이머 <= 5분 | 남은 시간 색상 primaryCoral, 깜빡이는 애니메이션 |
-| 타이머 만료 (0:00) | 자동으로 H-04 출석 결과 화면 전환, 미응답자 자동 결석 처리 |
-| 즉시 마감 탭 | Dialog_Confirm "즉시 마감하시겠습니까? 미응답자는 자동 결석 처리됩니다." → 확인 → H-04 |
-| 취소 (더보기 메뉴) | Dialog_Confirm "출석 체크를 취소하시겠습니까?" → 확인 → 출석 체크 취소 API → D-01 |
-| 탭 필터 선택 | 해당 상태 멤버만 필터링 (전체/출석/결석/미응답) |
+| 여행 상태 | 동작 |
+|----------|------|
+| none | 접근 불가. |
+| planning | 접근 불가 (출석 체크가 생성되지 않음). |
+| active | 출석 체크 진행 중일 때 정상 표시. RTDB 실시간 리스너 활성. |
+| completed | 여행 종료 시 진행 중인 출석 체크 자동 마감. H-04 결과로 전환. |
 
-**인터랙션**
+#### 프라이버시등급별 분기
 
-- [자동] 화면 진입 → RTDB `/attendance/{check_id}` 리스너 등록 → 실시간 응답 상태 업데이트
-- [자동] 타이머 1초 간격 갱신 → 만료 시 자동 H-04 전환
-- [자동] 전원 응답 완료 → 2초 후 자동 H-04 전환
-- [탭] 탭 필터 (출석/결석/미응답) → 해당 멤버만 표시
-- [탭] 즉시 마감 → Dialog_Confirm → PATCH /api/v1/groups/:group_id/attendance/:check_id/close → H-04
-- [탭] 더보기 → 취소 → Dialog_Confirm → DELETE /api/v1/groups/:group_id/attendance/:check_id → D-01
-- [풀 리프레시] → 최신 응답 현황 재조회
-- [뒤로가기] → Dialog_Confirm "진행 중인 출석 체크가 있습니다. 나가시겠습니까?" (출석 체크는 유지됨)
+출석 체크는 프라이버시 등급과 무관하게 동일하게 동작한다 (비즈니스 원칙 §05.5).
+
+| 프라이버시 등급 | 동작 |
+|--------------|------|
+| 안전최우선 (safety_first) | 동일 동작 |
+| 표준 (standard) | 동일 동작 |
+| 프라이버시우선 (privacy_first) | 동일 동작 |
+
+#### 인터랙션
+
+| # | 액션 | 결과 | 조건 |
+|---|------|------|------|
+| 1 | [자동] 화면 진입 | RTDB `/attendance/{check_id}` 리스너 등록. 실시간 응답 상태 업데이트. | — |
+| 2 | [자동] 타이머 1초 간격 갱신 | 남은 시간 카운트다운. > 5분: primaryTeal. <= 5분: timerUrgent + 깜빡이는 애니메이션. | — |
+| 3 | [자동] 실시간 응답 수신 | 해당 멤버 섹션 이동 (미응답 → 확인/부재). 진행률 바 갱신. 카운트 갱신. | RTDB 이벤트 |
+| 4 | [자동] 전원 응답 완료 | Toast "전원 응답 완료!". 2초 후 자동으로 H-04 출석 결과 화면 전환. | responded == total |
+| 5 | [자동] 타이머 만료 (0:00) | 미응답자 자동 `absent` 처리. 자동으로 H-04 출석 결과 화면 전환. | — |
+| 6 | [탭] 탭 필터 (전체/확인/부재/미응답) | 해당 상태 멤버만 필터링 표시. | — |
+| 7 | [탭] 즉시 마감 | Dialog_Confirm "즉시 마감하시겠습니까? 미응답자는 자동 부재 처리됩니다." → 확인 → `PATCH /api/v1/groups/:group_id/attendance/:check_id/close` → H-04. | — |
+| 8 | [탭] 더보기 → 취소 | Dialog_Confirm "출석 체크를 취소하시겠습니까?" → 확인 → `DELETE /api/v1/groups/:group_id/attendance/:check_id` → D-09 멤버탭. | — |
+| 9 | [풀 리프레시] | 최신 응답 현황 재조회. | — |
+| 10 | [뒤로가기] | Dialog_Confirm "진행 중인 출석 체크가 있습니다. 나가시겠습니까?" (출석 체크는 백그라운드에서 유지됨). 확인 → D-09. | — |
 
 ---
 
-### H-04 출석 결과 (Attendance Result)
+### 2.4 [H-04] 출석 결과
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
@@ -423,45 +420,47 @@
 | 화면명 | 출석 결과 (Attendance Result) |
 | Phase | P1 |
 | 역할 | 캡틴, 크루장 |
-| 진입 경로 | H-03 마감 시간 경과/즉시 마감 → H-04 |
-| 이탈 경로 | H-04 → D-01 멤버탭 (완료) |
+| 진입 경로 | H-03 마감 시간 경과 또는 즉시 마감 → H-04 |
+| 이탈 경로 | H-04 → D-09 멤버탭 (완료) |
 
-**레이아웃**
+#### 레이아웃
 
 ```
 ┌─────────────────────────────┐
 │ [←] 출석 결과           [↗️]  │ AppBar_Standard + 공유 버튼
 ├─────────────────────────────┤
 │                             │
-│  ┌─ 통계 요약 ──────────────┐│
+│  ┌─ 결과 요약 ──────────────┐│
 │  │                          ││ Card_Standard
 │  │   ┌─────────────────┐    ││
 │  │   │                 │    ││
-│  │   │   🟢 3  🔴 2     │    ││ 파이 차트 (PieChart)
-│  │   │     ⚪ 3         │    ││ 출석/결석/미응답(자동결석)
+│  │   │   🟢 5  🔴 1     │    ││ PieChart (fl_chart)
+│  │   │     ⚪ 3         │    ││ 확인/부재/미응답(자동부재)
 │  │   │                 │    ││
 │  │   └─────────────────┘    ││
 │  │                          ││
-│  │  전체 8명                 ││ titleMedium, onSurface
-│  │  출석 3 · 결석 2 · 자동결석 3││ bodyMedium, onSurfaceVariant
+│  │  ✅ 확인 5명 | ⏳ 미응답 3명││ 결과 요약 포맷
+│  │  | ❌ 부재 1명            ││ bodyMedium, onSurfaceVariant
 │  │                          ││
-│  │  마감: 14:30 · 생성: 14:00 ││ bodySmall, onSurfaceVariant
+│  │  전체 9명                 ││ titleMedium, onSurface
+│  │  마감: 14:10 · 생성: 14:00 ││ bodySmall, onSurfaceVariant
 │  └──────────────────────────┘│
 │                             │ spacing16
 │  ┌─ 멤버별 결과 ────────────┐│
 │  │                          ││
-│  │  ── 출석 (3명) ────────── ││ Section Header, #4CAF50
-│  │  👤 김철수   크루장  14:02 ││ ListTile + ✅ 출석 뱃지
+│  │  ── ✅ 확인 (5명) ─────── ││ Section Header, #4CAF50
+│  │  👤 김철수   크루    14:02 ││ ListTile + ✅ 확인 뱃지
 │  │  👤 이영희   크루    14:05 ││
 │  │  👤 박민수   크루    14:08 ││
+│  │  👤 최수진   크루    14:09 ││
+│  │  👤 한지민   크루    14:10 ││
 │  │                          ││
-│  │  ── 결석 (2명) ────────── ││ Section Header, #DA4C51
-│  │  👤 최지훈   크루    14:03 ││ ListTile + ❌ 결석 뱃지
-│  │  👤 한지민   크루    14:12 ││
+│  │  ── ❌ 부재 (1명) ─────── ││ Section Header, #DA4C51
+│  │  👤 최지훈   크루    14:03 ││ ListTile + ❌ 부재 뱃지
 │  │                          ││
-│  │  ── 자동 결석 (3명) ───── ││ Section Header, #8E8E93
-│  │  👤 정수진   크루    미응답 ││ ListTile + ⚪ 자동결석 뱃지
-│  │  👤 윤서연   크루    미응답 ││
+│  │  ── ⏳ 미응답 (3명) ───── ││ Section Header, #8E8E93
+│  │  👤 정수진   크루    미응답 ││ ListTile + ⏳ 자동부재 뱃지
+│  │  👤 윤서연   크루    미응답 ││ (자동 absent 처리됨)
 │  │  👤 강도윤   크루    미응답 ││
 │  │                          ││
 │  └──────────────────────────┘│
@@ -473,161 +472,125 @@
 └─────────────────────────────┘
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "출석 결과", leading: BackButton, actions: [ShareButton], style: AppBar_Standard |
-| 공유 버튼 | `IconButton` | icon: Icons.ios_share, onPressed: 결과 텍스트 공유 |
-| 통계 요약 카드 | `Card` | style: Card_Standard, padding: spacing16 |
-| 파이 차트 | `PieChart` (fl_chart) | sections: 3개 (출석 #4CAF50, 결석 #DA4C51, 자동결석 #8E8E93), size: 160dp, centerText: 전체 인원 |
-| 전체 인원 | `Text` | style: titleMedium (18sp, SemiBold), color: onSurface |
-| 통계 텍스트 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant, format: "출석 N -- 결석 N -- 자동결석 N" |
-| 시간 정보 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, format: "마감: HH:MM -- 생성: HH:MM" |
-| 섹션 헤더 (출석) | `Text` | style: labelMedium (14sp, Medium 500), color: attendanceGreen (#4CAF50) |
-| 섹션 헤더 (결석) | `Text` | style: labelMedium (14sp, Medium 500), color: absentRed (#DA4C51) |
-| 섹션 헤더 (자동 결석) | `Text` | style: labelMedium (14sp, Medium 500), color: noResponseGray (#8E8E93) |
-| 출석 멤버 항목 | `ListTile` | leading: CircleAvatar (40dp), title: 이름 (bodyLarge), subtitle: Badge_Role, trailing: Row [응답 시간 + 출석 뱃지 (Container, #4CAF50, pill, "출석")] |
-| 결석 멤버 항목 | `ListTile` | trailing: Row [응답 시간 + 결석 뱃지 (Container, #DA4C51, pill, "결석")] |
-| 자동결석 멤버 항목 | `ListTile` | trailing: Row ["미응답" + 자동결석 뱃지 (Container, #8E8E93, pill, "자동결석")], opacity: 0.7 |
-| 완료 버튼 | `ElevatedButton` | style: Button_Primary, text: "완료" |
+| 역할 | 접근 | 동작 |
+|------|:----:|------|
+| 캡틴 | ✅ | 전체 결과 조회. 결과 공유(↗️) 가능. |
+| 크루장 | ✅ | 캡틴과 동일한 결과 조회 권한. |
+| 크루 | ❌ | 결과 화면 직접 접근 불가. 본인의 응답 결과는 H-02에서 확인. |
+| 가디언 | ❌ | 결과 화면 직접 접근 불가. 연결된 멤버의 출석 결과는 알림으로 열람 가능 (비즈니스 원칙 §05.5). |
 
-**상태 분기**
+#### 여행상태별 분기
 
-| 상태 | UI 변화 |
-|------|---------|
-| 초기 | 자동결석 처리 완료된 최종 결과 표시, 파이 차트 애니메이션 (500ms) |
-| 미응답자 자동결석 | deadline_at 경과 시 response_type='unknown' → 'absent' 자동 변환, "자동결석" 뱃지 별도 표시 |
-| 공유 탭 | Share 시트 → 텍스트 형태 결과 요약 (이름/상태/시간 테이블) |
-| 결과 없음 (전원 미응답) | 파이 차트 전체 회색, "응답한 멤버가 없습니다" 안내 |
-| 완료 탭 | Navigator.popUntil → D-01 멤버탭 |
+| 여행 상태 | 동작 |
+|----------|------|
+| none | 접근 불가. |
+| planning | 접근 불가. |
+| active | 출석 체크 완료 후 결과 정상 표시. |
+| completed | 이전 출석 결과 이력 조회 가능. |
 
-**인터랙션**
+#### 프라이버시등급별 분기
 
-- [자동] 화면 진입 → GET /api/v1/groups/:group_id/attendance/:check_id/result → 최종 결과 렌더링
-- [자동] 파이 차트 500ms 애니메이션 (0% → 실제 비율)
-- [탭] 공유 (↗️) → `Share.share()` → 텍스트 형태 결과 (출석 체크 결과 | 날짜 | 출석 N명 / 결석 N명 / 미응답 N명)
-- [탭] 멤버 항목 → 확장 패널 (응답 시간 상세, 위치 정보 등) (P2 확장 예정)
-- [탭] 완료 → Navigator.popUntil → D-01 멤버탭
-- [뒤로가기] → Navigator.popUntil → D-01 멤버탭
+출석 체크는 프라이버시 등급과 무관하게 동일하게 동작한다 (비즈니스 원칙 §05.5).
+
+| 프라이버시 등급 | 동작 |
+|--------------|------|
+| 안전최우선 (safety_first) | 동일 동작 |
+| 표준 (standard) | 동일 동작 |
+| 프라이버시우선 (privacy_first) | 동일 동작 |
+
+#### 인터랙션
+
+| # | 액션 | 결과 | 조건 |
+|---|------|------|------|
+| 1 | [자동] 화면 진입 | `GET /api/v1/groups/:group_id/attendance/:check_id/result` → 최종 결과 렌더링. 파이 차트 500ms 애니메이션 (0% → 실제 비율). | — |
+| 2 | [자동] 미응답자 자동 부재 처리 | `deadline_at` 경과 시 `response_type='unknown'` → `'absent'` 자동 변환. "⏳ 미응답" 뱃지로 별도 표시 (수동 부재와 구분). | — |
+| 3 | [탭] 공유 (↗️) | `Share.share()` → 텍스트 형태 결과 공유: "출석 체크 결과 \| 날짜 \| ✅ 확인 N명 \| ⏳ 미응답 N명 \| ❌ 부재 N명". | — |
+| 4 | [탭] 완료 | `Navigator.popUntil` → D-09 멤버탭. | — |
+| 5 | [뒤로가기] | `Navigator.popUntil` → D-09 멤버탭. | — |
+| 6 | 결과 없음 (전원 미응답) | 파이 차트 전체 회색. "응답한 멤버가 없습니다" 안내 텍스트 표시. | total == 0 또는 전원 미응답 |
 
 ---
 
-### H-05 가디언 출석 결과 (Guardian Attendance View)
+## 3. 에러 & 엣지케이스
 
-**메타데이터**
+| # | 상황 | 처리 |
+|---|------|------|
+| 1 | 5인 이하 무료 여행에서 출석 체크 시도 | "6인 이상 유료 여행에서만 사용 가능합니다" Toast 안내. 출석 체크 버튼 비활성. |
+| 2 | 출석 체크 진행 중 멤버 탈퇴 | 해당 멤버 응답 `absent` 자동 처리. 현황 카운트에서 제외 (total 감소). |
+| 3 | 네트워크 끊김 중 출석 체크 응답 시도 | 로컬 큐잉 후 온라인 복귀 시 자동 전송. 마감 시간 이내인 경우에만 유효. 마감 경과 시 "마감 시간이 경과하여 응답이 전송되지 않았습니다" SnackBar. |
+| 4 | 동시에 2개 이상 출석 체크 생성 시도 | 기존 진행 중인 출석 체크가 있을 경우 "이미 진행 중인 출석 체크가 있습니다" Dialog. 기존 출석 체크 마감 후 새로 생성 가능. |
+| 5 | 출석 체크 생성 직후 앱 종료 (캡틴/크루장) | 출석 체크 세션은 서버에서 유지. 재진입 시 H-03 진행 현황 복원. |
+| 6 | 크루가 응답 후 앱 재진입 | H-02에서 이미 응답한 상태 표시 (확인/부재 완료 화면). 중복 응답 불가. |
+| 7 | 마감 시간 설정 시 과거 시간 입력 | "현재 시간 이후로 설정해주세요" 유효성 검사 에러 표시. |
+| 8 | RTDB 리스너 연결 실패 (H-03) | "실시간 업데이트에 실패했습니다. [재시도]" 배너 표시. 풀 리프레시로 수동 갱신 가능. |
+| 9 | 가디언의 출석 결과 열람 | 가디언은 연결된 멤버의 출석 결과를 FCM 알림으로 수신 (§05.5). 별도 화면 없이 알림 내 요약 정보로 확인. |
+| 10 | 여행 상태 `planning`에서 출석 체크 접근 | "여행이 시작된 후 출석 체크를 사용할 수 있습니다" Toast. 버튼 비활성. |
 
-| 항목 | 값 |
-|------|-----|
-| ID | H-05 |
-| 화면명 | 가디언 출석 결과 (Guardian Attendance View) |
-| Phase | P1 |
-| 역할 | 가디언 |
-| 진입 경로 | F-04 가디언홈 → 출석 결과 알림/이력 → H-05 |
-| 이탈 경로 | H-05 → F-04 가디언홈 (뒤로가기) |
+---
 
-**레이아웃**
+## 4. 오프라인 대응
+
+| 데이터 | 오프라인 가용성 | 비고 |
+|--------|:--------------:|------|
+| 출석 체크 생성 (H-01) | ❌ | 서버 세션 생성 필수. "오프라인 상태에서는 출석 체크를 생성할 수 없습니다. 네트워크 연결 후 시도해주세요." 안내. |
+| 출석 응답 (H-02) | ⚠️ | 로컬 큐잉 → 온라인 복귀 시 자동 전송 (마감 시간 이내인 경우에만 유효). |
+| 진행 현황 (H-03) | ⚠️ | 캐시된 마지막 상태 표시 + "오프라인 모드 — N분 전 기준" 배너. 실시간 업데이트 중단. |
+| 결과 조회 (H-04) | ⚠️ | 캐시된 결과 표시. "오프라인 모드" 배너 표시. |
+| FCM 알림 수신 | ⚠️ | 오프라인 시 수신 불가. 온라인 복귀 시 지연 전달. |
+
+### 오프라인 배너
 
 ```
-┌─────────────────────────────┐
-│ [←] 출석 결과                 │ AppBar_Standard
-├─────────────────────────────┤
-│                             │
-│  ┌─ 내 멤버 출석 상태 ───────┐│
-│  │                          ││ Card_Standard
-│  │  👤 이영희                 ││ CircleAvatar (56dp)
-│  │  크루                     ││ Badge_Role
-│  │                          ││
-│  │  ┌────────────────────┐  ││
-│  │  │     ✅ 출석         │  ││ 상태 뱃지 (대형)
-│  │  └────────────────────┘  ││ 배경 #4CAF50/20%, 텍스트 #4CAF50
-│  │                          ││ 또는 ❌ 결석 (#DA4C51)
-│  │  14:05 응답               ││ 또는 ⚪ 미응답 (#8E8E93)
-│  │                          ││ bodyMedium, onSurfaceVariant
-│  └──────────────────────────┘│
-│                             │ spacing24
-│  출석 체크 이력               │ titleMedium (18sp, SemiBold)
-│                             │
-│  ┌─ 이력 리스트 ────────────┐│
-│  │                          ││
-│  │  📋 3월 3일 14:00         ││ ListTile
-│  │  캡틴: 홍길동              ││ bodySmall, onSurfaceVariant
-│  │                 ✅ 출석   ││ 상태 뱃지 (소형, trailing)
-│  │  ─────────────────────── ││ Divider
-│  │                          ││
-│  │  📋 3월 2일 09:30         ││ ListTile
-│  │  캡틴: 홍길동              ││
-│  │                 ❌ 결석   ││ 상태 뱃지
-│  │  ─────────────────────── ││ Divider
-│  │                          ││
-│  │  📋 3월 1일 08:00         ││ ListTile
-│  │  캡틴: 홍길동              ││
-│  │                 ✅ 출석   ││ 상태 뱃지
-│  │                          ││
-│  └──────────────────────────┘│
-│                             │
-│  이전 기록 더 보기 >           │ TextButton, primaryTeal
-│                             │
-└─────────────────────────────┘
+[오프라인 모드] 마지막 동기화: 5분 전. 연결 후 자동 갱신됩니다.
 ```
 
-**컴포넌트 명세**
+### 온라인 복귀 시 동기화 우선순위
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "출석 결과", leading: BackButton, style: AppBar_Standard |
-| 멤버 카드 | `Card` | style: Card_Standard, padding: spacing16, alignment: center |
-| 멤버 아바타 | `CircleAvatar` | radius: 28dp (56dp 직경), backgroundColor: secondaryBeige (#F2EDE4) |
-| 멤버 이름 | `Text` | style: titleMedium (18sp, SemiBold), color: onSurface |
-| 역할 뱃지 | `Container` | style: Badge_Role (크루: #898989) |
-| 대형 상태 뱃지 | `Container` | width: 160dp, height: 48dp, radius12, 상태별 색상 분기 (아래 참조) |
-| 출석 뱃지 (대형) | `Container` | backgroundColor: #4CAF50/20% (투명도), text: "✅ 출석", textColor: #4CAF50, titleMedium (18sp, SemiBold) |
-| 결석 뱃지 (대형) | `Container` | backgroundColor: #DA4C51/20%, text: "❌ 결석", textColor: #DA4C51 |
-| 미응답 뱃지 (대형) | `Container` | backgroundColor: #8E8E93/20%, text: "⚪ 미응답", textColor: #8E8E93 |
-| 응답 시간 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant, format: "HH:MM 응답" |
-| 섹션 제목 | `Text` | style: titleMedium (18sp, SemiBold), color: onSurface, text: "출석 체크 이력" |
-| 이력 항목 | `ListTile` | leading: 📋 아이콘, title: 날짜+시간 (bodyLarge), subtitle: "캡틴: 이름" (bodySmall, onSurfaceVariant), trailing: 상태 뱃지 (소형) |
-| 소형 상태 뱃지 | `Container` | height: 24dp, radius4, padding: 4px 8px, 상태별 배경색 (출석 #4CAF50, 결석 #DA4C51, 미응답 #8E8E93), text: labelSmall (11sp), textColor: #FFFFFF |
-| 구분선 | `Divider` | color: outlineVariant (#F5F5F5), height: 1 |
-| 더 보기 버튼 | `TextButton` | style: labelMedium (14sp), color: primaryTeal, text: "이전 기록 더 보기 >" |
-
-**상태 분기**
-
-| 상태 | UI 변화 |
-|------|---------|
-| 초기 | 최신 출석 체크 결과 + 이력 리스트 표시 |
-| 출석 결과 | 대형 뱃지 "✅ 출석" (#4CAF50/20% 배경), 응답 시간 표시 |
-| 결석 결과 | 대형 뱃지 "❌ 결석" (#DA4C51/20% 배경), 응답 시간 표시 |
-| 자동결석 (미응답) | 대형 뱃지 "⚪ 미응답" (#8E8E93/20% 배경), "마감 시간 내 미응답" 안내 |
-| 진행 중 (아직 미마감) | 대형 뱃지 "⏳ 진행 중" (primaryTeal/20% 배경), 카운트다운 표시 |
-| 이력 없음 | "출석 체크 이력이 없습니다" + 일러스트 (빈 상태) |
-| 이력 로딩 | 이력 영역 Shimmer 효과 |
-| 더 보기 탭 | 이전 이력 10건씩 추가 로드 (페이지네이션) |
-| 다중 멤버 연결 | 멤버 선택 드롭다운 표시 (가디언이 여러 멤버를 보호하는 경우) |
-
-**인터랙션**
-
-- [자동] 화면 진입 → GET /api/v1/guardians/:guardian_id/attendance/:member_id → 연결 멤버 출석 결과 조회
-- [자동] 이력 리스트 → GET /api/v1/guardians/:guardian_id/attendance/:member_id/history?page=1&limit=10
-- [탭] 이력 항목 → 상세 정보 확장 (생성자 메시지, 정확한 응답 시간)
-- [탭] 이전 기록 더 보기 → 다음 페이지 로드 (page+1)
-- [탭] 멤버 선택 드롭다운 (다중 연결 시) → 선택 멤버의 출석 결과로 갱신
-- [뒤로가기] → Navigator.pop → F-04 가디언홈
+1. 출석 응답 큐 전송 (마감 시간 이내인 경우)
+2. 진행 중인 출석 체크 상태 갱신
+3. 출석 결과 동기화
 
 ---
 
-## 변경 이력
+## 5. 검증 체크리스트
 
-| 날짜 | 버전 | 내용 |
-|------|------|------|
-| 2026-03-03 | v1.0 | 최초 작성 -- 5개 화면 (H-01 ~ H-05) 5-섹션 템플릿 |
+| # | 체크 항목 | 기준 |
+|---|----------|------|
+| 1 | 출석 체크 생성이 캡틴/크루장에게만 허용되는가 | §05.5, 멤버탭 원칙 §8, 역할별 분기 확인 |
+| 2 | 크루만 출석 응답(✅ 확인 / ❌ 부재)이 가능한가 | §05.5, H-02 역할별 분기 확인 |
+| 3 | 기본 마감 시간이 10분으로 설정되는가 | 멤버탭 원칙 §8.2 |
+| 4 | 마감 경과 시 미응답자가 자동 `absent` 처리되는가 | §05.5, H-03 인터랙션 #5 |
+| 5 | 6인 이상 유료 여행에서만 출석 체크가 활성화되는가 | §09.2, 에러 케이스 #1 |
+| 6 | 응답 유형이 ✅ 확인 / ❌ 부재 / ⏳ 미응답 3종인가 | §05.5, 멤버탭 원칙 §8.4 |
+| 7 | 진행 중 배너가 "출석 체크 진행 중 \| 남은 시간: N:NN" 형식인가 | 멤버탭 원칙 §8.3, H-03 레이아웃 확인 |
+| 8 | 결과 표시가 "✅ 확인 N명 \| ⏳ 미응답 N명 \| ❌ 부재 N명" 형식인가 | 멤버탭 원칙 §8.3, H-04 레이아웃 확인 |
+| 9 | 출석 체크가 프라이버시 등급과 무관하게 동작하는가 | §05.5, 전 화면 프라이버시등급별 분기 확인 |
+| 10 | DB 테이블 `TB_ATTENDANCE_CHECK`, `TB_ATTENDANCE_RESPONSE`가 올바르게 참조되는가 | DB 설계 v3.4, 멤버탭 원칙 §13 |
+| 11 | 가디언은 연결된 멤버의 출석 결과를 알림으로 열람 가능한가 | §05.5, 에러 케이스 #9 |
+| 12 | 오프라인 시 출석 응답이 로컬 큐잉되고 온라인 복귀 시 마감 이내면 자동 전송되는가 | 오프라인 대응 §4, 에러 케이스 #3 |
+| 13 | H-05 가디언 출석 결과 화면이 제거되었는가 (Master_docs 미정의) | v2.0 변경사항 확인 |
+| 14 | 역할명이 캡틴/크루장/크루/가디언으로 통일되어 있는가 | 비즈니스 원칙 §01.1 |
 
 ---
 
-## 참조
+## 6. 변경 이력
 
-- 글로벌 스타일 가이드: `docs/wireframes/00_Global_Style_Guide.md`
-- 화면 목업 계획: `docs/plans/2026-03-03-screen-design-mockup-plan.md`
-- DB 설계 v3.5: `Master_docs/07_T2_DB_설계_및_관계_v3_5.md`
-- API 명세서 Part2: `Master_docs/37_T2_API_명세서_Part2.md`
-- 비즈니스 원칙: `Master_docs/01_T1_SafeTrip_비즈니스_원칙_v5.1.md`
+| 버전 | 날짜 | 변경 내용 | 변경 사유 |
+|------|------|----------|----------|
+| v1.0 | 2026-03-03 | 최초 작성 — 5개 화면 (H-01 ~ H-05) | 와이어프레임 초안 |
+| v2.0 | 2026-03-04 | 신규 포맷으로 전면 재작성. ① H-05 가디언 출석 결과 화면 제거 (Master_docs 미정의). ② 역할명 통일 (여행 멤버장→크루장, 여행 멤버→크루). ③ 응답 유형 표기 통일 (출석→✅ 확인, 결석→❌ 부재, 미응답→⏳ 미응답). ④ 기본 마감 시간 30분→10분 변경 (멤버탭 원칙 §8.2 기준). ⑤ 각 화면에 역할별/여행상태별/프라이버시등급별 분기 섹션 추가. ⑥ 에러 & 엣지케이스, 오프라인 대응, 검증 체크리스트 섹션 추가. | 비즈니스원칙 v5.1 및 멤버탭_원칙 v1.1 기준 재정합, 신규 와이어프레임 포맷 적용 |
+
+---
+
+## 7. 참조 테이블
+
+| 문서 ID | 문서명 | 참조 이유 |
+|---------|--------|----------|
+| DOC-T1-BIZ-001 | SafeTrip_비즈니스_원칙_v5.1 | §05.5 출석 체크 규칙, §09.2 과금 조건 (6인 이상), §01.1 역할 정의 |
+| DOC-T2-SCR-010 | SafeTrip_화면구성원칙_v1.1 | 화면 전체 구조, 역할별 렌더링 규칙, 여행상태별 분기 기준 |
+| DOC-T3-MBR-019 | SafeTrip_멤버탭_원칙_v1.1 | §8 출석 체크 시스템 상세 정의, §10 역할별 권한 매트릭스, §13 DB 스키마 |
+| DOC-T2-DB-007 | DB_설계_및_관계_v3.4 | TB_ATTENDANCE_CHECK, TB_ATTENDANCE_RESPONSE 스키마 정의 |
+| WF-STYLE-00 | 글로벌_스타일_가이드_v1.1 | 공통 컴포넌트 사전, 디자인 토큰, 타이포그래피 |
+| DOC-T3-NTF-022 | 알림버튼_원칙 | 출석 체크 FCM 알림 발송/수신 규칙 |

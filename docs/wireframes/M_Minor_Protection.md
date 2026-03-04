@@ -1,60 +1,75 @@
-# M. 미성년자 보호
+# SafeTrip 미성년자 보호 와이어프레임
 
-> **버전:** v1.0 | **작성일:** 2026-03-03
->
-> 이 문서는 SafeTrip 앱의 미성년자 보호 플로우 4개 화면을 정의한다.
-> 각 화면은 5-섹션 템플릿(메타데이터, 레이아웃, 컴포넌트 명세, 상태 분기, 인터랙션)으로 구성된다.
-
-**참조 문서:**
-
-| 문서 | 경로 |
+| 항목 | 내용 |
 |------|------|
-| 글로벌 스타일 가이드 | `docs/wireframes/00_Global_Style_Guide.md` |
-| 비즈니스 원칙 v5.1 §10 | `Master_docs/01_T1_SafeTrip_비즈니스_원칙_v5.1.md` |
-| 화면 목업 계획 | `docs/plans/2026-03-03-screen-design-mockup-plan.md` |
+| 문서 ID | WF-MNR-M |
+| 계층 | 와이어프레임 (화면구성원칙 하위) |
+| 버전 | v2.0 |
+| 작성일 | 2026-03-04 |
+| 기준 문서 | 비즈니스원칙 v5.1 §10, 화면구성원칙 v1.1, 05_T0_미성년자_보호_원칙 v1.0 |
 
 ---
 
-## 개요
+## 1. 개요
 
 - **화면 수:** 4개 (M-01 ~ M-04)
-- **Phase:** 전체 P2
-- **핵심 역할:** 보호자 (M-01), 미성년자+보호자 (M-02), 캡틴 (M-03), 크루/캡틴 (M-04)
-- **연관 문서:** 비즈니스 원칙 §10 미성년자 보호 기반 원칙
+- **Phase:** P2 4개 (전 화면 Phase 2)
+- **핵심 역할:** 법정대리인/보호자 (M-01), 미성년자 14~17세 + 보호자 (M-02), 캡틴 (M-03), 크루/캡틴 (M-04)
+- **법적 근거:** 개인정보 보호법 제22조 (14세 미만 법정대리인 동의), 위치정보법 제25~26조, 아동복지법 제3조
 
----
+### 미성년자 보호 최상위 원칙
 
-## User Journey Flow
+> **미성년자 멤버가 1명이라도 포함된 여행은 `safety_first` 등급만 허용된다.** (비즈니스 원칙 §10.2)
+> 14세 미만 이용자는 법정대리인 동의 없이 개인정보/위치정보를 수집할 수 없다.
+
+### User Journey Flow
 
 ```
 [14세 미만 사용자 가입]
-     ↓
-M-01 보호자 동의 (법정대리인 확인 + 동의서)
-     ↓
-     → A-04 전화번호 인증 (미성년자 본인)
+     |
+     v
+M-01 보호자 동의 (법정대리인 확인 + SMS 인증 + 동의서)
+     |
+     v
+     --> A-04 전화번호 인증 (미성년자 본인)
 
 [14~17세 사용자 가입]
-     ↓
-M-02 이중 동의 (Step 1: 본인 동의 → Step 2: 보호자 확인)
-     ↓
-     → A-04 전화번호 인증 (미성년자 본인)
+     |
+     v
+M-02 이중 동의 (Step 1: 본인 동의 --> Step 2: 보호자 확인)
+     |
+     v
+     --> A-04 전화번호 인증 (미성년자 본인)
 
-[미성년자가 여행 참여 시 — 캡틴 화면]
-     ↓
-M-03 미성년자 여행 안내 (강제 Safety First + 제한 사항)
-     ↓
-     → C-01 메인맵 (여행 화면)
+[미성년자가 여행에 참여 -- 캡틴 화면]
+     |
+     v
+M-03 미성년자 여행 안내 (safety_first 강제 + 제한 사항 고지)
+     |
+     v
+     --> C-01 메인맵
 
-[미성년자 가디언 해제 요청 시]
-     ↓
-M-04 미성년자 가디언 해제 (사유 입력 → 캡틴 승인/거절)
-     ↓
-     → F-01 가디언 관리 화면
+[미성년자 가디언 해제 요청]
+     |
+     v
+M-04 미성년자 가디언 해제 (사유 입력 --> 캡틴 승인/거절)
+     |
+     v
+     --> F-01 가디언 관리
 ```
 
----
+### 미성년자 보호 디자인 토큰
 
-## 외부 진입/이탈 참조
+| 토큰명 | HEX | 용도 |
+|--------|-----|------|
+| `semanticWarning` | `#FF9800` | 미성년자 보호 경고, 주의 카드 보더 |
+| `semanticError` | `#DA4C51` | 강제 제한 Card_Alert 보더, 법적 경고 |
+| `onSurfaceVariant` | `#8E8E93` | 법적 고지 텍스트 |
+
+> Card_Alert (red border): 미성년자 강제 제한 사항 표시 시 보더 색상 `semanticError` (`#DA4C51`) 사용.
+> Card_Alert (orange border): 안전 경고 표시 시 보더 색상 `semanticWarning` (`#FF9800`) 사용.
+
+### 외부 진입/이탈 참조
 
 | 출발 | 조건 | 도착 | 카테고리 |
 |------|------|------|---------|
@@ -65,173 +80,162 @@ M-04 미성년자 가디언 해제 (사유 입력 → 캡틴 승인/거절)
 | 여행 참여 API | 미성년자 멤버 감지 | M-03 미성년자 여행 안내 | M |
 | M-03 | 확인 완료 | C-01 메인맵 | C |
 | F-01 가디언 관리 | 가디언 해제 요청 | M-04 가디언 해제 | M |
-| M-04 | 승인/거절 완료 | F-01 가디언 관리 | F |
+| M-04 | 요청/승인/거절 완료 | F-01 가디언 관리 | F |
 
 ---
 
-## 디자인 토큰 (미성년자 보호 전용)
+## 2. 화면 정의
 
-| 토큰 | HEX | 용도 |
-|------|-----|------|
-| `semanticWarning` | `#FF9800` | 미성년자 보호 관련 경고, 주의 배경 |
-| `semanticError` | `#DA4C51` | 강제 제한 Card_Alert 보더, 법적 경고 |
-| `onSurfaceVariant` | `#8E8E93` | 법적 공지 텍스트 (`bodySmall`) |
+### 2.1 [M-01] 보호자 동의 (Minor Consent - Parent)
 
-> Card_Alert (red border): 미성년자 강제 제한 사항 표시 시 보더 색상 `semanticError` (`#DA4C51`) 사용
-
----
-
-## 화면 상세
-
----
-
-### M-01 보호자 동의 (Minor Consent - Parent)
-
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
 | ID | M-01 |
 | 화면명 | 보호자 동의 (Minor Consent - Parent) |
 | Phase | P2 |
-| 역할 | 보호자 (법정대리인) |
-| 진입 경로 | A-07 약관 동의 (14세 미만 사용자) → M-01 |
-| 이탈 경로 | M-01 → A-04 (보호자 동의 완료 시) |
+| 역할 | 법정대리인 (보호자) |
+| 진입 경로 | A-07 약관 동의 (14세 미만 사용자) --> M-01 |
+| 이탈 경로 | M-01 --> A-04 전화번호 인증 (보호자 동의 완료 시) |
 
-**레이아웃**
+#### 레이아웃
 
 ```
-┌─────────────────────────────┐
-│ [←] 보호자 동의               │ AppBar_Standard
-├─────────────────────────────┤
-│                             │
-│  법정대리인 동의가            │ headlineMedium (24sp, SemiBold)
-│  필요합니다                  │ onSurface
-│                             │
-│  14세 미만 사용자는 법정대리인  │ bodyMedium (14sp)
-│  (부모/보호자)의 동의가       │ onSurfaceVariant
-│  필요합니다.                  │
-│                             │
-│  ┌─ 법정대리인 정보 ─────────┐│
-│  │ 이름                      ││
-│  │ ┌───────────────────────┐││
-│  │ │ 보호자 이름 입력         │││ Input_Text
-│  │ └───────────────────────┘││
-│  │                          ││ spacing12
-│  │ 연락처                    ││
-│  │ ┌───────────────────────┐││
-│  │ │ 010-0000-0000          │││ Input_Text (phone)
-│  │ └───────────────────────┘││
-│  │                          ││ spacing12
-│  │ 관계                      ││
-│  │ ┌───────────────────────┐││
-│  │ │ 부모 / 법정후견인  ▼    │││ DropdownButtonFormField
-│  │ └───────────────────────┘││
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  ┌─ SMS 인증 ──────────────┐│
-│  │  보호자 휴대폰으로         ││
-│  │  인증번호를 발송합니다      ││ bodyMedium, onSurfaceVariant
-│  │                          ││
-│  │  ┌────────────────────┐  ││
-│  │  │   인증번호 발송      │  ││ Button_Secondary
-│  │  └────────────────────┘  ││
-│  │                          ││
-│  │  ┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐││
-│  │  │  ││  ││  ││  ││  ││  │││ Input_OTP (6자리)
-│  │  └──┘└──┘└──┘└──┘└──┘└──┘││
-│  │          2:45             ││ bodyLarge, primaryCoral
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  ┌─ 동의서 ────────────────┐│
-│  │ 📄 미성년자 개인정보      ││ Card_Standard
-│  │    수집·이용 동의서        ││ titleMedium, onSurface
-│  │                          ││
-│  │ (동의서 본문 스크롤 영역)  ││ bodySmall, onSurfaceVariant
-│  │ - 수집 목적: 위치 기반     ││ 최대 높이 160dp, 스크롤
-│  │   안전 서비스 제공         ││
-│  │ - 수집 항목: 이름, 위치,   ││
-│  │   비상연락처              ││
-│  │ - 보유 기간: 여행 종료 후  ││
-│  │   30일 (§10, §13)        ││
-│  │                          ││
-│  │ ☐ [필수] 위 동의서 내용을  ││ CheckboxListTile
-│  │   확인하였으며 동의합니다   ││ activeColor: semanticWarning
-│  │                          ││
-│  │ ☐ [필수] 법정대리인으로서  ││ CheckboxListTile
-│  │   본인의 자녀/피후견인의   ││ activeColor: semanticWarning
-│  │   SafeTrip 서비스 이용에   ││
-│  │   동의합니다              ││
-│  └──────────────────────────┘│
-│                             │ spacing12
-│  ⚖️ 본 동의는 개인정보 보호법  │ bodySmall (12sp)
-│  제22조(동의를 받는 방법) 및   │ onSurfaceVariant
-│  아동·청소년 개인정보 보호     │
-│  규정(COPPA/GDPR-K)에 따라   │
-│  수집됩니다.                  │
-│                             │ spacing16
-│  ┌─────────────────────────┐│
-│  │       동의 완료            ││ Button_Primary
-│  └─────────────────────────┘│
-│                             │
-└─────────────────────────────┘
++------------------------------------+
+| [<-] 보호자 동의                    | AppBar_Standard
++------------------------------------+
+|                                    |
+|  법정대리인 동의가                  | headlineMedium (24sp, SemiBold)
+|  필요합니다                         | onSurface
+|                                    |
+|  14세 미만 사용자는 법정대리인       | bodyMedium (14sp)
+|  (부모/보호자)의 동의가             | onSurfaceVariant
+|  필요합니다.                        |
+|                                    |
+|  +-- 법정대리인 정보 -------------+ |
+|  | 이름                           | |
+|  | +---------------------------+  | |
+|  | | 보호자 이름 입력             |  | | Input_Text
+|  | +---------------------------+  | |
+|  |                                | | spacing12
+|  | 연락처                          | |
+|  | +---------------------------+  | |
+|  | | 010-0000-0000              |  | | Input_Text (phone)
+|  | +---------------------------+  | |
+|  |                                | | spacing12
+|  | 관계                           | |
+|  | +---------------------------+  | |
+|  | | 부모 / 법정후견인  v        |  | | DropdownButtonFormField
+|  | +---------------------------+  | |
+|  +--------------------------------+ |
+|                                    | spacing16
+|  +-- SMS 인증 -------------------+ |
+|  |  보호자 휴대폰으로              | |
+|  |  인증번호를 발송합니다           | | bodyMedium, onSurfaceVariant
+|  |                                | |
+|  |  +------------------------+   | |
+|  |  |   인증번호 발송          |   | | Button_Secondary
+|  |  +------------------------+   | |
+|  |                                | |
+|  |  [__][__][__][__][__][__]      | | Input_OTP (6자리)
+|  |          2:45                  | | bodyLarge, primaryCoral
+|  +--------------------------------+ |
+|                                    | spacing16
+|  +-- 동의서 ---------------------+ |
+|  | 미성년자 개인정보               | | Card_Standard
+|  |    수집/이용 동의서              | | titleMedium, onSurface
+|  |                                | |
+|  | (동의서 본문 스크롤 영역)        | | bodySmall, onSurfaceVariant
+|  | - 수집 목적: 위치 기반           | | maxHeight: 160dp
+|  |   안전 서비스 제공               | |
+|  | - 수집 항목: 이름, 위치,         | |
+|  |   비상연락처                    | |
+|  | - 보유 기간: 여행 종료 후        | |
+|  |   30일                         | |
+|  |                                | |
+|  | [ ] [필수] 위 동의서 내용을      | | CheckboxListTile
+|  |     확인하였으며 동의합니다       | | activeColor: semanticWarning
+|  |                                | |
+|  | [ ] [필수] 법정대리인으로서      | | CheckboxListTile
+|  |     본인의 자녀/피후견인의       | | activeColor: semanticWarning
+|  |     SafeTrip 서비스 이용에      | |
+|  |     동의합니다                  | |
+|  +--------------------------------+ |
+|                                    | spacing12
+|  본 동의는 개인정보 보호법          | bodySmall (12sp)
+|  제22조 및 위치정보법 제25조에      | onSurfaceVariant
+|  따라 수집됩니다.                   |
+|                                    | spacing16
+|  +------------------------------+ |
+|  |       동의 완료                | | Button_Primary
+|  +------------------------------+ |
+|                                    |
++------------------------------------+
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "보호자 동의", leading: BackButton, style: AppBar_Standard |
-| 제목 | `Text` | style: headlineMedium (24sp, SemiBold), color: onSurface |
-| 설명 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant |
-| 보호자 이름 입력 | `TextFormField` | style: Input_Text, hintText: "보호자 이름 입력", validator: 필수 (2~20자) |
-| 보호자 연락처 입력 | `TextFormField` | style: Input_Text, keyboardType: TextInputType.phone, hintText: "010-0000-0000" |
-| 관계 선택 | `DropdownButtonFormField` | items: ["부모", "법정후견인", "기타"], value: null, validator: 필수 |
-| 인증번호 발송 버튼 | `OutlinedButton` | style: Button_Secondary, text: "인증번호 발송", enabled: 연락처 유효 시 |
-| OTP 입력 | `Row` < `TextField` x 6 > | style: Input_OTP, 각 셀 48x56dp, radius8, 자동 포커스 이동 |
-| 타이머 | `Text` | style: bodyLarge (16sp), color: primaryCoral (#FF807B), 180초 카운트다운 |
-| 동의서 카드 | `Card` | style: Card_Standard, 내부 스크롤 가능, maxHeight: 160dp |
-| 동의서 본문 | `SingleChildScrollView` + `Text` | style: bodySmall (12sp), color: onSurfaceVariant |
-| 동의 체크박스 1 | `CheckboxListTile` | activeColor: semanticWarning (#FF9800), title: "[필수] 위 동의서 내용을 확인하였으며 동의합니다" |
-| 동의 체크박스 2 | `CheckboxListTile` | activeColor: semanticWarning (#FF9800), title: "[필수] 법정대리인으로서 ... 동의합니다" |
-| 법적 고지 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, icon: ⚖️ prefix |
-| 동의 완료 버튼 | `ElevatedButton` | style: Button_Primary, text: "동의 완료", enabled: SMS 인증 완료 + 체크박스 2개 모두 체크 |
+| 기능 | 캡틴 | 크루장 | 크루 | 가디언 |
+|------|:----:|:------:|:----:|:------:|
+| M-01 화면 진입 | -- | -- | -- | -- |
+| 법정대리인(보호자) 동의 수행 | -- | -- | -- | -- |
 
-**상태 분기**
+> M-01은 회원가입 플로우 중 14세 미만 사용자의 법정대리인이 수행하는 화면이다.
+> 여행 역할(캡틴/크루장/크루/가디언)과 무관하게, 오직 법정대리인만 이 화면에 진입한다.
+
+#### 여행상태별 분기
+
+| 기능 | none | planning | active | completed |
+|------|:----:|:--------:|:------:|:---------:|
+| M-01 진입 | 해당 없음 (회원가입 플로우) | -- | -- | -- |
+
+> M-01은 회원가입 단계에서 동작하며 여행 상태와 무관하다.
+
+#### 프라이버시등급별 분기
+
+| 기능 | 안전최우선 | 표준 | 프라이버시우선 |
+|------|:---------:|:----:|:-------------:|
+| M-01 동작 | 해당 없음 | 해당 없음 | 해당 없음 |
+
+> 회원가입 시점에는 여행이 존재하지 않으므로 프라이버시 등급 분기가 적용되지 않는다.
+
+#### 인터랙션
+
+| 액션 | 결과 | 조건 |
+|------|------|------|
+| [탭] 보호자 이름 입력 | 키보드 표시, 실시간 형식 검증 (2~20자) | -- |
+| [탭] 보호자 연락처 입력 | 숫자 키패드 표시 | -- |
+| [탭] 관계 선택 | DropdownMenu 표시 (부모 / 법정후견인 / 기타) | -- |
+| [탭] 인증번호 발송 | POST `/api/v1/auth/minor-consent/send-otp` --> 보호자 폰에 SMS 발송 | 연락처 유효 시 |
+| [입력] OTP 셀 | 숫자 입력 시 자동 다음 셀 이동, 6자리 완료 시 자동 인증 요청 | 인증번호 발송 완료 |
+| [탭] 동의서 영역 | 스크롤하여 전문 확인 가능 | -- |
+| [탭] 동의 체크박스 | 개별 토글 | -- |
+| [탭] 동의 완료 | POST `/api/v1/auth/minor-consent/parent` --> TB_MINOR_CONSENT 생성 --> A-04 전화번호 인증으로 이동 | SMS 인증 완료 + 체크박스 2개 모두 체크 |
+| [뒤로가기] | Dialog_Confirm "동의를 중단하시겠습니까? 입력된 정보가 사라집니다." (확인 --> A-07 / 취소 --> 유지) | -- |
+
+**상태별 UI 변화:**
 
 | 상태 | UI 변화 |
 |------|---------|
-| 초기 | 모든 입력 필드 비어 있음, OTP 영역 비활성, 체크박스 unchecked, 동의 완료 버튼 비활성 (opacity 0.4) |
+| 초기 | 모든 입력 비어 있음, OTP 영역 비활성, 체크박스 unchecked, 동의 완료 버튼 비활성 (opacity 0.4) |
 | 보호자 정보 입력 중 | 입력 필드 보더 primaryTeal, 실시간 형식 검증 |
 | 연락처 유효 | 인증번호 발송 버튼 활성 (primaryTeal 보더) |
-| 인증번호 발송 중 | 발송 버튼 → CircularProgressIndicator |
+| 인증번호 발송 중 | 발송 버튼 --> CircularProgressIndicator |
 | 인증번호 발송 완료 | OTP 입력 필드 활성화, 타이머 3:00 시작, Toast "인증번호가 발송되었습니다" |
-| OTP 입력 중 | 활성 셀 보더 primaryTeal, 자동 다음 셀 이동 |
-| OTP 인증 성공 | OTP 영역에 ✅ 인증 완료 표시, 셀 비활성화 |
+| OTP 인증 성공 | OTP 영역에 인증 완료 표시, 셀 비활성화 |
 | OTP 인증 실패 | 전체 셀 보더 semanticError, SnackBar "인증번호가 올바르지 않습니다" |
 | 타이머 만료 | OTP 셀 비활성, "인증번호가 만료되었습니다" 안내, 재발송 버튼 표시 |
-| 체크박스 2개 모두 체크 + OTP 인증 완료 | 동의 완료 버튼 활성 (primaryTeal) |
-| 동의 저장 중 | 동의 완료 버튼 → CircularProgressIndicator |
-| 동의 저장 성공 | Navigator.push → A-04 전화번호 인증 (미성년자 본인 인증) |
+| 체크박스 2개 + OTP 인증 완료 | 동의 완료 버튼 활성 (primaryTeal) |
+| 동의 저장 중 | 동의 완료 버튼 --> CircularProgressIndicator |
+| 동의 저장 성공 | Navigator.push --> A-04 전화번호 인증 |
 | 동의 저장 실패 | SnackBar "동의 처리에 실패했습니다. 다시 시도해주세요." |
-
-**인터랙션**
-
-- [탭] 보호자 이름 입력 → 키보드 표시
-- [탭] 보호자 연락처 입력 → 숫자 키패드 표시
-- [탭] 관계 선택 → DropdownMenu (부모 / 법정후견인 / 기타)
-- [탭] 인증번호 발송 → POST /api/v1/auth/minor-consent/send-otp → 보호자 폰에 SMS 발송
-- [입력] OTP 셀 → 숫자 입력 시 자동 다음 셀 이동, 6자리 완료 시 자동 인증 요청
-- [탭] 동의서 영역 → 스크롤하여 전문 확인 가능
-- [탭] 동의 체크박스 → 개별 토글
-- [탭] 동의 완료 → POST /api/v1/auth/minor-consent/parent → 성공 시 A-04
-- [뒤로가기] → Dialog_Confirm "동의를 중단하시겠습니까? 입력된 정보가 사라집니다." (확인 → A-07 / 취소 → 유지)
 
 ---
 
-### M-02 이중 동의 (Minor Consent - Dual)
+### 2.2 [M-02] 이중 동의 (Minor Consent - Dual)
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
@@ -239,128 +243,137 @@ M-04 미성년자 가디언 해제 (사유 입력 → 캡틴 승인/거절)
 | 화면명 | 이중 동의 (Minor Consent - Dual) |
 | Phase | P2 |
 | 역할 | 미성년자 (14~17세) + 보호자 |
-| 진입 경로 | A-07 약관 동의 (14~17세 사용자) → M-02 |
-| 이탈 경로 | M-02 → A-04 (이중 동의 완료 시) |
+| 진입 경로 | A-07 약관 동의 (14~17세 사용자) --> M-02 |
+| 이탈 경로 | M-02 --> A-04 전화번호 인증 (이중 동의 완료 시) |
 
-**레이아웃**
+#### 레이아웃
 
 ```
-┌─────────────────────────────┐
-│ [←] 이중 동의                │ AppBar_Standard
-├─────────────────────────────┤
-│                             │
-│  본인과 보호자의             │ headlineMedium (24sp, SemiBold)
-│  동의가 필요합니다           │ onSurface
-│                             │
-│  14세 이상 18세 미만 사용자는 │ bodyMedium (14sp)
-│  본인과 보호자 모두의 동의가  │ onSurfaceVariant
-│  필요합니다.                 │
-│                             │
-│  ┌─ 진행 상황 ─────────────┐│
-│  │  ① 본인 동의    ② 보호자  ││ ProgressIndicator (step)
-│  │  ●━━━━━━━━━━━━━○         ││ step 1 활성: primaryTeal
-│  │  진행 중        대기 중    ││ step 2 대기: outline
-│  └──────────────────────────┘│
-│                             │ spacing16
-│ ┌─────────────────────────┐ │
-│ │ [Step 1] 본인 동의        │ │ Card_Standard
-│ │                          │ │ 활성 상태: 좌측 보더 primaryTeal
-│ │ ┌─ 동의 항목 ──────────┐ │ │
-│ │ │ ☐ [필수] 개인정보      │ │ │ CheckboxListTile
-│ │ │    수집·이용 동의       │→│ │ activeColor: primaryTeal
-│ │ │                       │ │ │
-│ │ │ ☐ [필수] 위치정보      │ │ │ CheckboxListTile
-│ │ │    이용 동의           │→│ │ activeColor: primaryTeal
-│ │ │                       │ │ │
-│ │ │ ☐ [필수] 미성년자      │ │ │ CheckboxListTile
-│ │ │    서비스 이용 동의     │→│ │ activeColor: primaryTeal
-│ │ └───────────────────────┘ │ │
-│ │                          │ │
-│ │ ┌────────────────────┐   │ │
-│ │ │    본인 동의 확인     │   │ │ Button_Primary (step 1용)
-│ │ └────────────────────┘   │ │
-│ └─────────────────────────┘ │
-│                             │ spacing16
-│ ┌─────────────────────────┐ │
-│ │ [Step 2] 보호자 확인      │ │ Card_Standard
-│ │                          │ │ 비활성 상태: opacity 0.5
-│ │  보호자 연락처             │ │
-│ │ ┌───────────────────────┐│ │
-│ │ │ 010-0000-0000          ││ │ Input_Text (phone, disabled)
-│ │ └───────────────────────┘│ │
-│ │                          │ │
-│ │  확인 방식                │ │
-│ │ ┌───────────────────┐    │ │
-│ │ │ ○ SMS 인증          │    │ │ RadioListTile
-│ │ │ ○ 인앱 승인 요청     │    │ │ RadioListTile
-│ │ └───────────────────┘    │ │
-│ │                          │ │
-│ │ ┌────────────────────┐   │ │
-│ │ │  보호자 확인 요청     │   │ │ Button_Primary (disabled)
-│ │ └────────────────────┘   │ │
-│ │                          │ │
-│ │  ⏳ 보호자 확인 대기 중    │ │ bodySmall, onSurfaceVariant
-│ └─────────────────────────┘ │
-│                             │ spacing12
-│  ⚖️ 개인정보 보호법 제22조 및  │ bodySmall (12sp)
-│  아동·청소년 보호 규정에 따른  │ onSurfaceVariant
-│  이중 동의 절차입니다.        │
-│                             │
-└─────────────────────────────┘
++------------------------------------+
+| [<-] 이중 동의                      | AppBar_Standard
++------------------------------------+
+|                                    |
+|  본인과 보호자의                    | headlineMedium (24sp, SemiBold)
+|  동의가 필요합니다                   | onSurface
+|                                    |
+|  14세 이상 18세 미만 사용자는        | bodyMedium (14sp)
+|  본인과 보호자 모두의 동의가         | onSurfaceVariant
+|  필요합니다.                        |
+|                                    |
+|  +-- 진행 상황 ------------------+ |
+|  |  (1) 본인 동의    (2) 보호자   | | Stepper (2-step)
+|  |  *================o           | | step 1 활성: primaryTeal
+|  |  진행 중          대기 중       | | step 2 대기: outline
+|  +--------------------------------+ |
+|                                    | spacing16
+| +--------------------------------+ |
+| | [Step 1] 본인 동의              | | Card_Standard
+| |                                | | 활성: 좌측 보더 primaryTeal 4px
+| | +-- 동의 항목 ----------------+ | |
+| | | [ ] [필수] 개인정보           | | | CheckboxListTile
+| | |     수집/이용 동의            | | | activeColor: primaryTeal
+| | |                              | | |
+| | | [ ] [필수] 위치정보           | | | CheckboxListTile
+| | |     이용 동의                | | | activeColor: primaryTeal
+| | |                              | | |
+| | | [ ] [필수] 미성년자           | | | CheckboxListTile
+| | |     서비스 이용 동의          | | | activeColor: primaryTeal
+| | +------------------------------+ | |
+| |                                | |
+| | +------------------------+     | |
+| | |    본인 동의 확인        |     | | Button_Primary (step 1용)
+| | +------------------------+     | |
+| +--------------------------------+ |
+|                                    | spacing16
+| +--------------------------------+ |
+| | [Step 2] 보호자 확인            | | Card_Standard
+| |                                | | 비활성: opacity 0.5
+| |  보호자 연락처                   | |
+| | +---------------------------+  | |
+| | | 010-0000-0000              |  | | Input_Text (phone, disabled)
+| | +---------------------------+  | |
+| |                                | |
+| |  확인 방식                      | |
+| | +---------------------------+  | |
+| | | ( ) SMS 인증               |  | | RadioListTile
+| | | ( ) 인앱 승인 요청          |  | | RadioListTile
+| | +---------------------------+  | |
+| |                                | |
+| | +------------------------+     | |
+| | |  보호자 확인 요청        |     | | Button_Primary (disabled)
+| | +------------------------+     | |
+| |                                | |
+| |  보호자 확인 대기 중             | | bodySmall, onSurfaceVariant
+| +--------------------------------+ |
+|                                    | spacing12
+|  개인정보 보호법 제22조 및          | bodySmall (12sp)
+|  아동/청소년 보호 규정에 따른       | onSurfaceVariant
+|  이중 동의 절차입니다.              |
+|                                    |
++------------------------------------+
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "이중 동의", leading: BackButton, style: AppBar_Standard |
-| 제목 | `Text` | style: headlineMedium (24sp, SemiBold), color: onSurface |
-| 설명 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant |
-| 진행 인디케이터 | `Stepper` (custom) | 2-step, activeColor: primaryTeal (#00A2BD), inactiveColor: outline (#EDEDED) |
-| Step 1 카드 | `Card` | style: Card_Standard, 활성 시 좌측 보더 primaryTeal 4px |
-| 동의 체크박스 (3개) | `CheckboxListTile` | activeColor: primaryTeal, 접두어 "[필수]", trailing: IconButton (chevron_right) |
-| 본인 동의 버튼 | `ElevatedButton` | style: Button_Primary, text: "본인 동의 확인", enabled: 3개 모두 체크 시 |
-| Step 2 카드 | `Card` | style: Card_Standard, 초기: opacity 0.5 (비활성), Step 1 완료 후 활성 |
-| 보호자 연락처 입력 | `TextFormField` | style: Input_Text, keyboardType: TextInputType.phone, hintText: "010-0000-0000" |
-| 확인 방식 선택 | `RadioListTile` x 2 | groupValue: confirmMethod, items: ["SMS 인증", "인앱 승인 요청"] |
-| 보호자 확인 요청 버튼 | `ElevatedButton` | style: Button_Primary, text: "보호자 확인 요청", enabled: Step 1 완료 + 연락처 유효 + 방식 선택 |
-| 대기 상태 표시 | `Row` (icon + text) | icon: ⏳, style: bodySmall (12sp), color: onSurfaceVariant |
-| 법적 고지 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, icon: ⚖️ prefix |
+| 기능 | 캡틴 | 크루장 | 크루 | 가디언 |
+|------|:----:|:------:|:----:|:------:|
+| M-02 화면 진입 | -- | -- | -- | -- |
+| 미성년자(14~17세) 이중 동의 | -- | -- | -- | -- |
 
-**상태 분기**
+> M-02는 회원가입 플로우 중 14~17세 미성년자 + 보호자가 수행하는 화면이다.
+> 여행 역할과 무관하게, 오직 해당 연령대 사용자의 가입 시에만 진입한다.
+
+#### 여행상태별 분기
+
+| 기능 | none | planning | active | completed |
+|------|:----:|:--------:|:------:|:---------:|
+| M-02 진입 | 해당 없음 (회원가입 플로우) | -- | -- | -- |
+
+> M-02는 회원가입 단계에서 동작하며 여행 상태와 무관하다.
+
+#### 프라이버시등급별 분기
+
+| 기능 | 안전최우선 | 표준 | 프라이버시우선 |
+|------|:---------:|:----:|:-------------:|
+| M-02 동작 | 해당 없음 | 해당 없음 | 해당 없음 |
+
+> 회원가입 시점에는 여행이 존재하지 않으므로 프라이버시 등급 분기가 적용되지 않는다.
+
+#### 인터랙션
+
+| 액션 | 결과 | 조건 |
+|------|------|------|
+| [탭] 동의 체크박스 | 개별 토글 | Step 1 활성 상태 |
+| [탭] 약관 항목 우측 화살표 | WebView로 해당 약관 전문 표시 | -- |
+| [탭] 본인 동의 확인 | 로컬 상태 저장, Step 1 카드에 완료 표시, Step 2 카드 활성화 (opacity 1.0), 진행 인디케이터 Step 2 활성 | 체크박스 3개 모두 체크 |
+| [탭] 확인 방식 라디오 | SMS 또는 인앱 승인 선택 | Step 1 완료 |
+| [탭] 보호자 확인 요청 | POST `/api/v1/auth/minor-consent/dual` --> SMS 발송 또는 인앱 푸시 | Step 1 완료 + 연락처 유효 + 방식 선택 |
+| [입력] OTP 셀 (SMS 선택 시) | 숫자 입력, 6자리 완료 시 자동 인증 | SMS 방식 선택 |
+| [자동] 인앱 승인 폴링 | GET `/api/v1/auth/minor-consent/status` (10초 간격) | 인앱 방식 선택 |
+| [탭] 재요청 | POST `/api/v1/auth/minor-consent/dual` (재전송) | 60초 후 활성 |
+| [뒤로가기] | Dialog_Confirm "동의 진행을 중단하시겠습니까?" (확인 --> A-07 / 취소 --> 유지) | -- |
+
+**상태별 UI 변화:**
 
 | 상태 | UI 변화 |
 |------|---------|
 | 초기 | Step 1 활성 (좌측 보더 primaryTeal), Step 2 비활성 (opacity 0.5), 진행 인디케이터 Step 1 활성 |
 | Step 1 체크박스 일부 체크 | 본인 동의 버튼 비활성 (opacity 0.4) |
 | Step 1 체크박스 전체 체크 | 본인 동의 버튼 활성 (primaryTeal) |
-| Step 1 완료 | Step 1 카드에 ✅ 완료 표시, 체크박스 비활성화 (locked), Step 2 카드 활성화 (opacity 1.0), 진행 인디케이터 Step 2 활성 |
-| Step 2 — SMS 인증 선택 | SMS 인증 플로우 표시 (Input_OTP + 타이머, M-01과 동일) |
-| Step 2 — 인앱 승인 선택 | "보호자 앱에 승인 요청을 보냅니다" 안내 표시, 푸시 알림으로 전달 |
-| 보호자 확인 요청 전송 중 | 버튼 → CircularProgressIndicator |
-| SMS 인증 대기 중 | OTP 입력 필드 + 타이머 3:00 표시 |
-| 인앱 승인 대기 중 | "⏳ 보호자 확인 대기 중..." 텍스트 + 실시간 폴링 (10초 간격), "재요청" 링크 (60초 후 활성) |
-| 보호자 확인 완료 | Step 2 카드에 ✅ 완료 표시, Toast "보호자 동의가 완료되었습니다", 자동 이동 A-04 |
+| Step 1 완료 | Step 1 카드에 완료 표시, 체크박스 비활성화 (locked), Step 2 카드 활성화, 진행 인디케이터 Step 2 활성 |
+| Step 2 -- SMS 인증 선택 | SMS 인증 플로우 표시 (Input_OTP + 타이머 3:00) |
+| Step 2 -- 인앱 승인 선택 | "보호자 앱에 승인 요청을 보냅니다" 안내 표시, 푸시 알림으로 전달 |
+| 보호자 확인 요청 전송 중 | 버튼 --> CircularProgressIndicator |
+| 인앱 승인 대기 중 | "보호자 확인 대기 중..." 텍스트 + 실시간 폴링 (10초 간격), "재요청" 링크 (60초 후 활성) |
+| 보호자 확인 완료 | Step 2 카드에 완료 표시, Toast "보호자 동의가 완료되었습니다", 자동 이동 A-04 |
 | 보호자 확인 거절 | Card_Alert (semanticWarning 보더): "보호자가 동의를 거부했습니다. 보호자에게 문의하세요." |
-| 보호자 확인 타임아웃 (24시간) | "보호자 확인이 만료되었습니다. 다시 요청해주세요." 안내 표시 |
-
-**인터랙션**
-
-- [탭] 동의 체크박스 → 개별 토글
-- [탭] 약관 항목 우측 화살표 (→) → WebView로 해당 약관 전문 표시
-- [탭] 본인 동의 확인 → 로컬 상태 저장, Step 2 활성화
-- [탭] 확인 방식 라디오 → SMS 또는 인앱 선택
-- [탭] 보호자 확인 요청 → POST /api/v1/auth/minor-consent/dual → SMS 발송 또는 인앱 푸시
-- [입력] OTP 셀 (SMS 선택 시) → 숫자 입력, 6자리 완료 시 자동 인증
-- [자동] 인앱 승인 폴링 → GET /api/v1/auth/minor-consent/status (10초 간격)
-- [탭] 재요청 → POST /api/v1/auth/minor-consent/dual (재전송)
-- [뒤로가기] → Dialog_Confirm "동의 진행을 중단하시겠습니까?" (확인 → A-07 / 취소 → 유지)
+| 보호자 확인 타임아웃 (24시간) | "보호자 확인이 만료되었습니다. 다시 요청해주세요." |
 
 ---
 
-### M-03 미성년자 여행 안내 (Minor Trip Notice)
+### 2.3 [M-03] 미성년자 여행 안내 (Minor Trip Notice)
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
@@ -368,238 +381,264 @@ M-04 미성년자 가디언 해제 (사유 입력 → 캡틴 승인/거절)
 | 화면명 | 미성년자 여행 안내 (Minor Trip Notice) |
 | Phase | P2 |
 | 역할 | 캡틴 |
-| 진입 경로 | 미성년자 멤버 가입 시 → M-03 (자동 팝업) |
-| 이탈 경로 | M-03 → C-01 메인맵 (확인 완료 시) |
+| 진입 경로 | 미성년자 멤버 여행 참여 감지 시 --> M-03 (캡틴에게 자동 팝업) |
+| 이탈 경로 | M-03 --> C-01 메인맵 (확인 완료 시) |
 
-**레이아웃**
+#### 레이아웃
 
 ```
-┌─────────────────────────────┐
-│ [←] 미성년자 여행 안내         │ AppBar_Standard
-├─────────────────────────────┤
-│                             │
-│  🛡️ 미성년자 멤버가           │ headlineMedium (24sp, SemiBold)
-│  참여합니다                  │ onSurface
-│                             │
-│  미성년자가 포함된 여행은      │ bodyMedium (14sp)
-│  안전 규정에 따라 제약이       │ onSurfaceVariant
-│  적용됩니다.                  │
-│                             │ spacing16
-│  ┌─ 강제 적용 사항 ─────────┐│
-│  │                          ││ Card_Alert
-│  │  ⚠️ 프라이버시 등급 강제    ││ semanticError 보더 (#DA4C51)
-│  │                          ││
-│  │  이 여행의 프라이버시 등급이 ││ bodyMedium, onSurface
-│  │  안전 최우선 (Safety First) ││
-│  │  으로 자동 전환됩니다.     ││
-│  │                          ││
-│  │  🛡️ Safety First          ││ Badge: semanticError 배경
-│  │  → 위치가 항상 공유됩니다   ││ bodySmall, onSurfaceVariant
-│  │                          ││
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  ┌─ 제한 사항 목록 ─────────┐│
-│  │                          ││ Card_Alert
-│  │  🚫 미성년자 제한 사항      ││ semanticError 보더 (#DA4C51)
-│  │                          ││
-│  │  • 프라이버시우선 모드       ││ bodyMedium, onSurface
-│  │    사용 불가               ││
-│  │                          ││
-│  │  • 가디언 위치 공유         ││
-│  │    일시 중지 불가           ││
-│  │                          ││
-│  │  • 가디언 연결 필수         ││
-│  │    (해제 시 캡틴 승인 필요) ││
-│  │                          ││
-│  │  • 위치 데이터 보유:        ││
-│  │    여행 종료 후 30일        ││ bodySmall, onSurfaceVariant
-│  │    (성인 90일보다 단축)     ││
-│  │                          ││
-│  │  • Intelligence AI 개인    ││
-│  │    분석 제한               ││
-│  │    (그룹 단위만 허용)       ││
-│  │                          ││
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  ┌─ 미성년자 멤버 정보 ──────┐│
-│  │ 👤 홍길동 (15세)           ││ ListTile_Member
-│  │    크루 · 가디언: 홍부모    ││ subtitle: 역할 + 가디언명
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  ⚖️ 비즈니스 원칙 §10에 따라   │ bodySmall (12sp)
-│  미성년자 보호 정책이          │ onSurfaceVariant
-│  자동 적용됩니다.             │
-│                             │ spacing24
-│  ┌─────────────────────────┐│
-│  │       확인                ││ Button_Primary
-│  └─────────────────────────┘│
-│                             │
-└─────────────────────────────┘
++------------------------------------+
+| [<-] 미성년자 여행 안내              | AppBar_Standard
++------------------------------------+
+|                                    |
+|  미성년자 멤버가                     | headlineMedium (24sp, SemiBold)
+|  참여합니다                         | onSurface
+|                                    |
+|  미성년자가 포함된 여행은            | bodyMedium (14sp)
+|  안전 규정에 따라 제약이             | onSurfaceVariant
+|  적용됩니다.                        |
+|                                    | spacing16
+|  +-- 강제 적용 사항 ---------------+|
+|  |                                || Card_Alert
+|  |  프라이버시 등급 강제 전환        || semanticError 보더 (#DA4C51)
+|  |                                ||
+|  |  이 여행의 프라이버시 등급이      || bodyMedium, onSurface
+|  |  안전 최우선 (Safety First)     ||
+|  |  으로 자동 전환됩니다.           ||
+|  |                                ||
+|  |  [Safety First]                || Badge: semanticError 배경
+|  |  -> 위치가 항상 공유됩니다       || bodySmall, onSurfaceVariant
+|  |                                ||
+|  +--------------------------------+|
+|                                    | spacing16
+|  +-- 제한 사항 목록 ---------------+|
+|  |                                || Card_Alert
+|  |  미성년자 제한 사항              || semanticError 보더 (#DA4C51)
+|  |                                ||
+|  |  * 프라이버시우선 모드            || bodyMedium, onSurface
+|  |    사용 불가                    ||
+|  |                                ||
+|  |  * 가디언 위치 공유              ||
+|  |    일시 중지 불가                ||
+|  |                                ||
+|  |  * 가디언 연결 필수              ||
+|  |    (해제 시 캡틴 승인 필요)      ||
+|  |                                ||
+|  |  * 야간 이동(22~06시) 감지       ||
+|  |    시 캡틴+가디언 알림           || bodySmall, onSurfaceVariant
+|  |                                ||
+|  |  * 위치 데이터 보유:             ||
+|  |    여행 종료 후 30일             ||
+|  |    (성인 90일보다 단축)          ||
+|  |                                ||
+|  |  * Intelligence AI 개인         ||
+|  |    분석 제한                    ||
+|  |    (그룹 단위만 허용)            ||
+|  |                                ||
+|  +--------------------------------+|
+|                                    | spacing16
+|  +-- 미성년자 멤버 정보 -----------+|
+|  | [Avatar] 홍길동 (15세)          || ListTile_Member
+|  |   크루 / 가디언: 홍부모          || subtitle: 역할 + 가디언명
+|  +--------------------------------+|
+|                                    | spacing16
+|  비즈니스 원칙 §10에 따라           | bodySmall (12sp)
+|  미성년자 보호 정책이               | onSurfaceVariant
+|  자동 적용됩니다.                   |
+|                                    | spacing24
+|  +------------------------------+ |
+|  |       확인                     | | Button_Primary
+|  +------------------------------+ |
+|                                    |
++------------------------------------+
 ```
 
-**컴포넌트 명세**
+#### 역할별 분기
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 | `AppBar` | title: "미성년자 여행 안내", leading: BackButton, style: AppBar_Standard |
-| 제목 | `Text` | style: headlineMedium (24sp, SemiBold), color: onSurface, prefix: 🛡️ |
-| 설명 | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant |
-| 강제 적용 카드 | `Card` | style: Card_Alert, borderColor: semanticError (#DA4C51), borderWidth: 1px |
-| 강제 적용 제목 | `Text` | style: titleMedium (18sp, SemiBold), prefix: ⚠️, color: onSurface |
-| Safety First 뱃지 | `Container` (pill) | backgroundColor: semanticError (#DA4C51), text: "Safety First", textColor: #FFFFFF, style: labelSmall |
-| 뱃지 설명 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant |
-| 제한 사항 카드 | `Card` | style: Card_Alert, borderColor: semanticError (#DA4C51), borderWidth: 1px |
-| 제한 사항 제목 | `Text` | style: titleMedium (18sp, SemiBold), prefix: 🚫, color: onSurface |
-| 제한 사항 목록 | `Column` < `Row` (bullet + text) > | style: bodyMedium (14sp), color: onSurface, bullet: "•" |
-| 제한 사항 부연 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant |
-| 미성년자 정보 카드 | `Card` + `ListTile` | style: Card_Standard, leading: CircleAvatar (40dp), title: 이름 + 나이, subtitle: 역할 + 가디언 |
-| 법적 고지 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, prefix: ⚖️ |
-| 확인 버튼 | `ElevatedButton` | style: Button_Primary, text: "확인" |
+| 기능 | 캡틴 | 크루장 | 크루 | 가디언 |
+|------|:----:|:------:|:----:|:------:|
+| M-03 안내 화면 수신 | ✅ | ❌ | ❌ | ❌ |
+| safety_first 강제 전환 확인 | ✅ | -- | -- | -- |
 
-**상태 분기**
+> M-03은 캡틴 전용 화면이다. 미성년자 멤버가 여행에 참여할 때 캡틴에게만 자동으로 표시된다.
+> 크루장/크루/가디언은 이 화면에 진입하지 않으며, 프라이버시 등급 변경은 서버에서 자동 처리된다.
+
+#### 여행상태별 분기
+
+| 기능 | none | planning | active | completed |
+|------|:----:|:--------:|:------:|:---------:|
+| M-03 팝업 | ❌ | ✅ (멤버 참여 시) | ✅ (멤버 참여 시) | ❌ |
+| safety_first 강제 전환 | -- | ✅ | ✅ | -- |
+
+#### 프라이버시등급별 분기
+
+| 기능 | 안전최우선 | 표준 | 프라이버시우선 |
+|------|:---------:|:----:|:-------------:|
+| M-03 등급 전환 안내 | "현재 등급이 유지됩니다" | "표준 --> 안전최우선으로 변경" 강조 | "프라이버시우선 --> 안전최우선으로 변경" 강조 |
+| 전환 차단 여부 | 이미 안전최우선 | 강제 전환 | 강제 전환 |
+
+> 미성년자 포함 여행에서 `safety_first` 이외의 등급으로 변경을 시도하면 서버에서 HTTP 403을 반환한다 (미성년자 보호 원칙 §5.2).
+
+#### 인터랙션
+
+| 액션 | 결과 | 조건 |
+|------|------|------|
+| [자동] 미성년자 멤버 가입 감지 | 캡틴 화면에 M-03 자동 팝업, 프라이버시 등급 강제 전환 안내 | 미성년자 멤버 존재 |
+| [스크롤] 제한 사항 카드 영역 | 전체 내용 확인 가능 | -- |
+| [탭] 확인 | PATCH `/api/v1/trips/:tripId/privacy-level` --> `safety_first` 강제 전환 확인 + Navigator.pop --> C-01 | -- |
+| [뒤로가기] | 확인 버튼과 동일 동작 (이 안내는 건너뛸 수 없음, 반드시 확인 필요) | -- |
+
+**상태별 UI 변화:**
 
 | 상태 | UI 변화 |
 |------|---------|
 | 초기 | 전체 정보 표시, 확인 버튼 활성 |
 | 미성년자 1명 | 미성년자 정보 카드 1개 표시 |
 | 미성년자 복수 | 미성년자 정보 카드 목록으로 표시 (스크롤 가능) |
-| 이미 Safety First 등급인 경우 | 강제 적용 카드에 "현재 등급이 유지됩니다" 표시 (등급 전환 없음) |
-| Safety First 아닌 등급에서 전환 | 강제 적용 카드에 "기존 [등급명] → Safety First로 변경됩니다" 강조 표시 |
-| 확인 중 | 버튼 → CircularProgressIndicator |
-| 확인 완료 | PATCH /api/v1/trips/:tripId/privacy-level → safety_first, Navigator.pop → C-01 메인맵 |
-
-**인터랙션**
-
-- [자동] 미성년자 멤버 가입 감지 시 자동 팝업 (캡틴 화면)
-- [스크롤] 제한 사항 카드 영역 → 전체 내용 확인 가능
-- [탭] 확인 → 프라이버시 등급 강제 전환 확인 + Navigator.pop → C-01
-- [뒤로가기] → 확인 버튼과 동일 동작 (이 안내는 건너뛸 수 없음, 반드시 확인 필요)
+| 이미 safety_first 등급 | 강제 적용 카드에 "현재 등급이 유지됩니다" 표시 |
+| 다른 등급에서 전환 | 강제 적용 카드에 "기존 [등급명] --> Safety First로 변경됩니다" 강조 |
+| 확인 중 | 버튼 --> CircularProgressIndicator |
+| 확인 완료 | PATCH 완료 --> Navigator.pop --> C-01 메인맵 |
 
 ---
 
-### M-04 미성년자 가디언 해제 (Minor Guardian Release)
+### 2.4 [M-04] 미성년자 가디언 해제 (Minor Guardian Release)
 
-**메타데이터**
+#### 메타데이터
 
 | 항목 | 값 |
 |------|-----|
 | ID | M-04 |
 | 화면명 | 미성년자 가디언 해제 (Minor Guardian Release) |
 | Phase | P2 |
-| 역할 | 크루 (요청) / 캡틴 (승인) |
-| 진입 경로 | F-01 가디언 관리 → 가디언 해제 → M-04 |
-| 이탈 경로 | M-04 → F-01 (요청 완료/승인·거절 완료 시) |
+| 역할 | 크루 (해제 요청) / 캡틴 (승인/거절) |
+| 진입 경로 | F-01 가디언 관리 --> 가디언 해제 --> M-04 |
+| 이탈 경로 | M-04 --> F-01 가디언 관리 (요청 완료/승인/거절 완료 시) |
 
-**레이아웃 — 크루 (요청 화면)**
-
-```
-┌─────────────────────────────┐
-│ [←] 가디언 해제 요청          │ AppBar_Standard
-├─────────────────────────────┤
-│                             │
-│  가디언 해제를               │ headlineMedium (24sp, SemiBold)
-│  요청합니다                  │ onSurface
-│                             │
-│  미성년자의 가디언 해제는      │ bodyMedium (14sp)
-│  캡틴의 승인이 필요합니다.    │ onSurfaceVariant
-│                             │ spacing16
-│  ┌─ 안전 경고 ─────────────┐│
-│  │                          ││ Card_Alert
-│  │  ⚠️ 안전 경고              ││ semanticWarning 보더 (#FF9800)
-│  │                          ││
-│  │  가디언을 해제하면 보호자가 ││ bodyMedium, onSurface
-│  │  더 이상 위치를 확인하거나  ││
-│  │  긴급 알림을 받을 수       ││
-│  │  없습니다.                ││
-│  │                          ││
-│  │  미성년자의 안전을 위해     ││ bodySmall, onSurfaceVariant
-│  │  신중하게 결정해 주세요.    ││
-│  │                          ││
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  ┌─ 해제 대상 ─────────────┐│
-│  │ 👤 홍부모 (가디언)        ││ ListTile_Member
-│  │    연결 일자: 2026-02-15  ││ subtitle: 연결 일자
-│  │    담당 멤버: 홍길동       ││ trailing: 담당 멤버명
-│  └──────────────────────────┘│
-│                             │ spacing16
-│  해제 사유 *                 │ labelMedium, onSurface
-│  ┌─────────────────────────┐│
-│  │ 해제 사유를 입력해주세요    ││ TextFormField
-│  │                          ││ Input_Text (multiline)
-│  │                          ││ maxLines: 4, maxLength: 200
-│  │                          ││ validator: 필수 (10자 이상)
-│  └─────────────────────────┘│
-│  10자 이상 입력해주세요.      │ bodySmall, onSurfaceVariant
-│                  (0/200)    │ bodySmall, 우측 정렬
-│                             │ spacing24
-│  ┌─────────────────────────┐│
-│  │    캡틴에게 승인 요청       ││ Button_Primary
-│  └─────────────────────────┘│
-│                             │
-└─────────────────────────────┘
-```
-
-**레이아웃 — 캡틴 (승인/거절 다이얼로그)**
+#### 레이아웃 -- 크루 (해제 요청 화면)
 
 ```
-┌─────────────────────────────────────┐
-│                                     │ 스크림: black 40%
-│                                     │
-│    ┌────────────────────────────┐   │
-│    │     가디언 해제 승인 요청    │   │ Dialog_Confirm (확장형)
-│    │                            │   │ radius16
-│    │  홍길동(크루)이 가디언       │   │
-│    │  홍부모의 해제를             │   │ bodyMedium, onSurface
-│    │  요청했습니다.              │   │
-│    │                            │   │
-│    │  ┌─ 안전 경고 ────────┐    │   │
-│    │  │ ⚠️ 미성년자의       │    │   │ Card_Alert (inline)
-│    │  │ 가디언을 해제하면    │    │   │ semanticWarning 보더
-│    │  │ 안전 보호가 약화    │    │   │
-│    │  │ 됩니다.            │    │   │
-│    │  └────────────────────┘    │   │
-│    │                            │   │
-│    │  해제 사유:                 │   │ labelMedium, onSurfaceVariant
-│    │  "여행 일정 변경으로 인해    │   │ bodyMedium, onSurface
-│    │   가디언 교체가 필요합니다"  │   │ 인용 스타일
-│    │                            │   │
-│    │  ┌──────────┐ ┌──────────┐│   │
-│    │  │   거절    │ │   승인    ││   │
-│    │  │          │ │          ││   │
-│    │  └──────────┘ └──────────┘│   │ 거절: Button_Secondary
-│    │                            │   │ 승인: Button_Destructive
-│    └────────────────────────────┘   │
-│                                     │
-└─────────────────────────────────────┘
++------------------------------------+
+| [<-] 가디언 해제 요청               | AppBar_Standard
++------------------------------------+
+|                                    |
+|  가디언 해제를                      | headlineMedium (24sp, SemiBold)
+|  요청합니다                         | onSurface
+|                                    |
+|  미성년자의 가디언 해제는            | bodyMedium (14sp)
+|  캡틴의 승인이 필요합니다.           | onSurfaceVariant
+|                                    | spacing16
+|  +-- 안전 경고 ------------------+ |
+|  |                               | | Card_Alert
+|  |  안전 경고                     | | semanticWarning 보더 (#FF9800)
+|  |                               | |
+|  |  가디언을 해제하면 보호자가     | | bodyMedium, onSurface
+|  |  더 이상 위치를 확인하거나      | |
+|  |  긴급 알림을 받을 수           | |
+|  |  없습니다.                     | |
+|  |                               | |
+|  |  미성년자의 안전을 위해         | | bodySmall, onSurfaceVariant
+|  |  신중하게 결정해 주세요.        | |
+|  |                               | |
+|  +-------------------------------+ |
+|                                    | spacing16
+|  +-- 해제 대상 ------------------+ |
+|  | [Avatar] 홍부모 (가디언)       | | ListTile_Member
+|  |   연결 일자: 2026-02-15        | | subtitle: 연결 일자
+|  |   담당 멤버: 홍길동             | | trailing: 담당 멤버명
+|  +-------------------------------+ |
+|                                    | spacing16
+|  해제 사유 *                       | labelMedium, onSurface
+|  +-------------------------------+ |
+|  | 해제 사유를 입력해주세요         | | TextFormField
+|  |                               | | Input_Text (multiline)
+|  |                               | | maxLines: 4, maxLength: 200
+|  |                               | | validator: 필수 (10자 이상)
+|  +-------------------------------+ |
+|  10자 이상 입력해주세요.    (0/200) | bodySmall, onSurfaceVariant
+|                                    | spacing24
+|  +------------------------------+ |
+|  |    캡틴에게 승인 요청           | | Button_Primary
+|  +------------------------------+ |
+|                                    |
++------------------------------------+
 ```
 
-**컴포넌트 명세**
+#### 레이아웃 -- 캡틴 (승인/거절 다이얼로그)
 
-| 컴포넌트 | Flutter 위젯 | 속성 |
-|----------|-------------|------|
-| 앱바 (크루) | `AppBar` | title: "가디언 해제 요청", leading: BackButton, style: AppBar_Standard |
-| 제목 (크루) | `Text` | style: headlineMedium (24sp, SemiBold), color: onSurface |
-| 설명 (크루) | `Text` | style: bodyMedium (14sp), color: onSurfaceVariant |
-| 안전 경고 카드 | `Card` | style: Card_Alert, borderColor: semanticWarning (#FF9800), borderWidth: 1px |
-| 경고 제목 | `Text` | style: titleMedium (18sp, SemiBold), prefix: ⚠️, color: onSurface |
-| 경고 본문 | `Text` | style: bodyMedium (14sp), color: onSurface |
-| 경고 부연 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant |
-| 해제 대상 카드 | `Card` + `ListTile` | style: Card_Standard, leading: CircleAvatar (40dp), title: 가디언명 + Badge_Role(가디언) |
-| 해제 대상 정보 | `Text` | subtitle: 연결 일자, trailing: 담당 멤버명, style: bodySmall (12sp) |
-| 사유 라벨 | `Text` | style: labelMedium (14sp, Medium 500), color: onSurface, "*" suffix: semanticError |
-| 사유 입력 | `TextFormField` | style: Input_Text, maxLines: 4, maxLength: 200, hintText: "해제 사유를 입력해주세요", validator: 필수 (10자 이상) |
-| 글자 수 안내 | `Text` | style: bodySmall (12sp), color: onSurfaceVariant, alignment: right |
-| 승인 요청 버튼 | `ElevatedButton` | style: Button_Primary, text: "캡틴에게 승인 요청", enabled: 사유 10자 이상 |
-| 캡틴 다이얼로그 | `AlertDialog` | style: Dialog_Confirm (확장형), radius16, 너비 320dp |
-| 다이얼로그 제목 | `Text` | style: titleMedium (18sp, SemiBold), text: "가디언 해제 승인 요청" |
-| 다이얼로그 본문 | `Text` | style: bodyMedium (14sp), color: onSurface |
-| 다이얼로그 경고 | `Card` (inline) | style: Card_Alert, borderColor: semanticWarning (#FF9800) |
-| 사유 표시 | `Container` | style: bodyMedium (14sp), 인용 스타일 (좌측 보더 4px, outline 색상) |
-| 거절 버튼 | `OutlinedButton` | style: Button_Secondary, text: "거절" |
-| 승인 버튼 | `ElevatedButton` | style: Button_Destructive, text: "승인" |
+```
++--------------------------------------+
+|                                      | 스크림: black 40%
+|                                      |
+|    +------------------------------+  |
+|    |  가디언 해제 승인 요청         |  | Dialog_Confirm (확장형)
+|    |                              |  | radius16
+|    |  홍길동(크루)이 가디언         |  |
+|    |  홍부모의 해제를              |  | bodyMedium, onSurface
+|    |  요청했습니다.                |  |
+|    |                              |  |
+|    |  +-- 안전 경고 -----------+  |  |
+|    |  | 미성년자의              |  |  | Card_Alert (inline)
+|    |  | 가디언을 해제하면        |  |  | semanticWarning 보더
+|    |  | 안전 보호가 약화        |  |  |
+|    |  | 됩니다.                |  |  |
+|    |  +------------------------+  |  |
+|    |                              |  |
+|    |  해제 사유:                   |  | labelMedium, onSurfaceVariant
+|    |  "여행 일정 변경으로 인해     |  | bodyMedium, onSurface
+|    |   가디언 교체가 필요합니다"   |  | 인용 스타일
+|    |                              |  |
+|    |  +----------+ +----------+  |  |
+|    |  |   거절    | |   승인    |  |  | 거절: Button_Secondary
+|    |  +----------+ +----------+  |  | 승인: Button_Destructive
+|    +------------------------------+  |
+|                                      |
++--------------------------------------+
+```
 
-**상태 분기**
+#### 역할별 분기
+
+| 기능 | 캡틴 | 크루장 | 크루 | 가디언 |
+|------|:----:|:------:|:----:|:------:|
+| M-04 해제 요청 화면 진입 | ❌ | ❌ | ✅ (미성년자 본인, 14세 이상) | ❌ |
+| M-04 해제 승인/거절 다이얼로그 | ✅ | ❌ | ❌ | ❌ |
+| 해제 요청 전송 | ❌ | ❌ | ✅ | ❌ |
+| 해제 승인 | ✅ | ❌ | ❌ | ❌ |
+| 해제 거절 | ✅ | ❌ | ❌ | ❌ |
+
+> **14세 미만 미성년자**: 본인이 해제 요청을 할 수 없다. 법정대리인이 대리 요청하며, 이 경우에도 캡틴 승인이 필요하다 (미성년자 보호 원칙 §6.3).
+> **안전 최우선 등급 특칙**: 여행 진행 중(`active`) 가디언 해제가 제한된다. 미성년자 본인의 해제 요청은 여행 종료 후 처리될 수 있다 (미성년자 보호 원칙 §6.3).
+
+#### 여행상태별 분기
+
+| 기능 | none | planning | active | completed |
+|------|:----:|:--------:|:------:|:---------:|
+| M-04 해제 요청 | ❌ | ✅ | ✅ (안전최우선: 제한적) | ❌ |
+| M-04 캡틴 승인/거절 | ❌ | ✅ | ✅ | ❌ |
+
+> `active` + `safety_first` 상태에서 미성년자의 가디언 해제 요청은 캡틴이 승인하더라도 여행 종료 후 처리될 수 있다 (미성년자 보호 원칙 §6.3 안전 최우선 등급 특칙).
+
+#### 프라이버시등급별 분기
+
+| 기능 | 안전최우선 | 표준 | 프라이버시우선 |
+|------|:---------:|:----:|:-------------:|
+| 가디언 해제 가능 여부 | 캡틴 승인 필수, 여행 중 해제 제한 | 해당 없음 (미성년자 포함 시 안전최우선 강제) | 해당 없음 (미성년자 포함 시 안전최우선 강제) |
+
+> 미성년자 포함 여행은 `safety_first`만 허용되므로 표준/프라이버시우선 분기는 사실상 발생하지 않는다 (비즈니스 원칙 §10.2).
+
+#### 인터랙션
+
+| 액션 | 결과 | 조건 |
+|------|------|------|
+| [탭] 사유 입력 필드 | 키보드 표시 (multiline), 글자 수 카운터 실시간 업데이트 (n/200) | -- |
+| [탭] 캡틴에게 승인 요청 | POST `/api/v1/trips/:tripId/guardians/:linkId/release-request` { reason } --> 캡틴에게 푸시 알림 | 사유 10자 이상 |
+| [캡틴 푸시 탭] | 앱 열림 + 승인/거절 다이얼로그 자동 표시 | -- |
+| [탭] 거절 (캡틴) | PATCH `/api/v1/trips/:tripId/guardians/:linkId/release` { action: "rejected" } --> 크루에게 "캡틴이 가디언 해제를 거절했습니다" 푸시 | -- |
+| [탭] 승인 (캡틴) | Dialog_Confirm (2차 확인) "정말 가디언을 해제하시겠습니까?" --> 확인 시 PATCH { action: "approved" } --> 가디언 해제 처리 + 전체 알림 | -- |
+| [뒤로가기] -- 크루 화면 | F-01 가디언 관리로 복귀 | -- |
+| [뒤로가기/다이얼로그 외부 탭] -- 캡틴 | 다이얼로그 닫힘 (미결 상태 유지, 알림에서 재진입 가능) | -- |
+
+**상태별 UI 변화:**
 
 | 상태 | UI 변화 |
 |------|---------|
@@ -608,41 +647,102 @@ M-04 미성년자 가디언 해제 (사유 입력 → 캡틴 승인/거절)
 | 사유 입력 중 | 글자 수 카운터 실시간 업데이트 (n/200) |
 | 사유 10자 미만 | 승인 요청 버튼 비활성, 안내 텍스트 "10자 이상 입력해주세요" |
 | 사유 10자 이상 | 승인 요청 버튼 활성 (primaryTeal) |
-| 요청 전송 중 | 버튼 → CircularProgressIndicator |
-| 요청 전송 성공 | Toast "캡틴에게 승인 요청을 보냈습니다", Navigator.pop → F-01 (대기 상태 표시) |
+| 요청 전송 중 | 버튼 --> CircularProgressIndicator |
+| 요청 전송 성공 | Toast "캡틴에게 승인 요청을 보냈습니다", Navigator.pop --> F-01 (대기 상태 표시) |
 | 요청 전송 실패 | SnackBar "요청 전송에 실패했습니다. 다시 시도해주세요." |
 | **캡틴 다이얼로그** | |
-| 알림 수신 | 푸시 알림: "홍길동이 가디언 해제를 요청했습니다" → 탭 시 다이얼로그 표시 |
+| 알림 수신 | 푸시 알림: "홍길동이 가디언 해제를 요청했습니다" --> 탭 시 다이얼로그 표시 |
 | 다이얼로그 표시 | 요청 정보 + 안전 경고 + 사유 표시, 거절/승인 버튼 활성 |
-| 승인 처리 중 | 승인 버튼 → CircularProgressIndicator |
-| 승인 완료 | PATCH /api/v1/trips/:tripId/guardians/:linkId/release → approved, Toast "가디언이 해제되었습니다", 다이얼로그 닫힘 |
-| 거절 완료 | PATCH /api/v1/trips/:tripId/guardians/:linkId/release → rejected, Toast "해제 요청을 거절했습니다", 다이얼로그 닫힘 |
-| 거절 → 크루 알림 | 크루에게 푸시: "캡틴이 가디언 해제를 거절했습니다", F-01에서 상태 "거절됨" 표시 |
-
-**인터랙션**
-
-- [탭] 사유 입력 필드 → 키보드 표시 (multiline)
-- [탭] 캡틴에게 승인 요청 → POST /api/v1/trips/:tripId/guardians/:linkId/release-request { reason } → 캡틴에게 푸시 알림
-- [캡틴 푸시 탭] → 앱 열림 + 다이얼로그 자동 표시
-- [탭] 거절 → PATCH /api/v1/trips/:tripId/guardians/:linkId/release { action: "rejected" }
-- [탭] 승인 → Dialog_Confirm (2차 확인) "정말 가디언을 해제하시겠습니까?" → 확인 시 PATCH { action: "approved" }
-- [뒤로가기 / 다이얼로그 외부 탭] → 다이얼로그 닫힘 (미결 상태 유지, 알림에서 재진입 가능)
-- [뒤로가기 — 크루 화면] → F-01 가디언 관리
+| 승인 처리 중 | 승인 버튼 --> CircularProgressIndicator |
+| 승인 완료 | PATCH --> approved, Toast "가디언이 해제되었습니다", 다이얼로그 닫힘 |
+| 거절 완료 | PATCH --> rejected, Toast "해제 요청을 거절했습니다", 다이얼로그 닫힘 |
+| 거절 --> 크루 알림 | 크루에게 푸시: "캡틴이 가디언 해제를 거절했습니다", F-01에서 상태 "거절됨" 표시 |
 
 ---
 
-## 변경 이력
+## 3. 에러 & 엣지케이스
 
-| 날짜 | 버전 | 내용 |
-|------|------|------|
-| 2026-03-03 | v1.0 | 최초 작성 -- 4개 화면 (M-01 ~ M-04) 5-섹션 템플릿 |
+| # | 케이스 | 처리 방법 |
+|---|--------|----------|
+| 1 | **법정대리인 인증 중 네트워크 단절** | "인증이 완료되지 않았습니다. 네트워크 연결 후 다시 시도해주세요." --> 인증 상태 임시 저장 (로컬) |
+| 2 | **법정대리인 동의 후 철회** | 즉시 서비스 이용 중단 --> 활성 여행에서 자동 탈퇴 --> 가디언 연결 해제, 캡틴에게 알림 |
+| 3 | **법정대리인 전화번호 변경** | 설정 > 보호자 정보 > 전화번호 변경 --> 재인증 필수 |
+| 4 | **보호자 확인 거절 (M-02)** | Card_Alert로 "보호자가 동의를 거부했습니다. 보호자에게 문의하세요." 표시, 재요청 가능 |
+| 5 | **보호자 확인 타임아웃 24시간 (M-02)** | "보호자 확인이 만료되었습니다. 다시 요청해주세요." 안내, 재요청 링크 |
+| 6 | **여행 중 미성년자가 만 18세 도래** | 여행 시작 시점의 minor_status 유지 --> 여행 종료 후 성인 전환, 다음 여행부터 성인 기능 적용 (미성년자 보호 원칙 §7.3) |
+| 7 | **미성년자 포함 여행에서 등급 변경 시도** | 서버 HTTP 403 + "미성년자가 포함된 여행은 안전 최우선 등급만 허용됩니다" 안내 다이얼로그 |
+| 8 | **미성년자가 가디언 역할로 참여 시도** | 연령 확인 --> "18세 이상만 보호자로 참여할 수 있습니다" 안내 |
+| 9 | **가디언이 앱을 삭제한 경우** | FCM 토큰 무효화 감지 --> 캡틴에게 "가디언 [이름]의 앱 연결이 끊어졌습니다" 알림 |
+| 10 | **미성년자가 가디언을 차단하려 시도** | 차단 불가 --> "보호자 연결은 여행 중 해제할 수 없습니다" 안내 |
+| 11 | **동일 미성년자에게 가디언 5명 초과 연결 시도** | "최대 5명까지 가디언을 연결할 수 있습니다" (무료 2명 + 유료 3명) |
+| 12 | **생년월일 미입력 회원이 미성년자 포함 여행에 참여** | "생년월일을 입력해주세요. 미성년자 보호를 위해 필요합니다." 안내 --> 미입력 시 성인으로 간주하되 캡틴에게 고지 |
+| 13 | **B2B CSV 일괄 등록 시 동의 미취득 학생** | 해당 학생 등록 거부, 오류 리포트에 포함 --> "보호자 동의 대기 중" 상태 표시 |
+| 14 | **미성년자 SOS 발동** | 가디언 즉시 알림 (프라이버시 무관) + 캡틴 우선 알림 + 14세 미만은 법정대리인 SMS 발송 (미성년자 보호 원칙 §8.1) |
+| 15 | **미성년자 Intelligence AI 접근 시도** | "이 기능은 18세 이상 이용자만 사용할 수 있습니다" 안내 + 대체 기능 제안 |
+| 16 | **가디언 해제 요청 전송 실패** | SnackBar "요청 전송에 실패했습니다. 다시 시도해주세요." |
+| 17 | **동의 유효 기간(3년) 만료** | 만료 30일 전 법정대리인에게 재동의 요청 알림 --> 미갱신 시 서비스 이용 제한 |
 
 ---
 
-## 참조
+## 4. 오프라인 대응
 
-- 글로벌 스타일 가이드: `docs/wireframes/00_Global_Style_Guide.md`
-- 비즈니스 원칙 §10: `Master_docs/01_T1_SafeTrip_비즈니스_원칙_v5.1.md`
-- 화면 목업 계획: `docs/plans/2026-03-03-screen-design-mockup-plan.md`
-- 디자인 시스템: `docs/DESIGN.md`
-- 가디언 시스템 와이어프레임: `docs/wireframes/F_Guardian_System.md`
+| 상황 | 동작 |
+|------|------|
+| **M-01 보호자 동의 -- 오프라인** | SMS 인증 및 서버 동의 저장 불가 --> "인터넷 연결이 필요합니다. Wi-Fi 또는 모바일 데이터를 확인해주세요." 안내, 재시도 버튼 표시 |
+| **M-02 이중 동의 -- 오프라인** | Step 1 (본인 동의)은 로컬 저장 가능, Step 2 (보호자 확인)는 네트워크 필수 --> "보호자 확인을 위해 인터넷 연결이 필요합니다." 안내 |
+| **M-03 미성년자 여행 안내 -- 오프라인** | 캐시된 여행 정보로 안내 화면 표시 가능, 확인 시 프라이버시 등급 PATCH 요청은 로컬 큐잉 --> 네트워크 복구 시 자동 전송 |
+| **M-04 가디언 해제 요청 -- 오프라인** | 요청 전송 불가 --> "인터넷 연결 후 다시 시도해주세요." 안내, 사유 입력 내용은 로컬 임시 저장 |
+| **미성년자 위치 공유 -- 오프라인** | 로컬 큐에 위치 데이터 저장 --> 온라인 복구 시 일괄 전송, 안전 최우선 등급 위치 공유 일시 중지 차단은 유지 |
+| **미성년자 SOS -- 오프라인** | SMS 기반 긴급 알림 대체, 가디언 전화번호로 SMS 직접 발송, 로컬 알람 울리기 (기기 최대 볼륨) |
+| **미성년자 기기 오프라인 장기화** | 15분: 캡틴에게 알림, 30분: 캡틴+크루장+가디언 알림, 타임아웃(30분 기본): Auto-SOS 발동 (미성년자 보호 원칙 §12.2) |
+
+---
+
+## 5. 검증 체크리스트
+
+| # | 검증 항목 | 기준 문서 | 확인 |
+|:-:|----------|----------|:----:|
+| 1 | 14세 미만 회원가입 시 법정대리인 동의 화면(M-01)이 표시되는가 | 비즈니스 원칙 §10.1, 미성년자 보호 원칙 §2 | ✅ |
+| 2 | 14~17세 회원가입 시 이중 동의 화면(M-02)이 표시되는가 | 비즈니스 원칙 §10.1, 미성년자 보호 원칙 §2 | ✅ |
+| 3 | 법정대리인 동의 없이 14세 미만의 개인정보/위치정보가 수집되지 않는가 | 개인정보보호법 제22조, 위치정보법 제25조 | ✅ |
+| 4 | 미성년자 포함 여행에서 `safety_first` 등급이 강제 적용되는가 (M-03) | 비즈니스 원칙 §10.2 | ✅ |
+| 5 | 미성년자 포함 여행에서 표준/프라이버시우선 등급 선택이 차단되는가 (서버 403) | 비즈니스 원칙 §10.2, 미성년자 보호 원칙 §5.2 | ✅ |
+| 6 | 미성년자 가디언 해제가 캡틴 승인을 필요로 하는가 (M-04) | 비즈니스 원칙 §10.2 | ✅ |
+| 7 | 야간 이동(22~06시) 감지 시 캡틴+가디언에게 알림이 발생하는가 | 미성년자 보호 원칙 §8.3 | ✅ |
+| 8 | 미성년자 위치 공유 일시 중지가 안전최우선 등급에서 차단되는가 | 비즈니스 원칙 §10.2, 미성년자 보호 원칙 §5.1 | ✅ |
+| 9 | 미성년자 가디언 일시 중지 기능이 차단되는가 | 비즈니스 원칙 §10.2, 미성년자 보호 원칙 §5.1 | ✅ |
+| 10 | 미성년자 위치 데이터 보유 기간이 여행 종료 후 30일인가 | 비즈니스 원칙 §10.2, 미성년자 보호 원칙 §3.1 | ✅ |
+| 11 | Intelligence AI가 미성년자 개인 데이터 기반 분석을 차단하는가 | 비즈니스 원칙 §10.3, 미성년자 보호 원칙 §7 | ✅ |
+| 12 | 미성년자가 가디언 역할로 참여할 수 없는가 | 미성년자 보호 원칙 §6.2 | ✅ |
+| 13 | M-03 안내 화면이 건너뛸 수 없는가 (뒤로가기 = 확인) | 와이어프레임 §2.3 인터랙션 | ✅ |
+| 14 | 역할명이 캡틴/크루장/크루/가디언인가 | 비즈니스 원칙 §01 | ✅ |
+| 15 | OTP 인증이 6자리이며 타이머가 3분(180초)인가 | 와이어프레임 §2.1 | ✅ |
+| 16 | 가디언 해제 사유가 10자 이상 필수인가 | 와이어프레임 §2.4 | ✅ |
+| 17 | 화면 수가 4개 (M-01 ~ M-04)이며 추가 화면이 없는가 | 태스크 명세 | ✅ |
+| 18 | 초대코드가 7자리인가 (B2B 일괄 초대코드 참조) | 비즈니스 원칙 §02.2 | ✅ |
+
+---
+
+## 6. 변경 이력
+
+| 버전 | 날짜 | 변경 내용 | 변경 사유 |
+|------|------|----------|----------|
+| v2.0 | 2026-03-04 | 전면 재작성: 새 와이어프레임 형식 적용 (문서 ID WF-MNR-M), 역할별/여행상태별/프라이버시등급별 분기 테이블 추가, 역할명 통일 (여행 멤버 --> 크루), safety_first 강제 규칙 명확화, 야간 이동(22~06시) 감지 알림 추가, 가디언 해제 캡틴 승인 필수 규칙 정합, 에러/엣지케이스 17건 상세화, 오프라인 대응/검증 체크리스트 추가 | 비즈니스 원칙 v5.1 §10 + 미성년자 보호 원칙 v1.0 정합, 와이어프레임 표준 형식 전환 |
+| v1.0 | 2026-03-03 | 최초 작성 -- 4개 화면 (M-01 ~ M-04) 5-섹션 템플릿 | 초기 작성 |
+
+---
+
+## 7. 참조 테이블
+
+| 문서 번호 | 문서명 | 관계 | 참조 섹션 |
+|:--------:|--------|:----:|----------|
+| #01 | SafeTrip_비즈니스_원칙_v5.1 | 상위 | §10 미성년자 보호, §01 역할 체계, §04 프라이버시 등급, §05 SOS |
+| #05 | 미성년자_보호_원칙_v1.0 | 참조 | 전체 (연령별 동의 체계, 데이터 보호, 역할별 권한, 프라이버시 등급 제한, 가디언 연결/해제, AI 제한, SOS 특칙, 야간 이동, B2B 학교 시나리오) |
+| #10 | 화면구성원칙_v1.1 | 상위 | §5 여행 상태별 분기, §6 역할별 렌더링, §7 프라이버시 등급별 UI |
+| WF-A | A_Onboarding_Auth.md | 연관 | A-04 전화번호 인증 (M-01/M-02 완료 후 이동), A-07 약관 동의 (M-01/M-02 진입 시작점) |
+| WF-C | C_MainMap_CommonUI.md | 연관 | C-01 메인맵 (M-03 확인 후 이동) |
+| WF-F | F_Guardian_System.md | 연관 | F-01 가디언 관리 (M-04 진입/이탈), 가디언 연결/해제 관리 |
+| WF-G | G_SOS_Emergency.md | 연관 | 미성년자 SOS 추가 조치 (가디언 즉시 알림, 법정대리인 SMS) |
+| WF-E | E_Location_Privacy.md | 연관 | 미성년자 위치 공유 일시 중지 차단, safety_first 강제 |
+| WF-N | N_B2B_Portal.md | 연관 | B2B 학교 시나리오 CSV 일괄 등록, 학부모 가디언 초대 |
+| WF-O | O_AI_Features.md | 연관 | Intelligence AI 미성년자 차단 |
