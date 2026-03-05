@@ -1,0 +1,103 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// 앱의 인증 상태 및 온보딩 흐름을 관리하는 클래스
+class AuthNotifier extends ChangeNotifier {
+  AuthNotifier() {
+    _loadState();
+  }
+
+  bool _isAuthenticated = false;
+  bool _hasActiveTrip = false;
+  bool _isFirstLaunch = true;
+  bool _isLoading = true;
+  String? _pendingInviteCode;
+  String _onboardingStep = 'complete';
+
+  bool get isAuthenticated => _isAuthenticated;
+  bool get hasActiveTrip => _hasActiveTrip;
+  bool get isFirstLaunch => _isFirstLaunch;
+  bool get isLoading => _isLoading;
+  String? get pendingInviteCode => _pendingInviteCode;
+  String get onboardingStep => _onboardingStep;
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final userId = prefs.getString('user_id');
+    final authVerifiedAtStr = prefs.getString('auth_verified_at');
+    final groupId = prefs.getString('group_id');
+    final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+
+    bool tokenValid = false;
+    if (userId != null && userId.isNotEmpty && authVerifiedAtStr != null) {
+      final verifiedAt = DateTime.tryParse(authVerifiedAtStr);
+      if (verifiedAt != null) {
+        // 인증 후 30일간 유효한 것으로 간주
+        tokenValid = DateTime.now().toUtc().difference(verifiedAt).inDays < 30;
+      }
+    }
+
+    _isAuthenticated = tokenValid;
+    _hasActiveTrip = groupId != null && groupId.isNotEmpty;
+    _isFirstLaunch = !onboardingCompleted;
+    _onboardingStep = prefs.getString('onboarding_step') ?? 'complete';
+    _isLoading = false;
+
+    notifyListeners();
+  }
+
+  Future<void> completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_completed', true);
+    _isFirstLaunch = false;
+    notifyListeners();
+  }
+
+  Future<void> setAuthenticated({required bool hasTrip}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString('auth_verified_at') == null) {
+      await prefs.setString('auth_verified_at', DateTime.now().toUtc().toIso8601String());
+    }
+    _isAuthenticated = true;
+    _hasActiveTrip = hasTrip;
+    notifyListeners();
+  }
+
+  Future<void> setDemoAuthenticated() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_verified_at', DateTime.now().toUtc().toIso8601String());
+    _isAuthenticated = true;
+    _hasActiveTrip = true; // 데모 모드는 활성 여행이 있다고 가정
+    notifyListeners();
+  }
+
+  Future<void> signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint('[AuthNotifier] SignOut Error: $e');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_id');
+    await prefs.remove('auth_verified_at');
+    await prefs.remove('group_id');
+    await prefs.remove('onboarding_step');
+    
+    _isAuthenticated = false;
+    _hasActiveTrip = false;
+    _onboardingStep = 'complete';
+    notifyListeners();
+  }
+
+  void setPendingInviteCode(String code) {
+    _pendingInviteCode = code;
+    notifyListeners();
+  }
+
+  void clearPendingInviteCode() {
+    _pendingInviteCode = null;
+    notifyListeners();
+  }
+}
