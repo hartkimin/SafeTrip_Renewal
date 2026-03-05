@@ -7,6 +7,7 @@ import '../screens/screen_splash.dart';
 import '../features/onboarding/presentation/screens/screen_welcome.dart';
 import '../features/onboarding/presentation/screens/screen_purpose_select.dart';
 import '../features/onboarding/presentation/screens/screen_terms_consent.dart';
+import '../features/onboarding/presentation/screens/screen_birth_date.dart';
 import '../features/onboarding/presentation/screens/screen_phone_auth.dart';
 import '../features/onboarding/presentation/screens/screen_profile_setup.dart';
 import '../screens/main/screen_main.dart';
@@ -56,6 +57,13 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>?;
           final role = extra?['role'] as String? ?? 'crew';
           return ScreenTermsConsent(selectedRole: role);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.authBirthDate,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return ScreenBirthDate(role: extra['role'] as String? ?? 'crew');
         },
       ),
       GoRoute(
