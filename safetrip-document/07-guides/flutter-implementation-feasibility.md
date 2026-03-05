@@ -1,514 +1,154 @@
-# Flutter 구현 가능성 분석
+# Flutter 구현 가능성 및 적용 기술 분석
 
-## 목차
+## 📋 목차
 
 1. [개요](#개요)
-2. [기술별 구현 가능성](#기술별-구현-가능성)
-3. [필요한 추가 패키지](#필요한-추가-패키지)
-4. [플랫폼별 제약사항](#플랫폼별-제약사항)
-5. [권장 구현 전략](#권장-구현-전략)
+2. [현재 채택된 핵심 기술 스택](#현재-채택된-핵심-기술-스택)
+3. [기술별 구현 현황 및 가능성](#기술별-구현-현황-및-가능성)
+4. [플랫폼별 제약사항 및 해결책](#플랫폼별-제약사항-및-해결책)
+5. [주요 비즈니스 구현 전략](#주요-비즈니스-구현-전략)
 
 ---
 
 ## 개요
 
-`REALTIME_COMMUNICATION.md` 문서에 명시된 모든 기술 스택을 Flutter로 구현 가능합니다. 다만, 일부 기능은 플랫폼별 제약사항과 추가 패키지가 필요합니다.
+SafeTrip 앱의 요구사항(실시간 위치 공유, 백그라운드 추적, 오프라인 동작, 긴급 SOS 등)은 Flutter를 통해 모두 구현 가능합니다. 
+초기 기획 당시 여러 실시간 통신 프로토콜(MQTT, WebSocket) 및 백그라운드 서비스 라이브러리들이 검토되었으나, 현재는 **안정성, 배터리 효율, 오프라인 지원**을 극대화하기 위해 검증된 엔터프라이즈급 패키지와 Firebase 생태계로 기술 스택이 최적화되었습니다.
 
 ---
 
-## 기술별 구현 가능성
+## 현재 채택된 핵심 기술 스택
 
-### 1. Firebase Realtime Database + FCM
+| 요구사항 | 채택된 기술 (패키지) | 현황 |
+|---------|---------------------|------|
+| **실시간 동기화** | `firebase_database`, `firebase_messaging` | ✅ 적용 완료 |
+| **백그라운드 위치/지오펜스** | `flutter_background_geolocation` | ✅ 적용 완료 |
+| **오프라인 큐 (로컬 DB)** | `sqflite`, `shared_preferences` | ✅ 적용 완료 |
+| **REST API 통신** | `dio` | ✅ 적용 완료 |
+| **권한 및 시스템 제어** | `permission_handler`, `wakelock_plus` | ✅ 적용 완료 |
+
+---
+
+## 기술별 구현 현황 및 가능성
+
+### 1. 실시간 위치 및 데이터 동기화 (Firebase RTDB + FCM)
+
+#### 구현 가능성: ✅ **완전 가능 (적용 완료)**
+
+**적용 상태:**
+- ✅ `firebase_database: ^11.0.0` (실시간 위치, 채팅, 지오펜스 상태 공유)
+- ✅ `firebase_messaging: ^15.0.0` (SOS, 알림, 백그라운드 깨우기)
+
+**구현 특징:**
+- WebSocket이나 MQTT를 직접 구축하는 대신, Firebase Realtime Database(RTDB)를 활용하여 포어그라운드/백그라운드 실시간 동기화를 처리합니다.
+- RTDB는 자체적으로 오프라인 캐싱 및 재연결 시 동기화를 지원하므로 네트워크 불안정 환경(터널, 산간지역)에서 매우 유리합니다.
+- 백그라운드에서 앱이 멈춘 상태일 경우, FCM(Data Payload)을 통해 앱을 깨워 위치를 즉시 보고하게 할 수 있습니다.
+
+**제약사항 및 해결책:**
+- RTDB 커넥션은 앱이 완전히 종료되면 끊어집니다. → **해결책**: 백그라운드 작업은 `flutter_background_geolocation`에 위임하고, 서버발 요청은 FCM으로 처리합니다.
+
+---
+
+### 2. 백그라운드 위치 추적 및 지오펜싱
+
+#### 구현 가능성: ✅ **완전 가능 (상용 패키지 적용 완료)**
+
+**적용 상태:**
+- ✅ `flutter_background_geolocation: ^4.18.2`
+
+**구현 특징:**
+- Android의 `Foreground Service` 및 iOS의 까다로운 `Always On` 제약을 라이브러리 레벨에서 완벽하게 추상화하여 처리합니다.
+- **배터리 최적화**: 디바이스의 모션 센서(가속도계, 자이로스코프)를 모니터링하여 이동 중일 때만 GPS를 활성화하므로 배터리 소모를 극적으로 줄입니다.
+- **지오펜스(Geofence)**: OS 네이티브 지오펜싱 API를 사용하여 무제한 확장이 가능하며, 진입/이탈(Enter/Exit) 이벤트를 백그라운드에서 신뢰성 있게 캡처합니다.
+
+**제약사항 및 해결책:**
+- iOS/Android 최신 버전에서 백그라운드 위치 권한 획득이 엄격합니다. → **해결책**: 온보딩(`onboarding`) 과정에서 사용자에게 명확한 이유를 고지한 후 `permission_handler`를 통해 권한을 획득하도록 구현되었습니다.
+
+---
+
+### 3. 오프라인 큐 및 데이터 동기화
+
+#### 구현 가능성: ✅ **완전 가능 (적용 완료)**
+
+**적용 상태:**
+- ✅ `sqflite: ^2.3.3`
+- ✅ `offline_sync_service.dart` (구현됨)
+
+**구현 특징:**
+- 네트워크가 끊어진 상태에서 발생한 위치 기록, SOS 요청, 채팅 메시지 등을 SQLite에 임시 저장(Queue)합니다.
+- `connectivity_plus`를 통해 네트워크가 복구됨을 감지하면 대기 중인 큐를 서버 및 Firebase로 일괄 전송(Sync)합니다.
+
+---
+
+### 4. 하트비트 및 디바이스 상태 모니터링
 
 #### 구현 가능성: ✅ **완전 가능**
 
-**현재 상태:**
-- ✅ `firebase_core`: 설치됨
-- ✅ `firebase_messaging`: 설치됨
-- ❌ `firebase_database`: **추가 필요**
+**적용 상태:**
+- ✅ `device_status_service.dart` (배터리 및 디바이스 상태)
+- ⚠️ 배터리 패키지 (`battery_plus`)는 명시적 추가 또는 네이티브 채널로 연동 가능
 
-**필요한 패키지:**
-```yaml
-firebase_database: ^10.3.0  # Firebase Realtime Database
-```
-
-**구현 방법:**
-- Firebase Realtime Database는 Flutter에서 완전히 지원됨
-- 실시간 리스너, 오프라인 동기화 모두 가능
-- FCM 백그라운드 핸들러도 완전 지원
-
-**제약사항:**
-- 없음 (완전 지원)
+**구현 특징:**
+- 주기적으로 서버나 RTDB에 사용자의 활성 상태(Heartbeat)와 배터리 잔량을 업데이트합니다.
+- 앱 강제 종료 시 디바이스 이탈 알림을 보호자에게 발송할 수 있습니다.
 
 ---
 
-### 2. WebSocket + FCM
+### 5. SMS 직접 전송 (SOS 대비용)
 
-#### 구현 가능성: ✅ **완전 가능**
+#### 구현 가능성: ⚠️ **부분 가능 (서버 연동 권장)**
 
-**현재 상태:**
-- ✅ `firebase_messaging`: 설치됨
-- ❌ WebSocket 패키지: **추가 필요**
-
-**필요한 패키지:**
-```yaml
-web_socket_channel: ^2.4.0  # 공식 WebSocket 패키지
-# 또는
-socket_io_client: ^2.0.3    # Socket.IO 클라이언트 (서버가 Socket.IO 사용 시)
-```
-
-**구현 방법:**
-- Flutter는 WebSocket을 네이티브로 지원 (`dart:io`의 `WebSocket`)
-- `web_socket_channel` 패키지가 더 사용하기 편리함
-- 포어그라운드에서 실시간 통신 가능
-- 백그라운드에서는 FCM으로 폴백
-
-**제약사항:**
-- 백그라운드에서 WebSocket 연결 유지 불가 (iOS/Android 제약)
-- 앱이 종료되면 연결 끊김
-- **해결책**: FCM으로 폴백 (문서의 하이브리드 전략과 일치)
+**구현 특징:**
+- Android는 네이티브 패키지(`telephony` 등)를 통해 SMS 강제 발송이 가능하나, iOS는 Apple 정책상 앱이 백그라운드에서 직접 SMS를 발송할 수 없습니다.
+- **해결책**: 모바일 앱에서 직접 SMS를 쏘는 대신, API 또는 FCM을 통해 **서버로 SOS를 쏘고**, 서버에서 Twilio나 AWS SNS 등을 통해 보호자에게 SMS 문자를 발송하는 구조를 사용해야 완벽한 크로스 플랫폼 지원이 가능합니다.
 
 ---
 
-### 3. MQTT + FCM
+### 6. 동영상/음성 녹화 (SOS 상황 시 주변 기록)
 
-#### 구현 가능성: ✅ **완전 가능** (주의사항 있음)
+#### 구현 가능성: ✅ **가능 (추가 확장 시)**
 
-**현재 상태:**
-- ✅ `firebase_messaging`: 설치됨
-- ❌ MQTT 패키지: **추가 필요**
+**필요 패키지 (도입 시):**
+- `camera: ^0.10.x`
+- `record: ^5.0.x`
 
-**필요한 패키지:**
-```yaml
-mqtt_client: ^9.6.0  # MQTT 클라이언트
-```
-
-**구현 방법:**
-- `mqtt_client` 패키지가 안정적으로 작동
-- QoS 0, 1, 2 모두 지원
-- Pub/Sub 패턴 완전 지원
-- 포어그라운드에서 실시간 통신 가능
-
-**주의사항:**
-- **한글 인코딩 이슈**: 토픽이나 메시지에 한글 사용 시 UTF-8 인코딩 명시 필요
-  ```dart
-  // 해결 방법: UTF-8 인코딩 명시
-  final payload = utf8.encode('한글 메시지');
-  client.publishMessage('topic', MqttQos.atLeastOnce, payload);
-  ```
-- 백그라운드에서 MQTT 연결 유지 불가 (iOS/Android 제약)
-- **해결책**: FCM으로 폴백 (문서의 하이브리드 전략과 일치)
-
-**제약사항:**
-- 백그라운드 연결 끊김
-- 앱 종료 시 연결 끊김
-- **해결책**: FCM으로 폴백
+**구현 특징:**
+- 사용자가 SOS를 요청할 때, 즉시 백그라운드 음성 녹음 또는 숏폼 동영상을 촬영하여 `firebase_storage`에 업로드하는 시나리오가 가능합니다.
+- Android는 Foreground Service 뱃지가 떠 있을 때 녹화가 원활하며, iOS는 앱이 포어그라운드로 켜져 있을 때만 카메라 접근이 원활합니다.
 
 ---
 
-### 4. REST API
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**현재 상태:**
-- ✅ `dio: ^5.4.0`: 설치됨
-
-**구현 방법:**
-- `dio`는 Flutter에서 가장 널리 사용되는 HTTP 클라이언트
-- 인터셉터, 타임아웃, 재시도 로직 모두 지원
-- 완전히 구현 가능
-
-**제약사항:**
-- 없음
-
----
-
-### 5. SMS (Android)
-
-#### 구현 가능성: ⚠️ **부분 가능** (Android만)
-
-**현재 상태:**
-- ✅ `telephony: ^0.2.0`: 설치됨
-
-**구현 방법:**
-- Android: `telephony` 패키지로 SMS 직접 전송 가능
-- iOS: **SMS 직접 전송 불가** (Apple 제약)
-
-**제약사항:**
-- **iOS 제약**: iOS에서는 SMS 직접 전송 불가
-  - **해결책**: 서버를 통해 SMS 전송 (Twilio, AWS SNS 등)
-- Android: 권한 필요 (`SEND_SMS`)
-
-**대안:**
-- 서버 측 SMS 서비스 사용 (Twilio, AWS SNS, Firebase Extensions)
-- iOS/Android 모두 지원
-
----
-
-### 6. 백그라운드 위치 추적
-
-#### 구현 가능성: ⚠️ **가능하나 제약 많음**
-
-**현재 상태:**
-- ✅ `geolocator: ^10.1.0`: 설치됨
-- ❌ 백그라운드 서비스: **추가 패키지 필요**
-
-**필요한 패키지:**
-```yaml
-flutter_background_service: ^5.0.5  # 백그라운드 서비스
-workmanager: ^0.5.2                  # 주기적 백그라운드 작업 (Android)
-```
-
-**구현 방법:**
-- **Android**: 
-  - Foreground Service로 백그라운드 위치 추적 가능
-  - `flutter_background_service` 사용
-  - 권한: `ACCESS_BACKGROUND_LOCATION`
-- **iOS**: 
-  - 백그라운드 위치 추적 제한적
-  - `location` 권한: "Always" 필요
-  - 사용자에게 명시적 허용 필요
-  - 배터리 최적화로 인해 정확도 저하 가능
-
-**제약사항:**
-- **iOS 제약**: 
-  - 백그라운드 위치 추적이 제한적
-  - 사용자가 명시적으로 허용해야 함
-  - 배터리 최적화로 인해 업데이트 빈도 감소
-- **Android**: 
-  - Foreground Service 필요
-  - 배터리 최적화 예외 설정 필요
-  - 사용자에게 명시적 권한 요청 필요
-
----
-
-### 7. FCM 백그라운드 핸들러
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**현재 상태:**
-- ✅ `firebase_messaging: ^14.7.10`: 설치됨
-
-**구현 방법:**
-- FCM은 백그라운드/종료 상태에서도 메시지 수신 가능
-- `data` 메시지 타입 사용 시 백그라운드 핸들러 실행 가능
-- 위치 수집, SOS 전송 등 모두 가능
-
-**제약사항:**
-- iOS: 백그라운드에서 위치 수집 시 추가 권한 필요
-- Android: 백그라운드 위치 권한 필요
-
----
-
-### 8. 하트비트 모니터링
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**구현 방법:**
-- `dio`로 주기적 API 호출
-- `Timer` 또는 `Stream.periodic` 사용
-- 백그라운드에서도 `workmanager`로 실행 가능
-
-**필요한 패키지:**
-```yaml
-workmanager: ^0.5.2  # 주기적 백그라운드 작업
-```
-
-**제약사항:**
-- iOS: 백그라운드 작업 제한적 (최소 15분 간격)
-- Android: 제한 없음 (Foreground Service 사용 시)
-
----
-
-### 9. 배터리 상태 모니터링
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**필요한 패키지:**
-```yaml
-battery_plus: ^5.0.1  # 배터리 상태 모니터링
-```
-
-**구현 방법:**
-- 배터리 레벨, 충전 상태, 배터리 최적화 모드 모두 모니터링 가능
-- 실시간 리스너 지원
-
-**제약사항:**
-- 없음
-
----
-
-### 10. 센서 데이터 (가속도계, 자이로스코프)
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**필요한 패키지:**
-```yaml
-sensors_plus: ^4.0.0  # 가속도계, 자이로스코프
-# 또는
-sensors: ^1.1.2      # 기본 센서 패키지
-```
-
-**구현 방법:**
-- 가속도계, 자이로스코프, 자력계 모두 지원
-- 실시간 스트림으로 데이터 수집 가능
-- 충격 감지, 낙상 감지 등 구현 가능
-
-**제약사항:**
-- 백그라운드에서 센서 데이터 수집은 제한적
-- **해결책**: Foreground Service 사용 (Android), 또는 FCM으로 깨우기
-
----
-
-### 11. 동영상/음성 녹화
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**필요한 패키지:**
-```yaml
-camera: ^0.10.5+5        # 카메라 접근
-record: ^5.0.4           # 오디오/비디오 녹화
-path_provider: ^2.1.1    # 파일 저장 경로 (이미 설치됨)
-```
-
-**구현 방법:**
-- 동영상 녹화: `camera` + `record` 패키지
-- 음성 녹화: `record` 패키지
-- 백그라운드 녹화: Foreground Service 사용
-
-**제약사항:**
-- **iOS**: 백그라운드 녹화 제한적 (Foreground Service 필요)
-- **Android**: Foreground Service로 백그라운드 녹화 가능
-- 저장 공간 고려 필요
-
----
-
-### 12. 로컬 큐 (SQLite)
-
-#### 구현 가능성: ✅ **완전 가능**
-
-**현재 상태:**
-- ✅ `sqflite: ^2.3.0`: 설치됨
-
-**구현 방법:**
-- SOS 큐, 위치 캐시 등 모두 SQLite에 저장 가능
-- 오프라인 지원 완벽
-
-**제약사항:**
-- 없음
-
----
-
-## 필요한 추가 패키지
-
-### 필수 패키지
-
-```yaml
-dependencies:
-  # Firebase Realtime Database
-  firebase_database: ^10.3.0
-  
-  # MQTT
-  mqtt_client: ^9.6.0
-  
-  # WebSocket
-  web_socket_channel: ^2.4.0
-  
-  # 백그라운드 서비스
-  flutter_background_service: ^5.0.5
-  workmanager: ^0.5.2
-  
-  # 배터리 모니터링
-  battery_plus: ^5.0.1
-  
-  # 센서 데이터
-  sensors_plus: ^4.0.0
-  
-  # 동영상/음성 녹화
-  camera: ^0.10.5+5
-  record: ^5.0.4
-```
-
-### 선택적 패키지 (서버 측 SMS 사용 시)
-
-```yaml
-# 서버 측 SMS 사용 시 필요 없음 (서버에서 처리)
-# 또는 Twilio, AWS SNS 등 서버 측 서비스 사용
-```
-
----
-
-## 플랫폼별 제약사항
+## 플랫폼별 제약사항 및 해결책
 
 ### Android
 
-#### 제약사항:
-1. **백그라운드 위치 추적**: Foreground Service 필요
-2. **백그라운드 작업**: WorkManager 또는 Foreground Service 필요
-3. **배터리 최적화**: 사용자가 예외 설정 필요
-4. **SMS 직접 전송**: 권한 필요 (`SEND_SMS`)
-
-#### 해결책:
-- Foreground Service 사용
-- 배터리 최적화 예외 설정 가이드 제공
-- 권한 요청 플로우 구현
-
----
+1. **백그라운드 제약 및 Doze 모드**: 
+   - **문제**: OS가 앱을 잠재워 백그라운드 위치 전송이 멈춤.
+   - **해결**: `flutter_background_geolocation`가 제공하는 Foreground Service(상단 알림바 고정)를 사용하여 OS 강제 종료를 방지합니다. 배터리 예외 처리 권한을 사용자에게 요구합니다.
 
 ### iOS
 
-#### 제약사항:
-1. **백그라운드 위치 추적**: 매우 제한적
-   - "Always" 권한 필요
-   - 사용자 명시적 허용 필요
-   - 배터리 최적화로 인해 업데이트 빈도 감소
-2. **백그라운드 작업**: 최소 15분 간격 제한
-3. **SMS 직접 전송**: **불가능** (Apple 정책)
-4. **백그라운드 센서 데이터**: 제한적
-
-#### 해결책:
-- FCM으로 백그라운드 알림 보장
-- 서버 측 SMS 서비스 사용 (Twilio, AWS SNS)
-- 중요한 작업은 FCM으로 깨우기
-- 사용자에게 명확한 권한 요청
+1. **엄격한 백그라운드 위치 권한 ("Always")**:
+   - **문제**: iOS 13+ 부터 한 번에 "항상 허용"을 받을 수 없고, "앱 사용 중" → "항상 허용으로 변경" 단계를 거쳐야 함.
+   - **해결**: 앱 내부 UI를 통해 지속적으로 "설정에서 항상 허용으로 변경해달라"는 유도 흐름(Onboarding)이 제공되어야 합니다.
+2. **백그라운드 지속 실행 불가**:
+   - **문제**: 포어그라운드가 아니면 타이머나 웹소켓이 모두 끊어짐.
+   - **해결**: 네이티브 Location 이벤트(Significant Location Change)에 의존하고, 즉각적 데이터 갱신이 필요할 때는 FCM(Silent Push)을 쏴서 앱을 잠시 깨웁니다(Background Fetch).
 
 ---
 
-## 권장 구현 전략
+## 주요 비즈니스 구현 전략 (Best Practices)
 
-### 1. 보호자 위치 확인 요청
+### 1. 보호자-여행자 실시간 위치 확인
+- **WebSocket/MQTT 대체**: RTDB를 사용하여 `/realtime_locations/{tripId}/{userId}` 경로에 데이터를 씁니다. 모바일 앱은 이 경로를 `onValue`로 리슨하여 별도의 소켓 관리 없이 실시간으로 상대방 마커를 지도(`flutter_map`)에 부드럽게 렌더링합니다.
 
-**권장 방법: Firebase Realtime Database + FCM**
+### 2. 하이브리드 SOS 전송 아키텍처
+- SOS 버튼을 누를 경우 실패 확률을 0으로 만들기 위해 다중 전송 전략을 취합니다.
+  1. **API (Dio)**: 메인 DB에 즉시 기록 
+  2. **RTDB 업데이트**: 연결된 보호자 앱 화면에 즉각 빨간색 경고 표시
+  3. **FCM (서버 → 보호자)**: 앱이 꺼진 보호자의 폰에 긴급 푸시 + 경고음 발생
+  4. **로컬 큐 (Offline)**: 인터넷이 끊긴 산속이라면 SQLite에 저장하고, 통신망에 붙는 즉시 발사(`offline_sync_service.dart`).
 
-**이유:**
-- ✅ Flutter에서 완전 지원
-- ✅ 백그라운드 처리 가능
-- ✅ 오프라인 지원 자동
-- ✅ 구현 간단
-
-**구현:**
-```dart
-// Firebase Realtime Database 리스너
-final databaseRef = FirebaseDatabase.instance.ref('location_requests/$userId');
-databaseRef.onValue.listen((event) {
-  // 위치 요청 수신
-  // 백그라운드에서 위치 수집
-  // Firebase에 위치 업데이트
-});
-
-// FCM 백그라운드 핸들러
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // 위치 수집 및 전송
-}
-```
-
----
-
-### 2. SOS 전송
-
-**권장 방법: MQTT + API + FCM + SMS 하이브리드**
-
-**이유:**
-- ✅ 포어그라운드에서 초고속 수신 (MQTT)
-- ✅ 백그라운드에서 확실한 알림 (FCM)
-- ✅ 오프라인 폴백 (SMS, Android만 직접 전송 가능)
-- ✅ DB 저장 및 추적 (API)
-
-**구현:**
-```dart
-// MQTT 클라이언트 (포어그라운드)
-final client = MqttServerClient('broker.example.com', 'client_id');
-await client.connect();
-client.subscribe('safetrip/sos/$userId', MqttQos.atLeastOnce);
-
-// 병렬 전송
-await Future.wait([
-  sendViaMQTT(sosData),      // 포어그라운드 즉시
-  sendViaAPI(sosData),       // DB 저장
-  sendViaSMS(sosData),       // Android 직접, iOS는 서버
-]);
-```
-
-**주의사항:**
-- 한글 인코딩 처리 필요
-- iOS는 SMS 직접 전송 불가 → 서버 측 SMS 사용
-
----
-
-### 3. 앱 삭제 및 디바이스 이벤트 처리
-
-**권장 방법: 하트비트 + FCM 토큰 무효화 + 위치 업데이트 모니터링**
-
-**이유:**
-- ✅ Flutter에서 모두 구현 가능
-- ✅ 서버 측 감지로 정확도 높음
-
-**구현:**
-```dart
-// 하트비트 전송 (5분마다)
-Timer.periodic(Duration(minutes: 5), (timer) {
-  sendHeartbeat();
-});
-
-// 배터리 상태 모니터링
-BatteryPlus().onBatteryStateChanged.listen((state) {
-  if (state.batteryLevel <= 5) {
-    sendBatteryWarning();
-  }
-});
-
-// 앱 종료 시 마지막 위치 저장
-@override
-void dispose() {
-  saveLastLocation();
-  super.dispose();
-}
-```
-
----
-
-## 결론
-
-### ✅ 구현 가능한 기능
-
-1. **Firebase Realtime Database + FCM**: 완전 지원
-2. **WebSocket + FCM**: 완전 지원
-3. **MQTT + FCM**: 완전 지원 (한글 인코딩 주의)
-4. **REST API**: 완전 지원
-5. **하트비트 모니터링**: 완전 지원
-6. **배터리 상태 모니터링**: 완전 지원
-7. **센서 데이터**: 완전 지원
-8. **동영상/음성 녹화**: 완전 지원
-9. **로컬 큐 (SQLite)**: 완전 지원
-
-### ⚠️ 제약사항이 있는 기능
-
-1. **백그라운드 위치 추적**:
-   - Android: Foreground Service 필요
-   - iOS: 매우 제한적
-2. **SMS 직접 전송**:
-   - Android: 가능 (권한 필요)
-   - iOS: 불가능 (서버 측 SMS 사용 필요)
-3. **백그라운드 작업**:
-   - Android: 제한 없음 (Foreground Service 사용 시)
-   - iOS: 최소 15분 간격 제한
-
-### 📋 권장 사항
-
-1. **하이브리드 전략 사용**: 포어그라운드(MQTT/WebSocket) + 백그라운드(FCM)
-2. **서버 측 SMS 사용**: iOS 제약 해결
-3. **Foreground Service 사용**: Android 백그라운드 작업
-4. **FCM 백그라운드 핸들러**: 모든 플랫폼에서 백그라운드 처리 보장
-5. **한글 인코딩 처리**: MQTT 사용 시 UTF-8 명시
-
----
-
-## 참고 문서
-
-- [Firebase Realtime Database](../04-firebase/firebase-rtdb.md) - 실시간 통신 가이드
-- [mqtt_client 패키지](https://pub.dev/packages/mqtt_client)
-- [web_socket_channel 패키지](https://pub.dev/packages/web_socket_channel)
-- [firebase_database 패키지](https://pub.dev/packages/firebase_database)
-- [flutter_background_service 패키지](https://pub.dev/packages/flutter_background_service)
-
+### 3. 백그라운드 지오펜싱(Geofencing)
+- 지오펜스 로직은 절대 모바일의 다트(Dart) 타이머로 좌표를 비교해 계산하지 않습니다. 
+- `geofence_manager.dart` 내부에서 `flutter_background_geolocation.addGeofence()` API를 호출하여 위치 연산을 모바일 OS(Native) 칩셋 레벨로 내려보냅니다. 이를 통해 배터리를 아끼면서 빠르고 정확하게 안전 구역 이탈 알림을 발생시킵니다.

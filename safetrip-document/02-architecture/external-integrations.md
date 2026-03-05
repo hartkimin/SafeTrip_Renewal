@@ -5,9 +5,10 @@
 1. [개요](#개요)
 2. [Firebase 서비스](#firebase-서비스)
 3. [지도 및 위치 서비스](#지도-및-위치-서비스)
-4. [구현 위치](#구현-위치)
-5. [환경 변수 설정](#환경-변수-설정)
-6. [비용 정리](#비용-정리)
+4. [공공/AI 및 결제 서비스](#공공ai-및-결제-서비스)
+5. [구현 위치](#구현-위치)
+6. [환경 변수 설정](#환경-변수-설정)
+7. [비용 정리](#비용-정리)
 
 ---
 
@@ -19,13 +20,14 @@ SafeTrip은 해외 여행 안전 플랫폼으로, 다음과 같은 외부 서비
 |---------|--------|------|----------|
 | **인증/알림** | Firebase Authentication | 전화번호 인증 | ✅ 필수 |
 | **인증/알림** | Firebase Cloud Messaging (FCM) | 푸시 알림 | ✅ 필수 |
-| **데이터베이스** | Firebase Realtime Database | 실시간 위치 공유, 그룹 채팅 | ✅ 필수 |
-| **스토리지** | Firebase Storage | 지도 이미지 저장 | ✅ 필수 |
-| **지도** | Google Maps Flutter SDK | 지도 표시 | ✅ 필수 |
-| **지도** | Google Maps Static API | 지도 이미지 생성 | ✅ 필수 |
-| **지오코딩** | Flutter geocoding 패키지 | 좌표 → 주소 변환 (앱) | ✅ 필수 |
-| **지오코딩** | OpenStreetMap Nominatim API | 좌표 → 주소 변환 (서버) | ✅ 필수 |
-| **위치 추적** | flutter_background_geolocation | 백그라운드 위치 추적 | ✅ 필수 |
+| **데이터베이스** | Firebase Realtime Database | 실시간 위치 공유, 그룹 채팅, 지오펜스 | ✅ 필수 |
+| **스토리지** | Firebase Storage | 미디어 파일(이미지 등) 저장 | ✅ 필수 |
+| **지도** | flutter_map (OpenStreetMap) | 지도 및 마커/폴리라인 표시 | ✅ 필수 |
+| **지오코딩** | Flutter geocoding 패키지 | 기기 내 좌표 → 주소 변환 | ✅ 필수 |
+| **위치 추적** | flutter_background_geolocation | 백그라운드 위치 추적, 지오펜싱 | ✅ 필수 |
+| **공공데이터** | 외교부 국가별 기본정보 API | 여행경보, 안전정보, 대사관 연락처 제공 | ✅ 필수 |
+| **AI** | OpenAI API (GPT-3.5-turbo 등) | 여행 지역별 맞춤 안전 가이드 생성 | ⚠️ 선택 |
+| **결제** | Apple App Store / Google Play Store | 인앱 결제 (가디언 슬롯, 프리미엄 구독) | ✅ 필수 |
 
 ---
 
@@ -34,14 +36,13 @@ SafeTrip은 해외 여행 안전 플랫폼으로, 다음과 같은 외부 서비
 ### 1. Firebase Authentication
 
 **용도:**
-- 전화번호 인증 (Firebase Phone Authentication)
-- 사용자 인증 상태 관리
-- ID Token 발급 및 검증
+- 전화번호 기반 인증 (Firebase Phone Authentication)
+- 사용자 세션 및 인증 상태 관리
+- 안전한 서버 통신을 위한 ID Token 발급 및 검증
 
 **구현 위치:**
-- `safetrip-mobile/lib/services/` (Flutter 앱)
-- `safetrip-server-api/src/config/firebase.config.ts` (서버 검증)
-- `safetrip-server-api/src/controllers/auth.controller.ts` (인증 API)
+- `safetrip-mobile/lib/services/auth/` (Flutter 앱)
+- `safetrip-server-api/src/modules/auth/` (NestJS 서버)
 
 **Flutter 패키지:**
 ```yaml
@@ -50,25 +51,20 @@ dependencies:
 ```
 
 **비용:**
-- 무료 (Firebase 기본 제공)
-
-**API 엔드포인트:**
-- `POST /api/v1/auth/firebase-verify` - Firebase ID Token 검증 및 사용자 동기화
+- 무료 (Firebase 기본 제공, SMS 발송량에 따라 추가 요금 발생 가능)
 
 ---
 
 ### 2. Firebase Cloud Messaging (FCM)
 
 **용도:**
-- SOS 긴급 알림 (우선순위 1)
-- 위치 업데이트 알림
-- 그룹 메시지 알림
-- 이벤트 알림
+- SOS 긴급 알림 (우선순위 최고)
+- 위치 업데이트 및 시스템 이벤트 푸시 알림
+- 그룹 채팅 알림
 
 **구현 위치:**
-- `safetrip-mobile/lib/services/` (Flutter 앱 - FCM 수신)
-- `safetrip-server-api/src/services/fcm.service.ts` (서버 - FCM 발송)
-- `safetrip-server-api/src/controllers/fcm.controller.ts` (FCM API)
+- `safetrip-mobile/lib/services/` (앱 FCM 토큰 관리 및 수신)
+- `safetrip-server-api/src/modules/notifications/` (서버 푸시 발송)
 
 **Flutter 패키지:**
 ```yaml
@@ -77,181 +73,67 @@ dependencies:
   flutter_local_notifications: ^17.2.4
 ```
 
-**비용:**
-- 무료 (Firebase 기본 제공)
-
-**API 엔드포인트:**
-- `POST /api/v1/fcm/travelers/:travelerId/notify` - 여행자에게 알림 전송
-
 ---
 
-### 3. Firebase Realtime Database
+### 3. Firebase Realtime Database (RTDB)
 
 **용도:**
-- 실시간 위치 공유 (`realtime_locations`)
-- 실시간 지오펜스 정보 (`realtime_geofences`)
-- 그룹 채팅 메시지 (`realtime_messages`)
-- 메시지 읽음 상태 (`realtime_message_reads`)
-- FCM 토큰 관리 (`realtime_tokens`)
+- 실시간 위치 공유 상태 동기화
+- 실시간 지오펜스 및 출석(Attendance) 상태
+- 오프라인 지원 및 그룹 채팅 메시지 실시간 동기화
 
 **구현 위치:**
-- `safetrip-mobile/lib/services/firebase_location_service.dart` (위치 업로드)
-- `safetrip-mobile/lib/services/group_chat_service.dart` (채팅)
-- `safetrip-server-api/src/services/location.service.ts` (위치 동기화)
-- `safetrip-server-api/src/config/firebase.config.ts` (서버 연결)
-
-**Flutter 패키지:**
-```yaml
-dependencies:
-  firebase_database: ^11.0.0
-```
+- `safetrip-mobile/lib/services/firebase_location_service.dart`
+- `safetrip-server-api/src/modules/locations/`
 
 **비용:**
-- 사용량 기반 (무료 티어: 1GB 저장, 10GB/월 전송)
-- 초과 시: $5/GB 저장, $1/GB 전송
-
-**자세한 내용**: [Firebase Realtime Database](../04-firebase/firebase-rtdb.md)
+- 사용량 기반 (무료 티어: 1GB 저장, 10GB/월 다운로드)
 
 ---
 
 ### 4. Firebase Storage
 
 **용도:**
-- 이동 세션 지도 이미지 저장
-- 이미지 캐싱 및 CDN 제공
+- 사용자 프로필 이미지 업로드
+- 채팅 중 전송되는 미디어 파일 보관
 
 **구현 위치:**
-- `safetrip-server-api/src/services/map-image.service.ts` (이미지 업로드/조회)
-
-**Flutter 패키지:**
-```yaml
-dependencies:
-  firebase_storage: ^12.0.0
-```
-
-**비용:**
-- 사용량 기반 (무료 티어: 5GB 저장, 1GB/일 다운로드)
-- 초과 시: $0.026/GB 저장, $0.12/GB 다운로드
+- `safetrip-mobile/lib/services/` (업로드)
+- `safetrip-server-api/src/` (이미지/파일 처리)
 
 ---
 
 ## 지도 및 위치 서비스
 
-### 5. Google Maps Flutter SDK
+### 5. flutter_map (OpenStreetMap 기반)
 
 **용도:**
-- 지도 표시
-- 마커 표시
-- 폴리라인 그리기
-- 카메라 제어
+- 메인 화면 지도 타일 렌더링
+- 여행자 마커 및 이동 경로(폴리라인) 애니메이션 표시
 
 **구현 위치:**
-- `safetrip-mobile/lib/screens/main/screen_main.dart` (메인 지도)
-- `safetrip-mobile/lib/managers/` (지도 관리자들)
+- `safetrip-mobile/lib/screens/main/`
+- `safetrip-mobile/lib/services/session_path_manager.dart`
 
 **Flutter 패키지:**
 ```yaml
 dependencies:
-  google_maps_flutter: ^2.5.0
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  flutter_map_marker_cluster: ^8.2.2
 ```
 
 **비용:**
-- 월 $200 무료 크레딧
-- 초과 시: Maps SDK $7/1,000회
-- **예상 월 비용**: $0-200 (무료 크레딧 내 사용 시)
-
-**API 키 설정:**
-- Android: `android/app/src/main/AndroidManifest.xml`
-- iOS: `ios/Runner/AppDelegate.swift`
+- 무료 (OpenStreetMap 타일 서버 사용 시 비용 없음, 상용 타일 사용 시 별도 책정)
 
 ---
 
-### 6. Google Maps Static API
+### 6. flutter_background_geolocation
 
 **용도:**
-- 이동 세션 경로 지도 이미지 생성
-- Base64 인코딩된 이미지 반환
-- Firebase Storage에 저장
-
-**구현 위치:**
-- `safetrip-server-api/src/services/map-image.service.ts`
-
-**API 사용:**
-```typescript
-const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap';
-const url = `${baseUrl}?size=800x400&path=weight:3|color:0x0000FF|enc:${polyline}&key=${apiKey}`;
-```
-
-**비용:**
-- 월 $200 무료 크레딧
-- 초과 시: Static Maps API $2/1,000회
-- **예상 월 비용**: $0-50 (무료 크레딧 내 사용 시)
-
-**환경 변수:**
-```env
-GOOGLE_MAPS_API_KEY=your_api_key_here
-```
-
----
-
-### 7. Flutter geocoding 패키지
-
-**용도:**
-- 좌표 → 주소 변환 (앱 내)
-- 주소 → 좌표 변환 (앱 내)
-- 국가 코드 조회
-
-**구현 위치:**
-- `safetrip-mobile/lib/services/geocoding_service.dart`
-
-**Flutter 패키지:**
-```yaml
-dependencies:
-  geocoding: ^3.0.0
-```
-
-**비용:**
-- 무료 (기기 내 지오코딩 사용)
-
----
-
-### 8. OpenStreetMap Nominatim API
-
-**용도:**
-- 서버에서 좌표 → 주소 변환 (역지오코딩)
-- 위치 기록 시 주소 정보 저장
-
-**구현 위치:**
-- `safetrip-server-api/src/services/geocoding.service.ts`
-
-**API 사용:**
-```typescript
-const response = await fetch(
-  `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-  {
-    headers: {
-      'User-Agent': 'SafeTrip-API-Server/1.0',
-    },
-  }
-);
-```
-
-**비용:**
-- 무료 (Rate Limit: 초당 1회 요청 권장)
-
-**주의사항:**
-- User-Agent 헤더 필수
-- 과도한 요청 시 IP 차단 가능
-
----
-
-### 9. flutter_background_geolocation
-
-**용도:**
-- 백그라운드 위치 추적
-- 지오펜스 이벤트 감지
-- 이동 세션 자동 시작/종료
-- 배터리 최적화
+- 앱이 백그라운드/종료 상태일 때 위치 추적
+- 지오펜스(Geofence) 진입 및 이탈 감지 이벤트
+- 배터리 소모 최적화(움직임 감지 연동)
 
 **구현 위치:**
 - `safetrip-mobile/lib/services/location_service.dart`
@@ -266,62 +148,98 @@ dependencies:
 **비용:**
 - 무료 (오픈소스 라이브러리)
 
-**주요 기능:**
-- 백그라운드 위치 추적
-- 지오펜스 진입/이탈 감지
-- 배터리 최적화 모드
-- 이동 감지 (Activity Recognition)
+---
+
+### 7. Flutter geocoding 및 역지오코딩
+
+**용도:**
+- 기기 내에서 좌표를 실제 주소명으로 변환 (역지오코딩)
+- 주소 검색 시 좌표 변환 (정지오코딩)
+
+**구현 위치:**
+- `safetrip-mobile/lib/services/geocoding_service.dart`
+
+**Flutter 패키지:**
+```yaml
+dependencies:
+  geocoding: ^3.0.0
+```
+
+---
+
+## 공공/AI 및 결제 서비스
+
+### 8. 외교부 공공데이터 API (MOFA)
+
+**용도:**
+- 국가별 여행경보, 기본정보, 대사관 연락처, 비자 정보 제공
+- `https://apis.data.go.kr/1262000` 공공데이터포털 연동
+- 조회 결과는 `TB_COUNTRY_SAFETY` 테이블에 캐시/저장 (DB 설계 문서 v3.6 §4.8a 참조)
+
+**구현 위치:**
+- `safetrip-server-api/src/modules/mofa/mofa.service.ts`
+- `safetrip-server-api/src/entities/country-safety.entity.ts` (TB_COUNTRY_SAFETY 엔티티)
+
+**비용:**
+- 무료 (API 인증키 필요)
+
+---
+
+### 9. OpenAI API (AI 서비스)
+
+**용도:**
+- 사용자의 여행지, 상황에 맞춘 지능형 안전 가이드 생성
+- 잠재적 위험 상황 분석 (Anomaly Detection 연동 예정)
+- AI 구독 플랜(AI Plus/Pro) 사용자 대상 장소 추천 및 브리핑
+
+**구현 위치:**
+- `safetrip-server-api/src/modules/ai/ai.service.ts`
+
+**비용:**
+- 종량제 과금 (토큰 사용량에 따라 부과)
+
+---
+
+### 10. Apple App Store & Google Play Store
+
+**용도:**
+- 가디언 슬롯 추가 요금 결제 (`guardian_fee`)
+- 프리미엄 AI 구독 (`guardian_premium`)
+- 서버에서 스토어 영수증(Receipt) 검증 후 서비스 권한 부여
+
+**구현 위치:**
+- `safetrip-server-api/src/modules/payments/payments.service.ts`
+
+**비용:**
+- 각 스토어 정책에 따른 수수료 부과 (보통 15~30%)
 
 ---
 
 ## 구현 위치
 
-### Backend 서비스
+### Backend 구조 (NestJS)
 
 ```
-safetrip-server-api/src/services/
-├── fcm.service.ts              # FCM 알림 발송
-├── geocoding.service.ts       # OpenStreetMap 역지오코딩
-├── map-image.service.ts        # Google Maps Static API (지도 이미지 생성)
-└── location.service.ts         # Firebase RTDB 위치 동기화
+safetrip-server-api/src/modules/
+├── ai/                # OpenAI 연동 및 사용량 관리
+├── auth/              # Firebase 토큰 검증 및 사용자 인증
+├── locations/         # 위치 데이터 관리 및 동기화
+├── mofa/              # 외교부 공공데이터 API 연동
+├── notifications/     # FCM 푸시 발송 로직
+└── payments/          # 스토어 영수증 검증 및 구독/슬롯 결제 관리
 ```
 
-### Backend 컨트롤러
-
-```
-safetrip-server-api/src/controllers/
-├── auth.controller.ts          # Firebase 인증
-├── fcm.controller.ts           # FCM 알림
-└── locations.controller.ts     # 위치 관리
-```
-
-### Backend 설정
-
-```
-safetrip-server-api/src/config/
-├── firebase.config.ts          # Firebase Admin SDK 초기화
-└── database.ts                 # PostgreSQL 연결
-```
-
-### Mobile 서비스
+### Mobile 구조 (Flutter)
 
 ```
 safetrip-mobile/lib/services/
-├── geocoding_service.dart      # Flutter geocoding 패키지
-├── firebase_location_service.dart  # Firebase RTDB 위치 업로드
-├── group_chat_service.dart     # Firebase RTDB 채팅
-└── location_service.dart       # flutter_background_geolocation
-```
-
-### Mobile 화면/매니저
-
-```
-safetrip-mobile/lib/
-├── screens/main/screen_main.dart  # Google Maps 지도 표시
-├── managers/
-│   ├── geofence_map_renderer.dart  # 지오펜스 지도 렌더링
-│   ├── marker_manager.dart         # 마커 관리
-│   └── camera_controller.dart      # 카메라 제어
+├── auth/                       # Firebase Auth
+├── api_service.dart            # API 서버 통신 (Dio)
+├── firebase_location_service.dart  # RTDB 위치/지오펜스 동기화
+├── geofence_manager.dart       # 백그라운드 지오펜스 로직
+├── location_service.dart       # 백그라운드 위치 추적
+├── mofa_service.dart           # 안전가이드 화면용 서비스 (API 경유)
+└── offline_sync_service.dart   # 오프라인 데이터 캐싱 및 동기화
 ```
 
 ---
@@ -335,151 +253,74 @@ safetrip-mobile/lib/
 FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_CLIENT_EMAIL=your_client_email
 FIREBASE_PRIVATE_KEY=your_private_key
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
 
-# Google Maps
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-
-# PostgreSQL
-DB_HOST=your_rds_endpoint
+# Database
+DB_HOST=your_db_endpoint
 DB_PORT=5432
-DB_NAME=safetrip
-DB_USER=safetrip_user
-DB_PASSWORD=your_password
-DB_SSL=true
+DB_USERNAME=postgres
+DB_PASSWORD=password
+DB_DATABASE=safetrip
 
-# 서버
-NODE_ENV=production
-PORT=3001
+# 공공데이터 및 AI
+MOFA_API_KEY=your_public_data_portal_key
+LLM_API_KEY=your_openai_api_key
+
+# 인앱 결제 검증용
+APPLE_SHARED_SECRET=your_apple_secret
 ```
 
 ### Mobile `.env`
 
 ```env
-# Firebase는 google-services.json (Android) / GoogleService-Info.plist (iOS)에서 자동 로드
-
-# Google Maps
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-
-# API 서버
 API_BASE_URL=https://api.safetrip.io/v1
+# Firebase는 google-services.json / GoogleService-Info.plist 에서 로드
 ```
-
-### Firebase 설정 파일
-
-**Android:**
-- `safetrip-mobile/android/app/google-services.json`
-
-**iOS:**
-- `safetrip-mobile/ios/Runner/GoogleService-Info.plist`
 
 ---
 
 ## 비용 정리
 
-### 월 예상 비용 (초기 단계)
+### 예상 유지비용
 
 | 서비스 | 월 예상 비용 | 비고 |
 |--------|-------------|------|
-| **Firebase Authentication** | 무료 | 기본 제공 |
-| **Firebase FCM** | 무료 | 기본 제공 |
-| **Firebase RTDB** | $0-10 | 1GB 저장, 10GB 전송 내 무료 |
-| **Firebase Storage** | $0-5 | 5GB 저장, 1GB/일 다운로드 내 무료 |
-| **Google Maps Flutter SDK** | $0-200 | 월 $200 무료 크레딧 |
-| **Google Maps Static API** | $0-50 | 월 $200 무료 크레딧 내 |
-| **OpenStreetMap Nominatim** | 무료 | Rate Limit 준수 시 |
-| **flutter_background_geolocation** | 무료 | 오픈소스 |
-| **Flutter geocoding** | 무료 | 기기 내 지오코딩 |
-| **총 예상** | **$0-265** | 무료 크레딧 활용 시 |
-
-### 월 예상 비용 (성장 단계 - 사용자 10만명)
-
-| 서비스 | 월 예상 비용 | 비고 |
-|--------|-------------|------|
-| **Firebase RTDB** | $50-200 | 사용량 증가 |
-| **Firebase Storage** | $20-100 | 이미지 저장 증가 |
-| **Google Maps Flutter SDK** | $200-500 | 무료 크레딧 초과 시 |
-| **Google Maps Static API** | $50-200 | 지도 이미지 생성 증가 |
-| **총 예상** | **$320-1,000** | 사용량에 따라 변동 |
+| **Firebase Auth & FCM** | 무료 | 기본 티어 제공 |
+| **Firebase RTDB / Storage** | $0 ~ $10+ | 초기 무료, 사용자 증가 시 사용량 기반 증가 |
+| **OpenStreetMap (flutter_map)** | 무료 | 무료 타일 서버 기준 |
+| **외교부 공공데이터 API** | 무료 | 공공데이터 |
+| **OpenAI API** | $0 ~ $50+ | 토큰 사용량 기반 종량제. 구독자 수에 비례 |
+| **스토어 수수료** | 매출의 15~30% | 인앱 결제 발생 시 스토어 자체 차감 |
 
 ---
 
 ## 연동 흐름도
 
 ### 1. 사용자 인증 흐름
-
 ```
-모바일 앱
-  ↓ (전화번호 입력)
-Firebase Authentication
-  ↓ (SMS OTP 발송 - Firebase 자동 처리)
-사용자 (OTP 수신)
-  ↓ (OTP 코드 입력)
-Firebase Authentication
-  ↓ (ID Token 발급)
-모바일 앱
-  ↓ (ID Token 전송)
-Backend API (/auth/firebase-verify)
-  ↓ (토큰 검증 및 사용자 동기화)
-PostgreSQL (사용자 정보 저장)
+모바일 앱 → Firebase Authentication (SMS OTP) → ID Token 발급
+→ Backend API (/auth/firebase-verify) → DB 동기화 (PostgreSQL)
 ```
 
----
-
-### 2. 위치 업로드 흐름
-
+### 2. 위치 수집 및 동기화 흐름
 ```
-모바일 앱 (flutter_background_geolocation)
-  ↓ (위치 수집)
-Firebase RTDB (realtime_locations)
-  ↓ (실시간 동기화)
-다른 사용자 앱 (실시간 위치 표시)
-  ↓ (서버 동기화)
-Backend API (주기적 동기화)
-  ↓ (주소 변환 - OpenStreetMap)
-PostgreSQL (위치 이력 저장)
+모바일 앱 (flutter_background_geolocation) → Firebase RTDB (실시간 노출)
+→ Backend API (일정 주기별 DB 영구 저장)
+```
+
+### 3. AI 안전 가이드 생성 흐름
+```
+모바일 앱 → Backend API (/ai/safety-guide)
+→ OpenAI API (Prompt 전송 및 결과 파싱) → 클라이언트에 응답
+```
+
+### 4. 인앱 결제 흐름
+```
+모바일 앱 (스토어 자체 결제) → 영수증(Receipt) 토큰 획득
+→ Backend API (/payments/verify) → Apple/Google 서버 검증 
+→ DB 권한(구독/슬롯) 업데이트 → 기능 잠금 해제
 ```
 
 ---
 
-### 3. FCM 알림 흐름
-
-```
-Backend API (/fcm/travelers/:travelerId/notify)
-  ↓ (FCM 메시지 생성)
-Firebase Cloud Messaging
-  ↓ (푸시 알림 전송)
-모바일 앱 (Firebase Messaging)
-  ↓ (로컬 알림 표시)
-사용자
-```
-
----
-
-### 4. 지도 이미지 생성 흐름
-
-```
-Backend API (이동 세션 완료)
-  ↓ (위치 데이터 조회)
-Google Maps Static API
-  ↓ (지도 이미지 생성)
-Base64 인코딩
-  ↓ (Firebase Storage 업로드)
-Firebase Storage
-  ↓ (URL 반환)
-PostgreSQL (URL 저장)
-```
-
----
-
-## 참고 자료
-
-- [Firebase Realtime Database 가이드](../04-firebase/firebase-rtdb.md)
-- [Firebase 아키텍처](../02-architecture/firebase-architecture.md)
-- [API 가이드](../05-api/api-guide.md)
-- [배포 가이드](../01-getting-started/deployment.md)
-
----
-
-**작성일**: 2025-01-15  
-**버전**: 3.0 (실제 사용 서비스만 반영)
+**작성일**: 2026-03-04  
+**버전**: 4.1 (DB 설계 v3.6 교차검증 반영 — TB_COUNTRY_SAFETY 참조 추가)

@@ -5,8 +5,9 @@
 | **문서 ID** | `DOC-T2-API-037` |
 | **상위 인덱스** | [35_T2_API_명세서.md](./35_T2_API_명세서.md) |
 | **범위** | §6 그룹 / §7 초대코드 / §8 가디언 / §9 위치 / §10 지오펜스 |
-| **버전** | v1.0 |
+| **버전** | v1.1 |
 | **작성일** | 2026-03-02 |
+| **최종 수정** | 2026-03-05 (DB v3.6 교차검증) |
 
 > Part 1: [36_T2_API_명세서_Part1.md](./36_T2_API_명세서_Part1.md) | Part 3: [38_T2_API_명세서_Part3.md](./38_T2_API_명세서_Part3.md)
 
@@ -771,6 +772,15 @@
 ---
 
 ### §6.F 출석체크
+
+> **DB v3.6 참고**: 출석체크 데이터는 `TB_ATTENDANCE_CHECK` (세션) 및 `TB_ATTENDANCE_RESPONSE` (개별 응답) 테이블에 저장된다 (DB 설계 문서 v3.6 §4.9, §4.10 참조). 현재 구현은 Firebase RTDB 기반이며, PostgreSQL 연동은 추후 구현 예정이다.
+
+<!-- TODO v3.6: TB_ATTENDANCE_CHECK / TB_ATTENDANCE_RESPONSE 관련 CRUD 엔드포인트 정의 필요 (DB 설계 문서 v3.6 §4.9~4.10 참조)
+     - GET /api/v1/groups/:group_id/attendance (출석체크 세션 목록 조회)
+     - GET /api/v1/groups/:group_id/attendance/:checkId (출석체크 세션 상세 + 응답 목록)
+     - POST /api/v1/groups/:group_id/attendance/:checkId/respond (멤버 출석 응답)
+     - PATCH /api/v1/groups/:group_id/attendance/:checkId/complete (출석체크 종료)
+-->
 
 ---
 
@@ -1824,6 +1834,13 @@
 
 ---
 
+<!-- TODO v3.6: TB_GUARDIAN_LOCATION_REQUEST / TB_GUARDIAN_SNAPSHOT 관련 엔드포인트 정의 필요 (DB 설계 문서 v3.6 §4.19~4.20 참조)
+     §8.E 가디언 위치 요청 (Guardian Location Requests)
+     - POST /api/v1/trips/:tripId/guardians/:linkId/location-request (가디언이 멤버에게 위치 확인 요청)
+     - GET /api/v1/trips/:tripId/guardians/:linkId/location-requests (위치 요청 이력 조회)
+     - POST /api/v1/trips/:tripId/guardians/:linkId/location-snapshot (위치 스냅샷 자동 생성)
+-->
+
 ### 8.D 레거시 가디언 (Deprecated)
 
 **Base URL**: `/api/v1/guardians`
@@ -2682,6 +2699,17 @@
 
 ---
 
+<!-- TODO v3.6: TB_PLANNED_ROUTE / TB_ROUTE_DEVIATION 관련 엔드포인트 정의 필요 (DB 설계 문서 v3.6 §4.17b~4.17c 참조)
+     §9.11 경로 계획 (Planned Routes)
+     - POST /api/v1/trips/:tripId/planned-routes (경로 계획 생성)
+     - GET /api/v1/trips/:tripId/planned-routes (경로 계획 목록 조회)
+     - GET /api/v1/trips/:tripId/planned-routes/:routeId (경로 계획 상세)
+     - PATCH /api/v1/trips/:tripId/planned-routes/:routeId (경로 계획 수정)
+     - DELETE /api/v1/trips/:tripId/planned-routes/:routeId (경로 계획 삭제)
+     §9.12 경로 이탈 (Route Deviations)
+     - GET /api/v1/trips/:tripId/planned-routes/:routeId/deviations (이탈 이력 조회)
+-->
+
 ## §10 지오펜스 (Geofences)
 
 **Base URL**: `/api/v1/geofences` (목록·상세·수정·삭제·이벤트 기록)
@@ -3000,6 +3028,14 @@
 ---
 
 ### 10.6 지오펜스 이벤트 기록
+
+> **DB v3.6 참고**: 지오펜스 이벤트 데이터는 `TB_GEOFENCE_EVENT` 테이블에 저장되며, 이탈 위반에 대한 패널티는 `TB_GEOFENCE_PENALTY` 테이블에 기록된다 (DB 설계 문서 v3.6 §4.14a~4.14b 참조). 현재 구현은 `TB_EVENT_LOG`에 통합 기록하는 방식이며, `TB_GEOFENCE_EVENT` 전용 테이블로의 마이그레이션은 추후 예정이다.
+
+<!-- TODO v3.6: TB_GEOFENCE_PENALTY 관련 엔드포인트 정의 필요 (DB 설계 문서 v3.6 §4.14b 참조)
+     - GET /api/v1/geofences/:geofenceId/penalties (지오펜스 위반 패널티 목록)
+     - POST /api/v1/geofences/:geofenceId/penalties (패널티 기록 생성)
+     - GET /api/v1/geofences/events?group_id=&user_id= (TB_GEOFENCE_EVENT 기반 조회)
+-->
 
 #### [POST] /api/v1/geofences/events
 

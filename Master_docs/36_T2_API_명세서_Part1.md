@@ -5,8 +5,9 @@
 | **문서 ID** | `DOC-T2-API-036` |
 | **상위 인덱스** | [35_T2_API_명세서.md](./35_T2_API_명세서.md) |
 | **범위** | §3 인증 / §4 사용자 / §5 여행 |
-| **버전** | v1.0 |
+| **버전** | v1.1 |
 | **작성일** | 2026-03-02 |
+| **최종 수정** | 2026-03-05 (DB v3.6 교차검증) |
 
 > Part 2: [37_T2_API_명세서_Part2.md](./37_T2_API_명세서_Part2.md) | Part 3: [38_T2_API_명세서_Part3.md](./38_T2_API_명세서_Part3.md)
 
@@ -137,6 +138,10 @@
 ---
 
 ### §4.A 사용자 (Users)
+
+> **v3.6 참고**: DB 설계 v3.6에서 `TB_USER`에 `deletion_requested_at TIMESTAMPTZ` (삭제 요청 시각, 7일 유예 기산점) 및 `deleted_at TIMESTAMPTZ` (soft delete) 컬럼이 추가되었다. 현재 API 응답 스키마에는 이 필드들이 포함되지 않으나, 계정 삭제 유예 기능 구현 시 응답에 추가될 예정이다.
+>
+> **v3.6 참고**: `TB_FCM_TOKEN` 테이블이 DB v3.6에서 신규 추가되었다. 기존 구현체의 `tb_device_token`은 `TB_FCM_TOKEN`으로 마이그레이션 예정이다 (§4.29a 참조).
 
 ---
 
@@ -416,7 +421,7 @@
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `token_id` | string | `tb_device_token.token_id` |
+| `token_id` | string | `tb_device_token.token_id` (DB v3.6: `TB_FCM_TOKEN.token_id`로 마이그레이션 예정) |
 | `is_new` | boolean | `true` = 신규 INSERT, `false` = 기존 토큰 UPDATE |
 | `last_used_at` | string | 토큰 마지막 사용 시각 |
 
@@ -580,7 +585,7 @@
 
 | 파라미터 | 타입 | 설명 |
 |---------|------|------|
-| `tokenId` | string (UUID) | 비활성화할 `tb_device_token.token_id` |
+| `tokenId` | string (UUID) | 비활성화할 `tb_device_token.token_id` (DB v3.6: `TB_FCM_TOKEN.token_id`) |
 
 **Response 200**
 ```json
@@ -644,6 +649,12 @@
 | 500 | 서버 내부 오류 |
 
 ---
+
+<!-- TODO v3.6: TB_PARENTAL_CONSENT (보호자 동의) 관련 엔드포인트 정의 필요 (DB 설계 문서 v3.6 §4.2a 참조)
+     - POST /api/v1/users/:userId/parental-consent (보호자 동의 요청 생성)
+     - GET /api/v1/users/:userId/parental-consent (보호자 동의 상태 조회)
+     - PATCH /api/v1/users/:userId/parental-consent/:consentId (동의 상태 변경)
+-->
 
 ### §4.B 여행자 (Travelers)
 
@@ -752,6 +763,12 @@
 > 보호자 승인 흐름 관련 엔드포인트는 인증 미들웨어 없이도 동작하나,
 > `user_id`를 토큰 또는 Request Body/Query Parameter로 반드시 전달해야 한다.
 
+> **v3.6 참고**: DB 설계 v3.6에서 `TB_TRIP`에 다음 컬럼이 추가되었다. 현재 API 응답 스키마에는 미포함이며, 해당 기능 구현 시 응답에 추가될 예정이다.
+> - `reactivated_at TIMESTAMPTZ` — 마지막 재활성화 시각
+> - `reactivation_count INTEGER DEFAULT 0` — 재활성화 횟수 (최대 1회, `CHECK (reactivation_count <= 1)`)
+> - `b2b_contract_id UUID` — B2B 계약 연결. NULL이면 B2C 여행 (§12)
+> - `has_minor_members BOOLEAN DEFAULT FALSE` — 미성년자 포함 여행 시 safety_first 등급 강제 (§13.2)
+>
 > **초대코드 체계 구분**: SafeTrip에는 두 가지 초대코드 체계가 공존한다.
 >
 > | 체계 | 저장 테이블 | 생성 시점 | 사용 엔드포인트 |
