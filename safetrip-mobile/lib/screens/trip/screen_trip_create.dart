@@ -92,6 +92,23 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
 
             _buildLabel('여행 기간 *'),
             _buildDateRangeField(),
+            if (_startDate != null && _endDate != null) ...[
+              Builder(builder: (context) {
+                final days = _endDate!.difference(_startDate!).inDays + 1;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    days >= 15
+                        ? '여행 기간이 최대(15일)에 달했습니다'
+                        : '$days일 여행',
+                    style: TextStyle(
+                      color: days >= 15 ? Colors.orange : Colors.grey,
+                      fontSize: 13,
+                    ),
+                  ),
+                );
+              }),
+            ],
             const SizedBox(height: AppSpacing.xxl),
 
             SizedBox(
@@ -142,6 +159,36 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
     );
   }
 
+  void _showTripDurationLimitModal(DateTime startDate, int days) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('여행 기간은 최대 15일입니다'),
+        content: Text(
+          '${days}일 여행을 계획 중이신가요?\n\n'
+          '두 개의 여행으로 나누어 생성하세요.\n'
+          '예: 1차 여행 (1~15일) + 2차 (16~${days}일)',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _startDate = startDate;
+                _endDate = startDate.add(const Duration(days: 14));
+              });
+            },
+            child: const Text('1차 여행 생성'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDateRangeField() {
     final rangeText = (_startDate != null && _endDate != null)
         ? '${DateFormat('yyyy.MM.dd').format(_startDate!)} ~ ${DateFormat('yyyy.MM.dd').format(_endDate!)}'
@@ -155,6 +202,11 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
           lastDate: DateTime.now().add(const Duration(days: 365)),
         );
         if (picked != null) {
+          final duration = picked.end.difference(picked.start).inDays + 1; // inclusive
+          if (duration > 15) {
+            if (mounted) _showTripDurationLimitModal(picked.start, duration);
+            return;
+          }
           setState(() {
             _startDate = picked.start;
             _endDate = picked.end;
