@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -36,11 +37,18 @@ class _ScreenTripPrivacyState extends State<ScreenTripPrivacy> {
   // 위치 공유 일시정지
   bool _isLocationPaused = false;
   DateTime? _locationPauseEnd;
+  Timer? _pauseTimer;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _pauseTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -160,15 +168,20 @@ class _ScreenTripPrivacyState extends State<ScreenTripPrivacy> {
   }
 
   Future<void> _pauseLocation(int minutes) async {
+    _pauseTimer?.cancel();
     setState(() {
       _isLocationPaused = true;
       _locationPauseEnd = DateTime.now().add(Duration(minutes: minutes));
+    });
+    _pauseTimer = Timer(Duration(minutes: minutes), () {
+      if (mounted) _resumeLocationSharing();
     });
     // Update sharing state through API
     await _updatePrivacy(false, _visibilityType);
   }
 
   void _resumeLocationSharing() {
+    _pauseTimer?.cancel();
     setState(() {
       _isLocationPaused = false;
       _locationPauseEnd = null;
