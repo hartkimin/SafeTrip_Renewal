@@ -22,6 +22,7 @@ import '../screens/trip/screen_guardian_management.dart';
 import '../screens/ai/screen_ai_briefing.dart';
 import '../screens/main/screen_main_guardian.dart';
 import '../features/onboarding/presentation/screens/screen_invite_confirm.dart';
+import '../features/onboarding/presentation/screens/screen_guardian_confirm.dart';
 
 class AppRouter {
   AppRouter(this.authNotifier);
@@ -86,6 +87,15 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           return ScreenInviteConfirm(
             inviteCode: extra['inviteCode'] as String? ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.onboardingGuardianConfirm,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return ScreenGuardianConfirm(
+            guardianCode: extra['guardianCode'] as String? ?? '',
           );
         },
       ),
