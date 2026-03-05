@@ -172,31 +172,43 @@ class AppRouter {
     final isLoading = authNotifier.isLoading;
     final isAuth = authNotifier.isAuthenticated;
 
-    debugPrint('[Router] redirect: path=$path, isLoading=$isLoading, isAuth=$isAuth, isFirstLaunch=${authNotifier.isFirstLaunch}');
-
+    // Still loading → stay on splash
     if (isLoading) return path == RoutePaths.splash ? null : RoutePaths.splash;
 
+    // Splash: decide where to go
     if (path == RoutePaths.splash) {
       if (!isAuth) {
+        // Check for deep link scenarios
         if (authNotifier.pendingInviteCode != null) {
-          return RoutePaths.tripJoin;
+          return RoutePaths.authPhone; // B: invite code → auth first
         }
+        if (authNotifier.pendingGuardianCode != null) {
+          return RoutePaths.authPhone; // C: guardian → auth first
+        }
+        // A or D: normal flow
         return authNotifier.isFirstLaunch
             ? RoutePaths.onboardingWelcome
             : RoutePaths.onboardingPurpose;
       }
-      return authNotifier.hasActiveTrip ? RoutePaths.main : RoutePaths.noTripHome;
+      // Authenticated: go to main
+      return authNotifier.hasActiveTrip
+          ? RoutePaths.main
+          : RoutePaths.noTripHome;
     }
 
-    final authPaths = [
+    // Protect auth/onboarding routes from authenticated users
+    final onboardingPaths = [
       RoutePaths.onboardingWelcome,
       RoutePaths.onboardingPurpose,
-      RoutePaths.authTerms,
       RoutePaths.authPhone,
+      RoutePaths.authTerms,
+      RoutePaths.authBirthDate,
+      RoutePaths.authProfile,
     ];
-    
-    if (isAuth && authPaths.contains(path)) {
-      return authNotifier.hasActiveTrip ? RoutePaths.main : RoutePaths.noTripHome;
+    if (isAuth && onboardingPaths.contains(path)) {
+      return authNotifier.hasActiveTrip
+          ? RoutePaths.main
+          : RoutePaths.noTripHome;
     }
 
     return null;
