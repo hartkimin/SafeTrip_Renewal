@@ -4,11 +4,11 @@ import 'auth_notifier.dart';
 import 'route_paths.dart';
 
 import '../screens/screen_splash.dart';
-import '../screens/onboarding/screen_intro.dart';
-import '../screens/onboarding/screen_role_select.dart';
-import '../screens/auth/screen_terms_consent.dart';
-import '../screens/auth/screen_phone_auth.dart';
-import '../screens/auth/screen_profile_setup.dart';
+import '../features/onboarding/presentation/screens/screen_welcome.dart';
+import '../features/onboarding/presentation/screens/screen_purpose_select.dart';
+import '../features/onboarding/presentation/screens/screen_terms_consent.dart';
+import '../features/onboarding/presentation/screens/screen_phone_auth.dart';
+import '../features/onboarding/presentation/screens/screen_profile_setup.dart';
 import '../screens/main/screen_main.dart';
 import '../screens/main/screen_notification_list.dart';
 import '../screens/settings/screen_settings_main.dart';
@@ -19,6 +19,7 @@ import '../screens/trip/screen_trip_demo.dart';
 import '../screens/trip/screen_trip_privacy.dart';
 import '../screens/trip/screen_guardian_management.dart';
 import '../screens/ai/screen_ai_briefing.dart';
+import '../screens/main/screen_main_guardian.dart';
 
 class AppRouter {
   AppRouter(this.authNotifier);
@@ -35,11 +36,11 @@ class AppRouter {
       ),
       GoRoute(
         path: RoutePaths.onboardingIntro,
-        builder: (context, state) => const ScreenIntro(),
+        builder: (context, state) => const ScreenWelcome(),
       ),
       GoRoute(
         path: RoutePaths.roleSelect,
-        builder: (context, state) => const RoleSelectScreen(),
+        builder: (context, state) => const ScreenPurposeSelect(),
       ),
       GoRoute(
         path: RoutePaths.termsConsent,
@@ -110,6 +111,31 @@ class AppRouter {
         path: RoutePaths.aiBriefing,
         builder: (context, state) => const ScreenAiBriefing(),
       ),
+      // 가디언 전용 메인 화면
+      GoRoute(
+        path: '/main/guardian',
+        builder: (context, state) => const MainGuardianScreen(),
+      ),
+      // 딥링크 동적 라우트 (화면구성원칙 §9.2)
+      GoRoute(
+        path: RoutePaths.tripDetail,
+        builder: (context, state) {
+          // tripId 파라미터로 메인 화면 열기 (향후 확장)
+          return MainScreen(authNotifier: authNotifier);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.tripSchedule,
+        builder: (context, state) {
+          return MainScreen(authNotifier: authNotifier);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.tripMembers,
+        builder: (context, state) {
+          return MainScreen(authNotifier: authNotifier);
+        },
+      ),
     ],
   );
 
@@ -117,6 +143,8 @@ class AppRouter {
     final path = state.uri.path;
     final isLoading = authNotifier.isLoading;
     final isAuth = authNotifier.isAuthenticated;
+
+    debugPrint('[Router] redirect: path=$path, isLoading=$isLoading, isAuth=$isAuth, isFirstLaunch=${authNotifier.isFirstLaunch}');
 
     if (isLoading) return path == RoutePaths.splash ? null : RoutePaths.splash;
 

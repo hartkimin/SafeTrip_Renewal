@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../router/route_paths.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../router/route_paths.dart';
 
 /// A-02 Purpose Selection Screen
-class RoleSelectScreen extends StatelessWidget {
-  const RoleSelectScreen({super.key});
+class ScreenPurposeSelect extends StatelessWidget {
+  const ScreenPurposeSelect({super.key});
 
   void _onRoleSelected(BuildContext context, String role) {
     context.push(RoutePaths.termsConsent, extra: {'role': role});

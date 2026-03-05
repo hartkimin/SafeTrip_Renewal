@@ -4,14 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../router/auth_notifier.dart';
-import '../../router/route_paths.dart';
-import '../../services/api_service.dart';
-import '../../services/auth/firebase_auth_service.dart';
-import '../../utils/phone_parser.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../router/auth_notifier.dart';
+import '../../../../router/route_paths.dart';
+import '../../../../services/api_service.dart';
+import '../../../../services/auth/firebase_auth_service.dart';
+import '../../../../utils/phone_parser.dart';
 
 enum _PhoneAuthStep { enterPhone, enterOtp }
 

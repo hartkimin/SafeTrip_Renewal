@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../constants/app_terms.dart';
-import '../../router/route_paths.dart';
-import '../../services/api_service.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../constants/app_terms.dart';
+import '../../../../router/route_paths.dart';
+import '../../../../services/api_service.dart';
 
 /// A-07 Terms Consent Screen
 class ScreenTermsConsent extends StatefulWidget {

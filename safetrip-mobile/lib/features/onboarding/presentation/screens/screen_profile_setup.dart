@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../router/auth_notifier.dart';
-import '../../router/route_paths.dart';
-import '../../services/api_service.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../router/auth_notifier.dart';
+import '../../../../router/route_paths.dart';
+import '../../../../services/api_service.dart';
 
 /// A-06 Profile Setup Screen
 class ScreenProfileSetup extends StatefulWidget {
