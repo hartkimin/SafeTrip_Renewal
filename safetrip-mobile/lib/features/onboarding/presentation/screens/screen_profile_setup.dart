@@ -36,6 +36,7 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
 
   File? _selectedImage;
   bool _isLoading = false;
+  String _privacyLevel = 'friends_only'; // §7.1 default: friends-only
 
   Future<void> _pickImage() async {
     final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
@@ -62,6 +63,7 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
           name,
           birthDate: birthDate,
           emergencyContact: emergencyContact.isNotEmpty ? emergencyContact : null,
+          privacyLevel: _privacyLevel,
         );
       }
 
@@ -108,6 +110,41 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
     }
   }
 
+  Widget _buildPrivacyOption(String value, String label, String description) {
+    final isSelected = _privacyLevel == value;
+    return GestureDetector(
+      onTap: () => setState(() => _privacyLevel = value),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          border: Border.all(color: isSelected ? AppColors.primaryTeal : AppColors.border),
+          borderRadius: BorderRadius.circular(AppSpacing.radius12),
+          color: isSelected ? AppColors.primaryTeal.withValues(alpha: 0.06) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? AppColors.primaryTeal : AppColors.textTertiary,
+              size: 20,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                  Text(description, style: AppTypography.bodySmall.copyWith(color: AppColors.textTertiary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,6 +187,13 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
                         keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(labelText: '비상 연락처', hintText: '010-0000-0000'),
                       ),
+                      const SizedBox(height: AppSpacing.xl),
+                      // §7.1 Privacy level selection
+                      Text('위치 공개 범위', style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: AppSpacing.sm),
+                      _buildPrivacyOption('public', '공개', '모든 사용자에게 위치 공유'),
+                      _buildPrivacyOption('friends_only', '친구만', '같은 여행 멤버에게만 공유'),
+                      _buildPrivacyOption('private', '비공개', '위치를 공유하지 않음'),
                     ],
                   ),
                 ),

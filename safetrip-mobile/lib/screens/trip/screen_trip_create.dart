@@ -171,10 +171,6 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               setState(() {
@@ -182,7 +178,21 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
                 _endDate = startDate.add(const Duration(days: 14));
               });
             },
-            child: const Text('1차 여행 생성'),
+            child: const Text('15일로 조정'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // 1차 여행: 15일로 설정 후, 사용자가 나중에 2차 여행을 생성
+              setState(() {
+                _startDate = startDate;
+                _endDate = startDate.add(const Duration(days: 14));
+              });
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                const SnackBar(content: Text('1차 여행(15일)이 설정되었습니다. 나머지 일정은 별도 여행으로 생성해주세요.')),
+              );
+            },
+            child: const Text('나누기'),
           ),
         ],
       ),

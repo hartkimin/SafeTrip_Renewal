@@ -101,6 +101,7 @@ class ApiService {
     String? birthDate,
     String? profilePhotoUrl,
     String? emergencyContact,
+    String? privacyLevel,
   }) async {
     try {
       final data = <String, dynamic>{'display_name': displayName};
@@ -109,6 +110,7 @@ class ApiService {
       if (emergencyContact != null) {
         data['emergency_contact'] = emergencyContact;
       }
+      if (privacyLevel != null) data['privacy_level'] = privacyLevel;
 
       final response = await _dio.put('/api/v1/users/$userId', data: data);
       return response.data['data'];
