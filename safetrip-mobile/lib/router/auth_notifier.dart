@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/onboarding/domain/onboarding_type.dart';
+
 /// 앱의 인증 상태 및 온보딩 흐름을 관리하는 클래스
 class AuthNotifier extends ChangeNotifier {
   AuthNotifier() {
@@ -14,6 +16,10 @@ class AuthNotifier extends ChangeNotifier {
   bool _isLoading = true;
   String? _pendingInviteCode;
   String _onboardingStep = 'complete';
+  OnboardingType? _onboardingType;
+  String? _pendingGuardianCode;
+  bool _consentCompleted = false;
+  bool _profileCompleted = false;
 
   bool get isAuthenticated => _isAuthenticated;
   bool get hasActiveTrip => _hasActiveTrip;
@@ -21,6 +27,10 @@ class AuthNotifier extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get pendingInviteCode => _pendingInviteCode;
   String get onboardingStep => _onboardingStep;
+  OnboardingType? get onboardingType => _onboardingType;
+  String? get pendingGuardianCode => _pendingGuardianCode;
+  bool get consentCompleted => _consentCompleted;
+  bool get profileCompleted => _profileCompleted;
 
   Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,6 +53,8 @@ class AuthNotifier extends ChangeNotifier {
     _hasActiveTrip = groupId != null && groupId.isNotEmpty;
     _isFirstLaunch = !onboardingCompleted;
     _onboardingStep = prefs.getString('onboarding_step') ?? 'complete';
+    _consentCompleted = prefs.getBool('consent_completed') ?? false;
+    _profileCompleted = prefs.getBool('profile_completed') ?? false;
     _isLoading = false;
 
     notifyListeners();
@@ -84,10 +96,16 @@ class AuthNotifier extends ChangeNotifier {
     await prefs.remove('auth_verified_at');
     await prefs.remove('group_id');
     await prefs.remove('onboarding_step');
-    
+    await prefs.remove('consent_completed');
+    await prefs.remove('profile_completed');
+
     _isAuthenticated = false;
     _hasActiveTrip = false;
     _onboardingStep = 'complete';
+    _onboardingType = null;
+    _pendingGuardianCode = null;
+    _consentCompleted = false;
+    _profileCompleted = false;
     notifyListeners();
   }
 
@@ -98,6 +116,36 @@ class AuthNotifier extends ChangeNotifier {
 
   void clearPendingInviteCode() {
     _pendingInviteCode = null;
+    notifyListeners();
+  }
+
+  void setOnboardingType(OnboardingType type) {
+    _onboardingType = type;
+    notifyListeners();
+  }
+
+  void setPendingGuardianCode(String code) {
+    _pendingGuardianCode = code;
+    _onboardingType = OnboardingType.guardian;
+    notifyListeners();
+  }
+
+  void clearPendingGuardianCode() {
+    _pendingGuardianCode = null;
+    notifyListeners();
+  }
+
+  Future<void> markConsentCompleted() async {
+    _consentCompleted = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('consent_completed', true);
+    notifyListeners();
+  }
+
+  Future<void> markProfileCompleted() async {
+    _profileCompleted = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('profile_completed', true);
     notifyListeners();
   }
 }
