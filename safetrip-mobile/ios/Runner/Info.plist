@@ -47,6 +47,20 @@
 			</array>
 		</dict>
 	</dict>
+	<!-- 딥링크 (화면구성원칙 §9.2) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.urock.safe.trip</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>safetrip</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/onboarding/data/deeplink_service.dart';
 import 'router/app_router.dart';
 import 'router/auth_notifier.dart';
 
@@ -54,11 +55,16 @@ void main() async {
     }
   }
 
+  // Initialize deep link service
+  await DeeplinkService.instance.init();
+
+  debugPrint('[main] About to runApp...');
   runApp(
     const ProviderScope(
       child: MyApp(),
     ),
   );
+  debugPrint('[main] runApp called');
 }
 
 class MyApp extends StatefulWidget {
@@ -75,8 +81,20 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[MyApp] initState start');
     _authNotifier = AuthNotifier();
     _appRouter = AppRouter(_authNotifier);
+
+    // Forward deep link params to AuthNotifier
+    final deeplink = DeeplinkService.instance;
+    if (deeplink.pendingInviteCode != null) {
+      _authNotifier.setPendingInviteCode(deeplink.pendingInviteCode!);
+    }
+    if (deeplink.pendingGuardianCode != null) {
+      _authNotifier.setPendingGuardianCode(deeplink.pendingGuardianCode!);
+    }
+
+    debugPrint('[MyApp] initState done');
   }
 
   @override
@@ -87,6 +105,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[MyApp] build called');
     return MaterialApp.router(
       title: 'SafeTrip',
       debugShowCheckedModeBanner: false,
