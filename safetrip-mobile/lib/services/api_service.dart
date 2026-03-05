@@ -1041,4 +1041,90 @@ class ApiService {
       return [];
     }
   }
+
+  // ===== 온보딩/동의/초대 (Onboarding/Consent/Invite) =====
+
+  /// POST /api/v1/auth/consent — individual consent record
+  Future<bool> saveConsentRecord({
+    required String consentType,
+    required String consentVersion,
+    required bool isGranted,
+  }) async {
+    try {
+      final response = await _dio.post('/api/v1/auth/consent', data: {
+        'consentType': consentType,
+        'consentVersion': consentVersion,
+        'isGranted': isGranted,
+      });
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] saveConsentRecord error: $e');
+      return false;
+    }
+  }
+
+  /// GET /api/v1/trips/invite/:inviteCode
+  Future<Map<String, dynamic>?> previewInviteCode(String code) async {
+    try {
+      final response = await _dio.get('/api/v1/trips/invite/$code');
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] previewInviteCode error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/trips/invite/accept
+  Future<Map<String, dynamic>?> acceptInvite(String code) async {
+    try {
+      final response = await _dio.post('/api/v1/trips/invite/accept', data: {
+        'inviteCode': code,
+      });
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] acceptInvite error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/trips/guardian-invite/:inviteCode
+  Future<Map<String, dynamic>?> previewGuardianInvite(String code) async {
+    try {
+      final response = await _dio.get('/api/v1/trips/guardian-invite/$code');
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] previewGuardianInvite error: $e');
+      return null;
+    }
+  }
+
+  /// PATCH /api/v1/trips/:tripId/guardians/:linkId/respond
+  Future<Map<String, dynamic>?> respondGuardianInvite({
+    required String tripId,
+    required String linkId,
+    required String action,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/trips/$tripId/guardians/$linkId/respond',
+        data: {'action': action},
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] respondGuardianInvite error: $e');
+      return null;
+    }
+  }
 }
