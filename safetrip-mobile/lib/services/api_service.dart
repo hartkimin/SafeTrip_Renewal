@@ -1129,4 +1129,122 @@ class ApiService {
       return null;
     }
   }
+
+  // ===== Settings API =====
+
+  /// PATCH /api/v1/trips/:tripId — 프라이버시 등급 변경
+  Future<bool> updateTripPrivacyLevel(String tripId, String privacyLevel) async {
+    try {
+      final response = await _dio.patch('/api/v1/trips/$tripId', data: {
+        'privacy_level': privacyLevel,
+      });
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] updateTripPrivacyLevel Error: $e');
+      return false;
+    }
+  }
+
+  /// GET /api/v1/trips/:tripId — 여행 상세 조회
+  Future<Map<String, dynamic>?> getTripById(String tripId) async {
+    try {
+      final response = await _dio.get('/api/v1/trips/$tripId');
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getTripById Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/trips/:tripId/guardians/me — 내 가디언 목록 조회
+  Future<List<Map<String, dynamic>>> getMyGuardians(String tripId) async {
+    try {
+      final response = await _dio.get('/api/v1/trips/$tripId/guardians/me');
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getMyGuardians Error: $e');
+      return [];
+    }
+  }
+
+  /// DELETE /api/v1/trips/:tripId/guardians/:linkId — 가디언 링크 삭제
+  Future<bool> removeGuardianLink(String tripId, String linkId) async {
+    try {
+      final response = await _dio.delete(
+        '/api/v1/trips/$tripId/guardians/$linkId',
+      );
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] removeGuardianLink Error: $e');
+      return false;
+    }
+  }
+
+  /// POST /api/v1/trips/:tripId/guardians — 가디언 추가
+  Future<Map<String, dynamic>?> addGuardian(
+    String tripId,
+    String guardianPhone,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/trips/$tripId/guardians',
+        data: {'guardian_phone': guardianPhone},
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] addGuardian Error: $e');
+      return null;
+    }
+  }
+
+  /// PATCH /api/v1/users/me — 계정 삭제 요청
+  Future<bool> requestAccountDeletion() async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/users/me',
+        data: {'deletionRequestedAt': DateTime.now().toIso8601String()},
+      );
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] requestAccountDeletion Error: $e');
+      return false;
+    }
+  }
+
+  /// PATCH /api/v1/users/me — 계정 삭제 요청 취소
+  Future<bool> cancelAccountDeletion() async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/users/me',
+        data: {'deletionRequestedAt': null},
+      );
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] cancelAccountDeletion Error: $e');
+      return false;
+    }
+  }
+
+  /// GET /api/v1/auth/consent — 동의 이력 조회
+  Future<List<Map<String, dynamic>>> getConsentHistory() async {
+    try {
+      final response = await _dio.get('/api/v1/auth/consent');
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getConsentHistory Error: $e');
+      return [];
+    }
+  }
 }
