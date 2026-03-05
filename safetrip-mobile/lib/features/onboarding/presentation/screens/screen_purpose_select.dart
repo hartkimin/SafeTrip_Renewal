@@ -10,7 +10,8 @@ class ScreenPurposeSelect extends StatelessWidget {
   const ScreenPurposeSelect({super.key});
 
   void _onRoleSelected(BuildContext context, String role) {
-    context.push(RoutePaths.termsConsent, extra: {'role': role});
+    // New flow: purpose → phone (not terms)
+    context.push(RoutePaths.authPhone, extra: {'role': role});
   }
 
   @override
@@ -48,13 +49,13 @@ class ScreenPurposeSelect extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // 2. 초대코드 입력 (Crew)
+              // 2. 초대코드 입력 (Crew) — goes directly to trip join screen
               _buildRoleButton(
                 context: context,
                 icon: '🔑',
                 label: '초대코드 입력',
                 isSecondary: true,
-                onTap: () => _onRoleSelected(context, 'crew'),
+                onTap: () => context.push(RoutePaths.tripJoin),
               ),
               const SizedBox(height: AppSpacing.md),
 
