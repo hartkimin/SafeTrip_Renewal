@@ -184,10 +184,22 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen>
 
       if (!mounted) return;
 
-      // 프로필 설정 화면으로 이동
+      // Scenario D: returning user who already completed onboarding — skip to main
+      final consentDone = prefs.getBool('consent_completed') ?? false;
+      final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
+
+      if (onboardingDone && consentDone) {
+        await widget.authNotifier.setAuthenticated(
+          hasTrip: (prefs.getString('group_id') ?? '').isNotEmpty,
+        );
+        if (mounted) context.go(RoutePaths.main);
+        return;
+      }
+
+      // 약관 동의 화면으로 이동
       context.push(
-        RoutePaths.profileSetup,
-        extra: {'userId': userId, 'role': widget.role},
+        RoutePaths.authTerms,
+        extra: {'role': widget.role},
       );
 
       await widget.authNotifier.setAuthenticated(hasTrip: false);
