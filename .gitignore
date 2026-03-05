@@ -171,3 +171,7 @@ docker-compose.override.yml
 .cursor/
 temp_*.txt
 
+# Legacy / External
+safetrip-mobile-legacy/
+gemini-superpowers-antigravity/
+
