@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../services/api_service.dart';
 import '../../utils/app_cache.dart';
 import '../../widgets/avatar_widget.dart';
 
@@ -16,6 +17,7 @@ class ScreenGuardianManagement extends StatefulWidget {
 }
 
 class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
+  final _apiService = ApiService();
   bool _isLoading = true;
   String? _tripId;
   String? _userId;
@@ -38,24 +40,8 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
       _tripId = await AppCache.tripId;
 
       if (_tripId != null && _userId != null) {
-        // 임시로 Mock 데이터 사용 (실제 API: GET /trips/:tripId/guardians/me)
-        // final apiService = ApiService();
-        // final guardians = await apiService.get('/api/v1/trips/$_tripId/guardians/me');
-        // setState(() => _guardians = guardians ?? []);
-
-        // Mocking for UI demonstration
-        setState(() {
-          _guardians = [
-            {
-              'link_id': '1',
-              'display_name': '가디언1',
-              'phone_number': '010-1111-2222',
-              'status': 'accepted',
-              'is_paid': false,
-            },
-            // {'link_id': '2', 'display_name': '가디언2', 'phone_number': '010-3333-4444', 'status': 'accepted', 'is_paid': false},
-          ];
-        });
+        final guardians = await _apiService.getMyGuardians(_tripId!);
+        setState(() => _guardians = guardians);
       }
     } catch (e) {
       debugPrint('[GuardianScreen] 로드 에러: $e');
@@ -99,18 +85,27 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
             child: const Text('취소'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              final phone = phoneController.text.trim();
+              if (phone.isEmpty) return;
               Navigator.pop(context);
-              // Call API to add guardian
-              setState(() {
-                _guardians.add({
-                  'link_id': DateTime.now().toString(),
-                  'display_name': '새 가디언',
-                  'phone_number': phoneController.text,
-                  'status': 'pending',
-                  'is_paid': _guardians.length >= _freeLimit,
-                });
-              });
+              setState(() => _isLoading = true);
+              try {
+                final result = await _apiService.addGuardian(_tripId!, phone);
+                if (result != null) {
+                  await _loadGuardians();
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('가디언 추가에 실패했습니다.')),
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('[GuardianScreen] 추가 에러: $e');
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
             },
             child: const Text('요청'),
           ),
@@ -165,7 +160,7 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '월 1,900원',
+                        '1,900원/여행',
                         style: AppTypography.titleLarge.copyWith(
                           color: AppColors.primaryTeal,
                         ),
@@ -228,6 +223,88 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
     }
   }
 
+  void _showRemoveConfirmation(dynamic guardian) {
+    final isPaid = guardian['is_paid'] == true;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('가디언 연결 해제'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${guardian['display_name']}님과의 가디언 연결을 해제하시겠습니까?'),
+            if (isPaid) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.sosDanger.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber,
+                        color: AppColors.sosDanger, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '해제 후 환불되지 않습니다.',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.sosDanger),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _removeGuardian(guardian);
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.sosDanger),
+            child: const Text('해제', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeGuardian(dynamic guardian) async {
+    setState(() => _isLoading = true);
+    try {
+      final linkId = guardian['link_id']?.toString() ?? '';
+      final success = await _apiService.removeGuardianLink(_tripId!, linkId);
+      if (success) {
+        await _loadGuardians();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('가디언이 해제되었습니다.')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('해제에 실패했습니다.')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[GuardianScreen] 해제 에러: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final freeGuardians = _guardians
@@ -259,7 +336,7 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
                 if (freeGuardians.length >= _freeLimit ||
                     paidGuardians.isNotEmpty)
                   _buildSection(
-                    '💳 유료 슬롯 (${paidGuardians.length}/3 사용)  1,900원/명',
+                    '💳 유료 슬롯 (${paidGuardians.length}/3 사용)  1,900원/여행',
                     paidGuardians,
                   ),
 
@@ -351,9 +428,7 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
           ],
         ),
         trailing: TextButton(
-          onPressed: () {
-            // 해제 로직
-          },
+          onPressed: () => _showRemoveConfirmation(guardian),
           child: const Text('해제', style: TextStyle(color: AppColors.sosDanger)),
         ),
       ),
