@@ -261,7 +261,7 @@ start_backend() {
     fi
 
     log_info "Backend 서버 시작 중 (백그라운드)..."
-    npx tsx watch src/index.ts > /tmp/safetrip-backend.log 2>&1 &
+    npm run start:dev > /tmp/safetrip-backend.log 2>&1 &
     echo $! > /tmp/safetrip-backend.pid
 
     wait_for_port 3001 "Backend API" 30

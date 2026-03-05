@@ -442,12 +442,12 @@ start_backend() {
         log_warn "Firebase Emulator 환경변수가 .env에 없습니다"
     fi
 
-    log_info "Backend 서버 시작 (tsx watch)..."
+    log_info "Backend 서버 시작 (nest start --watch)..."
     echo -e "  ${CYAN}서버 URL:${NC}  http://localhost:$(grep PORT .env | head -1 | cut -d= -f2)"
     echo ""
 
     # Foreground로 실행 (개발 모드)
-    npx tsx watch src/index.ts
+    npm run start:dev
 }
 
 # ============================================================================
@@ -482,8 +482,8 @@ stop_all() {
         log_info "PostgreSQL 미실행"
     fi
 
-    # Backend 서버 (tsx) 중지
-    pkill -f "tsx.*src/index.ts" 2>/dev/null && log_success "Backend 서버 중지됨" || log_info "Backend 서버 미실행"
+    # Backend 서버 (nest) 중지
+    pkill -f "nest start" 2>/dev/null && log_success "Backend 서버 중지됨" || log_info "Backend 서버 미실행"
 
     log_success "모든 서비스 중지 완료"
 }
