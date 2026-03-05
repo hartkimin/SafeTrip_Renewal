@@ -38,6 +38,22 @@ export class GeofencesService {
         return this.eventRepo.find({ where: { tripId }, order: { occurredAt: 'DESC' }, take: 100 });
     }
 
+    /** PostGIS 기반 근접 지오펜스 체크 (공간 쿼리 최적화) */
+    async checkProximity(lat: number, lng: number, tripId: string) {
+        // ST_DWithin: 현재 좌표 기준 반경 내에 있는 지오펜스 조회
+        // ST_Contains: 폴리곤 형태 지오펜스 내부에 있는지 확인
+        const point = `ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`;
+        
+        return this.geofenceRepo.createQueryBuilder('geofence')
+            .where('geofence.trip_id = :tripId', { tripId })
+            .andWhere('geofence.is_active = true')
+            .andWhere(`(
+                (geofence.fence_type = 'circle' AND ST_DWithin(geofence.geometry, ${point}, geofence.radius_meters)) OR
+                (geofence.fence_type = 'polygon' AND ST_Contains(geofence.geometry, ${point}))
+            )`)
+            .getMany();
+    }
+
     async addPenalty(eventId: string, tripId: string, userId: string, penaltyType: string, reason?: string) {
         // 누적 위반 횟수 계산
         const count = await this.penaltyRepo.count({ where: { tripId, userId } });

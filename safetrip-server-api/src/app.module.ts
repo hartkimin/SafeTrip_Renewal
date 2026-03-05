@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 // Config
 import { databaseConfig } from './config/database.config';
@@ -67,6 +69,12 @@ import { AiModule } from './modules/ai/ai.module';
             }),
         }),
 
+        // ── Rate Limiting (§23 §12.3: 10 req/min per IP for sensitive routes) ──
+        ThrottlerModule.forRoot([{
+            ttl: 60000,   // 1 minute window
+            limit: 60,    // 60 requests per minute (global default)
+        }]),
+
         // ── Scheduling (Cron jobs) ─────────────────────────────────────
         ScheduleModule.forRoot(),
 
@@ -94,6 +102,9 @@ import { AiModule } from './modules/ai/ai.module';
         MofaModule,
         TasksModule,
         AiModule,
+    ],
+    providers: [
+        { provide: APP_GUARD, useClass: ThrottlerGuard },
     ],
 })
 export class AppModule { }

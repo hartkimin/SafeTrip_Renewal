@@ -3,76 +3,105 @@ import {
 } from 'typeorm';
 
 /**
- * TB_USER — 사용자 (도메인 A)
- * DB 설계 v3.4 §4.1
+ * TB_USER -- 사용자 (도메인 A)
+ * DB 설계 v3.5.1 $4.1
  */
 @Entity('tb_user')
 export class User {
     @PrimaryColumn({ name: 'user_id', type: 'varchar', length: 128 })
     userId: string; // Firebase UID
 
-    @Column({ name: 'phone_number', type: 'varchar', length: 20 })
-    phoneNumber: string;
+    @Column({ name: 'phone_number', type: 'varchar', length: 20, nullable: true })
+    phoneNumber: string | null;
 
-    @Column({ name: 'phone_country_code', type: 'varchar', length: 5, default: '+82' })
-    phoneCountryCode: string;
+    @Column({ name: 'phone_country_code', type: 'varchar', length: 5, nullable: true })
+    phoneCountryCode: string | null;
 
-    @Column({ name: 'display_name', type: 'varchar', length: 50, default: '' })
-    displayName: string;
+    @Column({ name: 'display_name', type: 'varchar', length: 100, nullable: true })
+    displayName: string | null;
 
     @Column({ name: 'profile_image_url', type: 'text', nullable: true })
     profileImageUrl: string | null;
 
+    @Column({ name: 'email', type: 'varchar', length: 255, nullable: true })
+    email: string | null;
+
     @Column({ name: 'date_of_birth', type: 'date', nullable: true })
     dateOfBirth: Date | null;
 
-    currentUserRole: string; // Not a DB column, renamed to avoid TypeORM conflict
+    @Column({ name: 'location_sharing_mode', type: 'varchar', length: 20, nullable: true })
+    locationSharingMode: string | null; // 'always' | 'in_trip' | 'off'
 
-    @Column({ name: 'install_id', type: 'varchar', length: 128, nullable: true })
+    @Column({ name: 'fcm_token', type: 'text', nullable: true })
+    fcmToken: string | null;
+
+    @Column({ name: 'install_id', type: 'varchar', length: 100, nullable: true })
     installId: string | null;
 
-    @Column({ name: 'location_sharing_mode', type: 'varchar', length: 20, default: 'always' })
-    locationSharingMode: string;
+    @Column({ name: 'device_info', type: 'jsonb', nullable: true })
+    deviceInfo: any;
+
+    @Column({ name: 'user_status', type: 'varchar', length: 20, default: 'active' })
+    userStatus: string; // 'active' | 'inactive' | 'banned'
+
+    /** v3.4: 미성년자 상태 */
+    @Column({ name: 'minor_status', type: 'varchar', length: 20, default: 'adult' })
+    minorStatus: string; // 'adult' | 'minor_over14' | 'minor_under14' | 'minor_child'
+
+    @Column({ name: 'minor_status_updated_at', type: 'timestamptz', nullable: true })
+    minorStatusUpdatedAt: Date | null;
+
+    @Column({ name: 'guardian_pause_blocked', type: 'boolean', default: false })
+    guardianPauseBlocked: boolean;
+
+    @Column({ name: 'ai_intelligence_blocked', type: 'boolean', default: false })
+    aiIntelligenceBlocked: boolean;
 
     @Column({ name: 'last_verification_at', type: 'timestamptz', nullable: true })
     lastVerificationAt: Date | null;
 
-    @Column({ name: 'is_active', type: 'boolean', default: true })
-    isActive: boolean;
+    @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
+    lastLoginAt: Date | null;
 
-    @Column({ name: 'is_onboarding_complete', type: 'boolean', default: false })
-    isOnboardingComplete: boolean;
-
-    @Column({ name: 'onboarding_step', type: 'varchar', length: 50, nullable: true })
-    onboardingStep: string | null;
-
-    /** v3.4: 미성년자 여부 */
-    @Column({ name: 'minor_status', type: 'varchar', length: 20, default: 'adult' })
-    minorStatus: string; // 'adult' | 'minor'
+    @Column({ name: 'last_active_at', type: 'timestamptz', nullable: true })
+    lastActiveAt: Date | null;
 
     /** v3.4: 계정 삭제 7일 유예 기산점 */
     @Column({ name: 'deletion_requested_at', type: 'timestamptz', nullable: true })
     deletionRequestedAt: Date | null;
 
-    @Column({ name: 'terms_agreed_at', type: 'timestamptz', nullable: true })
-    termsAgreedAt: Date | null;
-
-    @Column({ name: 'terms_version', type: 'varchar', length: 20, nullable: true })
-    termsVersion: string | null;
+    @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+    deletedAt: Date | null;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
 
-    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-    updatedAt: Date;
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz', nullable: true })
+    updatedAt: Date | null;
 
-    @Column({ name: 'last_active_at', type: 'timestamptz', nullable: true })
-    lastActiveAt: Date | null;
+    // -- Backward-compat columns (not in SSOT but used by existing code) --
+
+    currentUserRole: string; // Not a DB column, runtime-only
+
+    @Column({ name: 'is_active', type: 'boolean', default: true, select: false })
+    isActive: boolean;
+
+    @Column({ name: 'is_onboarding_complete', type: 'boolean', default: false, select: false })
+    isOnboardingComplete: boolean;
+
+    @Column({ name: 'onboarding_step', type: 'varchar', length: 50, nullable: true, select: false })
+    onboardingStep: string | null;
+
+    @Column({ name: 'terms_agreed_at', type: 'timestamptz', nullable: true, select: false })
+    termsAgreedAt: Date | null;
+
+    @Column({ name: 'terms_version', type: 'varchar', length: 20, nullable: true, select: false })
+    termsVersion: string | null;
 }
 
 /**
- * TB_PARENTAL_CONSENT — 법정대리인 동의 기록 (도메인 A)
- * DB 설계 v3.4 §4.1a
+ * TB_PARENTAL_CONSENT -- 법정대리인 동의 기록 (도메인 A)
+ * DB 설계 v3.4 $4.1a
  */
 @Entity('tb_parental_consent')
 export class ParentalConsent {

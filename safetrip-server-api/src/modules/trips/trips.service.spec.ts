@@ -71,18 +71,19 @@ describe('TripsService', () => {
         it('should successfully create a new trip and its relations', async () => {
             const userId = 'test-user';
             const tripData = {
-                tripName: 'Paris Vacation',
-                destination: 'Paris',
-                destinationCountryCode: 'FR',
-                startDate: '2026-05-01',
-                endDate: '2026-05-10',
+                title: 'Paris Vacation',
+                country_code: 'FR',
+                country_name: 'France',
+                trip_type: 'leisure',
+                start_date: '2026-05-01',
+                end_date: '2026-05-10',
             };
 
             const expectedGroupId = 'new-group-1';
             const expectedTripId = 'new-trip-1';
 
-            mockGroupRepo.create.mockReturnValue({ groupName: tripData.tripName, createdBy: userId });
-            mockGroupRepo.save.mockResolvedValue({ groupId: expectedGroupId, groupName: tripData.tripName, createdBy: userId });
+            mockGroupRepo.create.mockReturnValue({ groupName: tripData.title, createdBy: userId });
+            mockGroupRepo.save.mockResolvedValue({ groupId: expectedGroupId, groupName: tripData.title, createdBy: userId });
 
             mockTripRepo.create.mockReturnValue({ ...tripData, groupId: expectedGroupId });
             mockTripRepo.save.mockResolvedValue({ tripId: expectedTripId, ...tripData, groupId: expectedGroupId });
@@ -109,9 +110,11 @@ describe('TripsService', () => {
         it('should throw BadRequestException for durations over 15 days', async () => {
             const userId = 'test-user';
             const invalidTripData = {
-                tripName: 'Long Vacation',
-                startDate: '2026-05-01',
-                endDate: '2026-05-20', // 19 days
+                title: 'Long Vacation',
+                country_code: 'FR',
+                trip_type: 'leisure',
+                start_date: '2026-05-01',
+                end_date: '2026-05-20', // 19 days
             };
 
             await expect(service.create(userId, invalidTripData)).rejects.toThrow(BadRequestException);

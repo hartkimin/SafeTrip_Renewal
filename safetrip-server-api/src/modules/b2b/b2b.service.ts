@@ -39,7 +39,7 @@ export class B2bService {
         const contract = await this.contractRepo.findOne({ where: { contractId } });
         if (!contract) return false;
         
-        return contract.currentTripCount < contract.maxTrips;
+        return (contract.currentTripCount ?? 0) < (contract.maxTrips ?? Infinity);
     }
 
     async incrementTripCount(contractId: string) {

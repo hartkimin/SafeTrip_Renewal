@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, In } from 'typeorm';
 import { Emergency, EmergencyContact, SosEvent, NoResponseEvent } from '../../entities/emergency.entity';
@@ -69,7 +69,7 @@ export class EmergenciesService {
         try {
             // 발송자 이름 가져오기
             const sender = await this.userRepo.findOne({ where: { userId: senderId } });
-            const senderName = sender?.displayName || sender?.userName || 'Traveler';
+            const senderName = sender?.displayName || 'Traveler';
 
             const title = `🚨 SOS EMERGENCY!`;
             const body = `${senderName} is in an emergency! Please check the map immediately.`;
@@ -123,13 +123,48 @@ export class EmergenciesService {
         return this.emergencyRepo.find({ where: { tripId }, order: { createdAt: 'DESC' }, take: 50 });
     }
 
-    async resolveEmergency(emergencyId: string, userId: string, note?: string) {
+    async resolveEmergency(emergencyId: string, userId: string, data?: { note?: string; isFalseAlarm?: boolean }) {
+        const emergency = await this.emergencyRepo.findOne({ where: { emergencyId } });
+        if (!emergency) throw new NotFoundException('Emergency not found');
+
+        // §13 §7.1: Only the sender or captain can resolve
+        const isSender = emergency.userId === userId;
+        let isCaptain = false;
+        if (!isSender && emergency.tripId) {
+            const captain = await this.memberRepo.findOne({
+                where: { tripId: emergency.tripId, userId, memberRole: 'captain', status: 'active' },
+            });
+            isCaptain = !!captain;
+        }
+        if (!isSender && !isCaptain) {
+            throw new ForbiddenException('Only the sender or captain can resolve an emergency');
+        }
+
+        const newStatus = data?.isFalseAlarm ? 'false_alarm' : 'resolved';
         await this.emergencyRepo.update(emergencyId, {
-            status: 'resolved',
+            status: newStatus,
             resolvedBy: userId,
             resolvedAt: new Date(),
-            resolutionNote: note,
+            resolutionNote: data?.note,
         });
+
+        // Also mark the SOS event as cancelled if false alarm
+        if (emergency.emergencyType === 'sos' && data?.isFalseAlarm) {
+            await this.sosRepo.update(
+                { emergencyId },
+                { wasCancelled: true },
+            );
+        }
+
+        // §13 §7.3: Notify all recipients that SOS is cleared
+        if (emergency.tripId) {
+            const clearTitle = data?.isFalseAlarm ? 'SOS False Alarm' : 'SOS Resolved';
+            const sender = await this.userRepo.findOne({ where: { userId: emergency.userId } });
+            const clearBody = `${sender?.displayName || 'Traveler'}'s emergency has been ${newStatus}.`;
+            this.handleSosNotification(userId, emergency.tripId, { ...emergency, status: newStatus } as any)
+                .catch(err => console.error('SOS clear notification error:', err));
+        }
+
         return this.emergencyRepo.findOne({ where: { emergencyId } });
     }
 

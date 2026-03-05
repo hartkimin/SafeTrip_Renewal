@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -9,6 +9,24 @@ import { Public } from '../../common/decorators/public.decorator';
 @Controller('fcm') // Endpoint defined as /api/v1/fcm in API docs
 export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) { }
+
+    @Post('token')
+    @ApiOperation({ summary: 'FCM 기기 토큰 등록' })
+    registerToken(
+        @CurrentUser() userId: string,
+        @Body() body: { token: string; deviceId?: string }
+    ) {
+        return this.notificationsService.registerToken(userId, body.token, body.deviceId);
+    }
+
+    @Delete('token')
+    @ApiOperation({ summary: 'FCM 기기 토큰 삭제 (로그아웃 등)' })
+    invalidateToken(
+        @CurrentUser() userId: string,
+        @Body() body: { token: string }
+    ) {
+        return this.notificationsService.invalidateToken(userId, body.token);
+    }
 
     @Public()
     @Post('send')
@@ -77,5 +95,16 @@ export class NotificationsController {
         @Param('notificationId') notificationId: string
     ) {
         return this.notificationsService.markAsRead(userId, notificationId);
+    }
+
+    // ── §12.4 특정 여행자에게 FCM 푸시 발송 ──
+    @Public()
+    @Post('travelers/:travelerId/notify')
+    @ApiOperation({ summary: '특정 여행자에게 FCM 푸시 발송' })
+    notifyTraveler(
+        @Param('travelerId') travelerId: string,
+        @Body() body: { title: string; body: string; data?: any },
+    ) {
+        return this.notificationsService.notifyTraveler(travelerId, body);
     }
 }

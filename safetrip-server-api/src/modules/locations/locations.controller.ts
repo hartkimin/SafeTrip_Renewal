@@ -26,6 +26,45 @@ export class LocationsController {
         };
     }
 
+    @Post('locations/sync')
+    @ApiOperation({ summary: '오프라인 데이터 벌크 동기화' })
+    @HttpCode(HttpStatus.OK)
+    async syncLocations(
+        @CurrentUser() userId: string,
+        @Body('locations') locations: any[],
+    ) {
+        await this.locationsService.syncLocations(userId, locations || []);
+        return {
+            success: true,
+            data: null,
+            message: `${locations?.length || 0}개의 오프라인 위치 데이터 동기화 완료`
+        };
+    }
+
+    @Post('locations')
+    @ApiOperation({ summary: '단일 위치 데이터 저장' })
+    @HttpCode(HttpStatus.CREATED)
+    async recordLocation(
+        @CurrentUser() userId: string,
+        @Body() body: any,
+    ) {
+        // trip_id or group_id can be in body
+        await this.locationsService.logLocation({
+            userId,
+            tripId: body.trip_id || body.group_id,
+            latitude: body.latitude,
+            longitude: body.longitude,
+            accuracy: body.accuracy,
+            speed: body.speed,
+            heading: body.heading,
+            batteryLevel: body.battery_level,
+        });
+        return {
+            success: true,
+            data: null,
+        };
+    }
+
     @Get('trips/:tripId/locations')
     @ApiOperation({ summary: '9.A.2 특정 멤버의 위치 이력 조회' })
     async getMemberLocations(

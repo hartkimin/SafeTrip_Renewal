@@ -73,6 +73,51 @@ export class TripsController {
         return this.tripsService.acceptInvite(body.inviteCode, userId);
     }
 
+    // ── §5.A 보호자 초대코드 조회 ──
+    @Public()
+    @Get('guardian-invite/:inviteCode')
+    @ApiOperation({ summary: '보호자용 초대 코드로 여행 정보 조회' })
+    findByGuardianInviteCode(@Param('inviteCode') inviteCode: string) {
+        return this.tripsService.findByGuardianInviteCode(inviteCode);
+    }
+
+    // ── §5.A group_id 기반 여행 조회 ──
+    @Public()
+    @Get('groups/:groupId')
+    @ApiOperation({ summary: 'group_id로 여행 조회' })
+    findByGroupId(@Param('groupId') groupId: string) {
+        return this.tripsService.findByGroupId(groupId);
+    }
+
+    // ── §5.A user_id 기반 내 여행 목록 ──
+    @Get('users/:userId/trips')
+    @ApiOperation({ summary: '사용자의 여행 목록 조회 (enriched)' })
+    getUserTrips(@Param('userId') userId: string) {
+        return this.tripsService.getUserTrips(userId);
+    }
+
+    // ── §5.B 국가/타임존 ──
+    @Public()
+    @Get('groups/:groupId/countries')
+    @ApiOperation({ summary: 'group_id 기반 국가 목록 조회' })
+    getCountriesByGroup(@Param('groupId') groupId: string) {
+        return this.tripsService.getCountriesByGroup(groupId);
+    }
+
+    @Public()
+    @Get('users/:userId/countries')
+    @ApiOperation({ summary: 'user_id 기반 여행 국가 목록 조회' })
+    getCountriesByUser(@Param('userId') userId: string) {
+        return this.tripsService.getCountriesByUser(userId);
+    }
+
+    @Public()
+    @Get('groups/:groupId/timezones')
+    @ApiOperation({ summary: 'group_id 기반 타임존 조회' })
+    getTimezonesByGroup(@Param('groupId') groupId: string) {
+        return this.tripsService.getTimezonesByGroup(groupId);
+    }
+
     // ── 가디언 ──
     @Post('guardian-approval/request')
     @ApiOperation({ summary: '가디언 승인 요청' })

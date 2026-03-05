@@ -47,6 +47,8 @@ export class GroupsController {
         return this.groupsService.findMyPermission(groupId, userId || queryUserId || '');
     }
 
+    // Note: §6 spec uses group_id path, but tb_group_member lookups use trip_id internally.
+    // Group:Trip is 1:1, so these routes accept tripId for backward compat.
     @Get(':tripId/members')
     @ApiOperation({ summary: '그룹 멤버 목록 조회 (tripId 기준)' })
     getMembers(@Param('tripId') tripId: string) {
@@ -62,8 +64,19 @@ export class GroupsController {
         return this.groupsService.addMember(groupId, body.tripId, body.userId, body.role);
     }
 
+    @Patch(':groupId/members/:userId')
+    @ApiOperation({ summary: '멤버 권한/역할 수정 (§6.B spec)' })
+    updateMember(
+        @CurrentUser() currentUserId: string,
+        @Param('groupId') groupId: string,
+        @Param('userId') userId: string,
+        @Body() body: any,
+    ) {
+        return this.groupsService.updateMemberByGroupId(groupId, userId, body, currentUserId);
+    }
+
     @Patch(':tripId/members/:userId/role')
-    @ApiOperation({ summary: '멤버 역할 변경' })
+    @ApiOperation({ summary: '멤버 역할 변경 (legacy tripId path)' })
     updateRole(
         @CurrentUser() currentUserId: string,
         @Param('tripId') tripId: string,
@@ -154,5 +167,56 @@ export class GroupsController {
     ) {
         const userId = currentUser || queryUserId;
         return this.groupsService.getTransferHistory(groupId, userId || '');
+    }
+
+    // ── §6.D 일정 (Schedule) ──
+    @Get(':groupId/schedules')
+    @ApiOperation({ summary: '그룹 일정 목록 조회' })
+    getSchedules(
+        @Param('groupId') groupId: string,
+        @Query() query: any,
+    ) {
+        return this.groupsService.getSchedules(groupId, query);
+    }
+
+    @Post(':groupId/schedules')
+    @ApiOperation({ summary: '그룹 일정 추가' })
+    createSchedule(
+        @Param('groupId') groupId: string,
+        @CurrentUser() userId: string,
+        @Body() body: any,
+    ) {
+        return this.groupsService.createSchedule(groupId, userId, body);
+    }
+
+    @Patch(':groupId/schedules/:scheduleId')
+    @ApiOperation({ summary: '그룹 일정 수정' })
+    updateSchedule(
+        @Param('groupId') groupId: string,
+        @Param('scheduleId') scheduleId: string,
+        @CurrentUser() userId: string,
+        @Body() body: any,
+    ) {
+        return this.groupsService.updateSchedule(groupId, scheduleId, userId, body);
+    }
+
+    @Delete(':groupId/schedules/:scheduleId')
+    @ApiOperation({ summary: '그룹 일정 삭제' })
+    deleteSchedule(
+        @Param('groupId') groupId: string,
+        @Param('scheduleId') scheduleId: string,
+    ) {
+        return this.groupsService.deleteSchedule(groupId, scheduleId);
+    }
+
+    // ── §6.F 출석체크 ──
+    @Post(':groupId/attendance/start')
+    @ApiOperation({ summary: '출석체크 시작' })
+    startAttendance(
+        @Param('groupId') groupId: string,
+        @CurrentUser() userId: string,
+        @Body() body: any,
+    ) {
+        return this.groupsService.startAttendance(groupId, userId, body);
     }
 }

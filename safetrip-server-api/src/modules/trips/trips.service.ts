@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource, Not } from 'typeorm';
 import { Trip } from '../../entities/trip.entity';
 import { User } from '../../entities/user.entity';
-import { GuardianLink } from '../../entities/guardian.entity';
+import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 import { Group } from '../../entities/group.entity';
 import { GroupMember } from '../../entities/group-member.entity';
 import { ChatRoom } from '../../entities/chat.entity';
 import { Schedule } from '../../entities/schedule.entity';
 import { TravelSchedule } from '../../entities/travel-schedule.entity';
 import { InviteCode } from '../../entities/invite-code.entity';
+import { Country } from '../../entities/country.entity';
 import { PaymentsService } from '../payments/payments.service';
 import { B2bService } from '../b2b/b2b.service';
 
@@ -25,6 +26,8 @@ export class TripsService {
         @InjectRepository(TravelSchedule) private travelScheduleRepo: Repository<TravelSchedule>,
         @InjectRepository(InviteCode) private inviteCodeRepo: Repository<InviteCode>,
         @InjectRepository(User) private userRepo: Repository<User>,
+        @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
+        @InjectRepository(Country) private countryRepo: Repository<Country>,
         private paymentsService: PaymentsService,
         private b2bService: B2bService,
         private dataSource: DataSource,
@@ -223,7 +226,7 @@ export class TripsService {
         const result: any[] = [];
         for (const sched of schedules) {
             const items = await this.travelScheduleRepo.find({
-                where: { tripId, scheduleType: sched.scheduleName },
+                where: { tripId, ...(sched.scheduleName ? { scheduleType: sched.scheduleName } : {}) },
                 order: { startTime: 'ASC' },
             });
             result.push({ ...sched, items });
@@ -290,7 +293,7 @@ export class TripsService {
             throw new ForbiddenException('Permission denied: Cannot manage invites');
         }
 
-        const results = [];
+        const results: any[] = [];
         for (const inv of invitees) {
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
             const invite = this.inviteCodeRepo.create({
@@ -445,6 +448,145 @@ export class TripsService {
             guardian_invite_code: mappedStatus === 'pending' ? link.linkId.substring(0, 8).toUpperCase() : null,
             accepted_at: link.acceptedAt,
             created_at: link.createdAt
+        };
+    }
+
+    // ── §5.A 추가 조회 엔드포인트 ──────────────────────────────────
+
+    /** GET /trips/groups/:groupId — group_id로 첫 번째 여행 조회 */
+    async findByGroupId(groupId: string) {
+        if (!groupId) throw new BadRequestException('group_id is required');
+        const trip = await this.tripRepo.findOne({
+            where: { groupId },
+            order: { startDate: 'ASC' },
+        });
+        if (!trip) throw new NotFoundException('No trip found for this group');
+        return trip;
+    }
+
+    /** GET /trips/users/:userId/trips — enriched 내 여행 목록 */
+    async getUserTrips(userId: string) {
+        if (!userId) throw new BadRequestException('user_id is required');
+
+        const rows = await this.dataSource.query(`
+            SELECT
+                t.trip_id, t.group_id, g.group_name,
+                gm.member_role, gm.is_admin,
+                t.destination_country_code AS country_code,
+                t.destination AS country_name,
+                t.destination_city,
+                TO_CHAR(t.start_date, 'YYYY-MM-DD') AS start_date,
+                TO_CHAR(t.end_date, 'YYYY-MM-DD') AS end_date,
+                t.status AS trip_status,
+                (SELECT COUNT(*) FROM tb_group_member m2
+                 WHERE m2.group_id = gm.group_id AND m2.status = 'active')::int AS member_count,
+                gm.joined_at
+            FROM tb_group_member gm
+            JOIN tb_trip t ON t.trip_id = gm.trip_id
+            JOIN tb_group g ON g.group_id = gm.group_id
+            WHERE gm.user_id = $1 AND gm.status = 'active'
+            ORDER BY gm.joined_at DESC
+        `, [userId]);
+
+        return rows;
+    }
+
+    /** GET /trips/guardian-invite/:inviteCode — 보호자용 초대코드 조회 */
+    async findByGuardianInviteCode(inviteCode: string) {
+        if (!inviteCode) throw new BadRequestException('inviteCode is required');
+
+        const guardian = await this.guardianRepo.findOne({
+            where: { guardianInviteCode: inviteCode },
+        });
+        if (!guardian) throw new NotFoundException('Invalid guardian invite code');
+
+        const trip = guardian.tripId
+            ? await this.tripRepo.findOne({ where: { tripId: guardian.tripId } })
+            : null;
+
+        const traveler = guardian.travelerUserId
+            ? await this.userRepo.findOne({ where: { userId: guardian.travelerUserId } })
+            : null;
+
+        return {
+            trip: trip ? {
+                trip_id: trip.tripId,
+                country_name: trip.destination,
+                start_date: trip.startDate,
+                end_date: trip.endDate,
+            } : null,
+            traveler: traveler ? {
+                user_id: traveler.userId,
+                display_name: traveler.displayName,
+                phone_number: traveler.phoneNumber,
+            } : null,
+        };
+    }
+
+    // ── §5.B 국가 · 타임존 ──────────────────────────────────
+
+    /** GET /trips/groups/:groupId/countries */
+    async getCountriesByGroup(groupId: string) {
+        if (!groupId) throw new BadRequestException('group_id is required');
+
+        const rows = await this.dataSource.query(`
+            SELECT
+                destination_country_code AS country_code,
+                MIN(start_date)::date::text AS start_date,
+                MAX(end_date)::date::text AS end_date
+            FROM tb_trip
+            WHERE group_id = $1 AND destination_country_code IS NOT NULL
+            GROUP BY destination_country_code
+            ORDER BY MIN(start_date) ASC
+        `, [groupId]);
+
+        return {
+            group_id: groupId,
+            countries: rows,
+            country_codes: rows.map((r: any) => r.country_code),
+            count: rows.length,
+        };
+    }
+
+    /** GET /trips/users/:userId/countries */
+    async getCountriesByUser(userId: string) {
+        if (!userId) throw new BadRequestException('user_id is required');
+
+        const rows = await this.dataSource.query(`
+            SELECT DISTINCT t.destination_country_code AS country_code
+            FROM tb_group_member gm
+            JOIN tb_trip t ON t.trip_id = gm.trip_id
+            WHERE gm.user_id = $1 AND gm.status = 'active'
+              AND t.destination_country_code IS NOT NULL
+            ORDER BY country_code
+        `, [userId]);
+
+        return {
+            user_id: userId,
+            country_codes: rows.map((r: any) => r.country_code),
+            count: rows.length,
+        };
+    }
+
+    /** GET /trips/groups/:groupId/timezones */
+    async getTimezonesByGroup(groupId: string) {
+        if (!groupId) throw new BadRequestException('group_id is required');
+
+        const rows = await this.dataSource.query(`
+            SELECT DISTINCT c.timezone, c.country_code, c.country_name_ko
+            FROM tb_trip t
+            JOIN tb_country c ON c.country_code = t.destination_country_code
+            WHERE t.group_id = $1 AND c.is_active = TRUE AND c.timezone IS NOT NULL
+            ORDER BY c.timezone
+        `, [groupId]);
+
+        // Always include Korea first
+        const koreaEntry = { country_code: 'KOR', timezone: 'Asia/Seoul', country_name_ko: '대한민국' };
+        const filtered = rows.filter((r: any) => r.timezone !== 'Asia/Seoul');
+
+        return {
+            group_id: groupId,
+            timezones: [koreaEntry, ...filtered],
         };
     }
 }

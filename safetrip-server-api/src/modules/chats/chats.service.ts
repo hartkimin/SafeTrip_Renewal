@@ -56,7 +56,7 @@ export class ChatsService {
     private async handleChatNotification(room: ChatRoom, senderId: string, message: ChatMessage) {
         try {
             const sender = await this.userRepo.findOne({ where: { userId: senderId } });
-            const senderName = sender?.displayName || sender?.userName || 'Traveler';
+            const senderName = sender?.displayName || 'Traveler';
 
             const title = room.roomName || 'Group Chat';
             const body = `${senderName}: ${message.messageType === 'text' ? message.content : '[' + message.messageType + ']'}`;

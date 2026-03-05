@@ -29,7 +29,7 @@ export class UsersService {
 
     private async formatUserResponse(user: User) {
         const userRole = await this.getUserRole(user.userId);
-        let dobStr = null;
+        let dobStr: string | null = null;
         if (user.dateOfBirth) {
             const dob = user.dateOfBirth instanceof Date ? user.dateOfBirth : new Date(user.dateOfBirth);
             dobStr = dob.toISOString().split('T')[0];

@@ -17,7 +17,12 @@ async function bootstrap() {
 
     // Security
     app.use(helmet());
-    app.enableCors();
+    app.enableCors({
+        origin: process.env.CORS_ORIGINS?.split(',') || '*',
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-test-bypass', 'x-test-user-id'],
+        credentials: true,
+    });
 
     // Global prefix: /api/v1
     app.setGlobalPrefix('api/v1', {

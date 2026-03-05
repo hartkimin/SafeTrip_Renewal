@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, Check } from 'typeorm';
 
 /**
- * TB_LOCATION — 위치 기록 (도메인 E, 구 TB_LOCATION_LOG)
- * DB 설계 v3.4 §4.16 — PostGIS 확장 활용
+ * TB_LOCATION -- 위치 기록 (도메인 E)
+ * DB 설계 v3.5.1 $4.16
  */
 @Entity('tb_location')
 @Index('idx_location_user_time', ['userId', 'recordedAt'])
@@ -14,84 +14,115 @@ export class Location {
     @Column({ name: 'user_id', type: 'varchar', length: 128 })
     userId: string;
 
-    @Column({ name: 'trip_id', type: 'uuid' })
-    tripId: string;
+    @Column({ name: 'trip_id', type: 'uuid', nullable: true })
+    tripId: string | null;
 
-    @Column({ name: 'latitude', type: 'float' })
+    @Column({ name: 'group_id', type: 'uuid', nullable: true })
+    groupId: string | null;
+
+    @Column({ name: 'latitude', type: 'double precision' })
     latitude: number;
 
-    @Column({ name: 'longitude', type: 'float' })
+    @Column({ name: 'longitude', type: 'double precision' })
     longitude: number;
 
-    @Column({ name: 'altitude', type: 'float', nullable: true })
-    altitude: number | null;
-
-    @Column({ name: 'accuracy', type: 'float', nullable: true })
+    @Column({ name: 'accuracy', type: 'double precision', nullable: true })
     accuracy: number | null;
 
-    @Column({ name: 'speed', type: 'float', nullable: true })
+    @Column({ name: 'speed', type: 'double precision', nullable: true })
     speed: number | null;
 
-    @Column({ name: 'heading', type: 'float', nullable: true })
-    heading: number | null;
+    @Column({ name: 'bearing', type: 'double precision', nullable: true })
+    bearing: number | null;
 
-    @Column({ name: 'activity_type', type: 'varchar', length: 20, nullable: true })
-    activityType: string | null; // 'still' | 'walking' | 'running' | 'vehicle'
-
-    @Column({ name: 'movement_session_id', type: 'uuid', nullable: true })
-    movementSessionId: string | null;
-
-    @Column({ name: 'is_offline', type: 'boolean', default: false })
-    isOffline: boolean;
+    @Column({ name: 'altitude', type: 'double precision', nullable: true })
+    altitude: number | null;
 
     @Column({ name: 'battery_level', type: 'int', nullable: true })
     batteryLevel: number | null;
 
-    @CreateDateColumn({ name: 'recorded_at', type: 'timestamptz' })
-    recordedAt: Date;
-
-    @Column({ name: 'server_received_at', type: 'timestamptz', nullable: true })
-    serverReceivedAt: Date | null;
-}
-
-/**
- * TB_LOCATION_SHARING — 위치 공유 설정 (도메인 E)
- * DB 설계 v3.4 §4.15
- */
-@Entity('tb_location_sharing')
-@Index('idx_location_sharing_trip', ['tripId'])
-export class LocationSharing {
-    @PrimaryGeneratedColumn('uuid', { name: 'sharing_id' })
-    sharingId: string;
-
-    @Column({ name: 'user_id', type: 'varchar', length: 128 })
-    userId: string;
-
-    /** v3.4: trip_id 추가 */
-    @Column({ name: 'trip_id', type: 'uuid' })
-    tripId: string;
+    @Column({ name: 'network_type', type: 'varchar', length: 20, nullable: true })
+    networkType: string | null;
 
     @Column({ name: 'is_sharing', type: 'boolean', default: true })
     isSharing: boolean;
 
-    /** v3.4: 가시성 타입 */
+    @Column({ name: 'motion_state', type: 'varchar', length: 20, nullable: true })
+    motionState: string | null;
+
+    @Column({ name: 'provider', type: 'varchar', length: 20, nullable: true })
+    provider: string | null;
+
+    @Column({ name: 'movement_session_id', type: 'uuid', nullable: true })
+    movementSessionId: string | null;
+
+    @Column({ name: 'recorded_at', type: 'timestamptz' })
+    recordedAt: Date;
+
+    @Column({ name: 'server_received_at', type: 'timestamptz', nullable: true })
+    serverReceivedAt: Date | null;
+
+    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    createdAt: Date;
+
+    // -- Backward-compat columns (not in SSOT but used by existing code) --
+
+    @Column({ name: 'heading', type: 'float', nullable: true, select: false })
+    heading: number | null;
+
+    @Column({ name: 'activity_type', type: 'varchar', length: 20, nullable: true, select: false })
+    activityType: string | null;
+
+    @Column({ name: 'is_offline', type: 'boolean', default: false, select: false })
+    isOffline: boolean;
+}
+
+/**
+ * TB_LOCATION_SHARING -- 위치 공유 설정 (도메인 E)
+ * DB 설계 v3.5.1 $4.15
+ */
+@Entity('tb_location_sharing')
+@Index('idx_location_sharing_trip', ['tripId'])
+export class LocationSharing {
+    @PrimaryGeneratedColumn('uuid', { name: 'location_sharing_id' })
+    locationSharingId: string;
+
+    /** Backward-compat alias for locationSharingId */
+    get sharingId(): string { return this.locationSharingId; }
+
+    @Column({ name: 'trip_id', type: 'uuid' })
+    tripId: string;
+
+    @Column({ name: 'user_id', type: 'varchar', length: 128 })
+    userId: string;
+
     @Column({ name: 'visibility_type', type: 'varchar', length: 20, default: 'all' })
     visibilityType: string; // 'all' | 'admin_only' | 'specified'
 
-    /** specified인 경우 대상 멤버 user_id */
-    @Column({ name: 'target_user_id', type: 'varchar', length: 128, nullable: true })
-    targetUserId: string | null;
+    @Column({ name: 'visibility_member_ids', type: 'jsonb', nullable: true })
+    visibilityMemberIds: any;
+
+    @Column({ name: 'is_active', type: 'boolean', default: true })
+    isActive: boolean;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
 
     @Column({ name: 'updated_at', type: 'timestamptz', nullable: true })
     updatedAt: Date | null;
+
+    // -- Backward-compat columns --
+
+    @Column({ name: 'is_sharing', type: 'boolean', default: true, select: false })
+    isSharing: boolean;
+
+    @Column({ name: 'target_user_id', type: 'varchar', length: 128, nullable: true, select: false })
+    targetUserId: string | null;
 }
 
 /**
- * TB_LOCATION_SCHEDULE — 위치 공유 일정 (도메인 E, v3.4 신규)
- * DB 설계 v3.4 §4.15a
+ * TB_LOCATION_SCHEDULE -- 위치 공유 일정 (도메인 E)
+ * DB 설계 v3.5.1 $4.15a
  */
 @Entity('tb_location_schedule')
 @Check(`("day_of_week" IS NOT NULL AND "specific_date" IS NULL) OR ("day_of_week" IS NULL AND "specific_date" IS NOT NULL) OR ("day_of_week" IS NULL AND "specific_date" IS NULL)`)
@@ -106,27 +137,30 @@ export class LocationSchedule {
     userId: string;
 
     @Column({ name: 'day_of_week', type: 'int', nullable: true })
-    dayOfWeek: number | null; // 0=일, 1=월, ... 6=토
+    dayOfWeek: number | null; // 0=Sun, 1=Mon, ... 6=Sat (NULL = daily)
 
-    /** v3.4.1: 특정 일자에만 적용 */
+    /** v3.5.1: 특정 일자에만 적용 */
     @Column({ name: 'specific_date', type: 'date', nullable: true })
     specificDate: Date | null;
 
-    @Column({ name: 'start_time', type: 'time' })
-    startTime: string;
+    @Column({ name: 'share_start', type: 'time' })
+    startTime: string; // TypeScript name: startTime, DB column: share_start
 
-    @Column({ name: 'end_time', type: 'time' })
-    endTime: string;
+    @Column({ name: 'share_end', type: 'time' })
+    endTime: string; // TypeScript name: endTime, DB column: share_end
 
     @Column({ name: 'is_sharing_on', type: 'boolean', default: true })
     isSharingOn: boolean;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
+
+    @Column({ name: 'updated_at', type: 'timestamptz', nullable: true })
+    updatedAt: Date | null;
 }
 
 /**
- * TB_STAY_POINT — 체류 지점 (도메인 E)
+ * TB_STAY_POINT -- 체류 지점 (도메인 E)
  */
 @Entity('tb_stay_point')
 export class StayPoint {
@@ -136,8 +170,8 @@ export class StayPoint {
     @Column({ name: 'user_id', type: 'varchar', length: 128 })
     userId: string;
 
-    @Column({ name: 'trip_id', type: 'uuid' })
-    tripId: string;
+    @Column({ name: 'trip_id', type: 'uuid', nullable: true })
+    tripId: string | null;
 
     @Column({ name: 'latitude', type: 'float' })
     latitude: number;
@@ -159,7 +193,7 @@ export class StayPoint {
 }
 
 /**
- * TB_MOVEMENT_SESSION — 이동 세션 (도메인 E, v3.2 신규)
+ * TB_MOVEMENT_SESSION -- 이동 세션 (도메인 E)
  */
 @Entity('tb_movement_session')
 export class MovementSession {
@@ -180,7 +214,7 @@ export class MovementSession {
 }
 
 /**
- * TB_SESSION_MAP_IMAGE — 이동 세션 지도 이미지 (도메인 E, v3.1 신규)
+ * TB_SESSION_MAP_IMAGE -- 이동 세션 지도 이미지 (도메인 E)
  */
 @Entity('tb_session_map_image')
 export class SessionMapImage {
@@ -190,8 +224,8 @@ export class SessionMapImage {
     @Column({ name: 'movement_session_id', type: 'uuid' })
     movementSessionId: string;
 
-    @Column({ name: 'trip_id', type: 'uuid' })
-    tripId: string;
+    @Column({ name: 'trip_id', type: 'uuid', nullable: true })
+    tripId: string | null;
 
     @Column({ name: 'user_id', type: 'varchar', length: 128 })
     userId: string;
@@ -204,61 +238,4 @@ export class SessionMapImage {
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
-}
-
-/**
- * TB_PLANNED_ROUTE — 계획 경로 (도메인 E, v3.1 신규)
- */
-@Entity('tb_planned_route')
-export class PlannedRoute {
-    @PrimaryGeneratedColumn('uuid', { name: 'route_id' })
-    routeId: string;
-
-    @Column({ name: 'trip_id', type: 'uuid' })
-    tripId: string;
-
-    @Column({ name: 'user_id', type: 'varchar', length: 128 })
-    userId: string;
-
-    @Column({ name: 'route_name', type: 'varchar', length: 100, nullable: true })
-    routeName: string | null;
-
-    @Column({ name: 'waypoints', type: 'jsonb', nullable: true })
-    waypoints: any;
-
-    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-    createdAt: Date;
-}
-
-/**
- * TB_ROUTE_DEVIATION — 경로 이탈 감지 (도메인 E, v3.1 신규)
- */
-@Entity('tb_route_deviation')
-export class RouteDeviation {
-    @PrimaryGeneratedColumn('uuid', { name: 'deviation_id' })
-    deviationId: string;
-
-    @Column({ name: 'route_id', type: 'uuid' })
-    routeId: string;
-
-    @Column({ name: 'user_id', type: 'varchar', length: 128 })
-    userId: string;
-
-    @Column({ name: 'trip_id', type: 'uuid' })
-    tripId: string;
-
-    @Column({ name: 'latitude', type: 'float' })
-    latitude: number;
-
-    @Column({ name: 'longitude', type: 'float' })
-    longitude: number;
-
-    @Column({ name: 'distance_meters', type: 'float' })
-    distanceMeters: number;
-
-    @Column({ name: 'severity', type: 'varchar', length: 20, default: 'low' })
-    severity: string; // 'low' | 'medium' | 'high' | 'critical'
-
-    @CreateDateColumn({ name: 'detected_at', type: 'timestamptz' })
-    detectedAt: Date;
 }

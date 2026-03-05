@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, DataSource, IsNull } from 'typeorm';
 import {
     Location, LocationSharing, LocationSchedule,
-    StayPoint, PlannedRoute, RouteDeviation, MovementSession
+    StayPoint, MovementSession
 } from '../../entities/location.entity';
+import { PlannedRoute } from '../../entities/planned-route.entity';
+import { RouteDeviation } from '../../entities/route-deviation.entity';
 
 @Injectable()
 export class LocationsService {
@@ -34,6 +36,62 @@ export class LocationsService {
             }),
         );
         return this.locationRepo.save(entities);
+    }
+
+    /** 오프라인 데이터 벌크 동기화 */
+    async syncLocations(userId: string, locations: any[]) {
+        const entities = locations.map((loc) =>
+            this.locationRepo.create({
+                userId,
+                tripId: loc.trip_id,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                accuracy: loc.accuracy,
+                altitude: loc.altitude,
+                speed: loc.speed,
+                heading: loc.heading,
+                batteryLevel: loc.battery_level,
+                recordedAt: new Date(loc.timestamp),
+                serverReceivedAt: new Date(),
+            }),
+        );
+        return this.locationRepo.save(entities);
+    }
+
+    /** PostGIS 기반 경로 이탈 감지 (공간 쿼리 최적화) */
+    async checkRouteDeviation(userId: string, tripId: string, lat: number, lng: number) {
+        const point = `ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`;
+        
+        // 현재 위치와 계획된 경로(LineString) 사이의 최단 거리가 임계값을 넘는지 확인
+        const routes = await this.routeRepo.createQueryBuilder('route')
+            .where('route.trip_id = :tripId', { tripId })
+            .andWhere('route.user_id = :userId', { userId })
+            .andWhere('route.is_active = true')
+            .select([
+                'route.routeId',
+                'route.deviationThreshold',
+                `ST_Distance(route.geometry, ${point}) * 111000 AS distance_meters` // 대략적인 m 환산 (좌표계에 따라 정확도 차이 발생 가능)
+            ])
+            .getRawMany();
+
+        for (const r of routes) {
+            if (r.distance_meters > r.route_deviationThreshold) {
+                // 이탈 감지 로그 기록 (RouteDeviation 엔티티 저장 등)
+                this.recordDeviation(userId, tripId, r.route_route_id, r.distance_meters, lat, lng);
+            }
+        }
+        return routes;
+    }
+
+    private async recordDeviation(userId: string, tripId: string, routeId: string, distance: number, lat: number, lng: number) {
+        const deviation = this.deviationRepo.create({
+            userId, tripId, routeId,
+            distanceMeters: distance,
+            latitude: lat,
+            longitude: lng,
+            startedAt: new Date()
+        });
+        await this.deviationRepo.save(deviation);
     }
 
     async logLocation(data: {

@@ -26,9 +26,9 @@ export class EmergenciesController {
     resolveEmergency(
         @CurrentUser() userId: string,
         @Param('emergencyId') emergencyId: string,
-        @Body() body: { note?: string },
+        @Body() body: { note?: string; isFalseAlarm?: boolean },
     ) {
-        return this.emergenciesService.resolveEmergency(emergencyId, userId, body.note);
+        return this.emergenciesService.resolveEmergency(emergencyId, userId, body);
     }
 
     @Patch(':emergencyId/acknowledge')

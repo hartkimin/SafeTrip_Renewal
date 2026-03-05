@@ -17,8 +17,8 @@ export class PaymentsController {
 
     @Post('transaction/:id/verify')
     @ApiOperation({ summary: '영수증 검증 및 결제 완료' })
-    verify(@Param('id') id: string, @Body() body: { externalPaymentId: string }) {
-        return this.paymentsService.verifyAndComplete(id, body.externalPaymentId);
+    verify(@CurrentUser() userId: string, @Param('id') id: string, @Body() body: { externalPaymentId: string, receiptData: string, storeType: 'ios' | 'android' }) {
+        return this.paymentsService.verifyAndComplete(userId, id, body.externalPaymentId, body.receiptData, body.storeType);
     }
 
     @Get('transactions')

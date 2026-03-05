@@ -1,11 +1,17 @@
-// Central entity barrel file — re-exports all entities.
+// Central entity barrel file -- re-exports all entities.
 // User Domain (A)
-export { User } from './user.entity';
+export { User, ParentalConsent } from './user.entity';
 
 // Group & Trip Domain (B)
 export { Group } from './group.entity';
 export { GroupMember } from './group-member.entity';
 export { Trip } from './trip.entity';
+export { TripSettings } from './trip-settings.entity';
+export { InviteCode } from './invite-code.entity';
+export { AttendanceCheck, AttendanceResponse } from './attendance.entity';
+
+// Country Domain (B)
+export { Country } from './country.entity';
 
 // Guardian Domain (C)
 export {
@@ -16,7 +22,9 @@ export {
     GuardianSnapshot,
 } from './guardian.entity';
 
-// Geofence Domain (D)
+// Schedule & Geofence Domain (D)
+export { Schedule } from './schedule.entity';
+export { TravelSchedule } from './travel-schedule.entity';
 export { Geofence, GeofenceEvent, GeofencePenalty } from './geofence.entity';
 
 // Location Domain (E)
@@ -26,51 +34,80 @@ export {
     LocationSchedule,
     StayPoint,
     SessionMapImage,
-    PlannedRoute,
-    RouteDeviation,
+    MovementSession,
 } from './location.entity';
 
-// Emergency Domain (F)
+export { PlannedRoute } from './planned-route.entity';
+export { RouteDeviation } from './route-deviation.entity';
+
+// Safety & SOS Domain (F)
 export {
     Emergency,
     EmergencyContact,
+    EmergencyRecipient,
+    SafetyCheckin,
     SosEvent,
     NoResponseEvent,
+    Heartbeat,
+    PowerEvent,
+    SosRescueLog,
+    SosCancelLog,
 } from './emergency.entity';
 
 // Chat Domain (G)
-export { ChatRoom, ChatMessage, ChatReadStatus } from './chat.entity';
+export {
+    ChatRoom,
+    ChatMessage,
+    ChatReadStatus,
+    ChatPoll,
+    ChatPollVote,
+} from './chat.entity';
 
 // Notification Domain (H)
 export {
     Notification,
     FcmToken,
     NotificationPreference,
+    NotificationSetting,
+    EventNotificationConfig,
 } from './notification.entity';
 
-// Payment Domain (I)
-export { Payment, Subscription } from './payment.entity';
+// Legal & Privacy Domain (I)
+export {
+    UserConsent,
+    MinorConsent,
+    LocationAccessLog,
+    LocationSharingPauseLog,
+    DataDeletionLog,
+    DataProvisionLog,
+} from './legal.entity';
 
-// B2B Domain (J)
+// Payment Domain (K)
+export {
+    Payment,
+    Subscription,
+    RedeemCode,
+    BillingItem,
+    RefundLog,
+} from './payment.entity';
+
+// B2B Domain (L)
 export {
     B2bOrganization,
     B2bContract,
     B2bAdmin,
     B2bDashboardConfig,
+    B2bSchool,
+    B2bInviteBatch,
+    B2bMemberLog,
 } from './b2b.entity';
 
-// Country/Safety Domain (K)
+// Ops & Log Domain (J)
 export {
-    Country,
-} from './country.entity';
-
-// Event Log Domain (L)
-export { EventLog } from './event-log.entity';
+    EventLog,
+    LeaderTransferLog,
+    EmergencyNumber,
+} from './event-log.entity';
 
 // AI Domain (O)
 export { AiUsage } from './ai.entity';
-
-// Schedule Domain (M)
-export { Schedule } from './schedule.entity';
-export { TravelSchedule } from './travel-schedule.entity';
-export { InviteCode } from './invite-code.entity';

@@ -70,24 +70,26 @@ export class EventLogService {
         const geofence = await this.geofenceRepo.findOne({ where: { geofenceId: event.geofenceId } });
         if (!geofence) return;
 
-        const sender = await this.userRepo.findOne({ where: { userId: event.userId } });
-        const senderName = sender?.displayName || sender?.userName || 'Traveler';
+        const sender = event.userId
+            ? await this.userRepo.findOne({ where: { userId: event.userId } })
+            : null;
+        const senderName = sender?.displayName || 'Traveler';
 
         const action = event.eventType === 'GEOFENCE_ENTER' ? 'entered' : 'exited';
-        const title = `📍 Geofence Alert: ${geofence.name}`;
+        const title = `Geofence Alert: ${geofence.name}`;
         const body = `${senderName} has ${action} ${geofence.name}.`;
 
         await this.notifyAdmins(event.groupId, title, body, 'GEOFENCE', event.geofenceId);
     }
 
     private async notifyMemberEvent(event: EventLog) {
-        if (!event.groupId) return;
+        if (!event.groupId || !event.userId) return;
 
         const sender = await this.userRepo.findOne({ where: { userId: event.userId } });
-        const senderName = sender?.displayName || sender?.userName || 'Traveler';
+        const senderName = sender?.displayName || 'Traveler';
 
         const action = event.eventType === 'MEMBER_JOIN' ? 'joined' : 'left';
-        const title = `👥 Member Update`;
+        const title = `Member Update`;
         const body = `${senderName} has ${action} the trip.`;
 
         await this.notifyAdmins(event.groupId, title, body, 'MEMBER', event.userId);

@@ -5,6 +5,7 @@ import { Group } from '../../entities/group.entity';
 import { GroupMember } from '../../entities/group-member.entity';
 import { InviteCode } from '../../entities/invite-code.entity';
 import { Trip } from '../../entities/trip.entity';
+import { Schedule } from '../../entities/schedule.entity';
 
 @Injectable()
 export class GroupsService {
@@ -13,6 +14,7 @@ export class GroupsService {
         @InjectRepository(GroupMember) private memberRepo: Repository<GroupMember>,
         @InjectRepository(InviteCode) private inviteCodeRepo: Repository<InviteCode>,
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
+        @InjectRepository(Schedule) private scheduleRepo: Repository<Schedule>,
         private dataSource: DataSource
     ) { }
 
@@ -154,6 +156,30 @@ export class GroupsService {
         return { message: 'Member removed' };
     }
 
+    /** §6.B PATCH /groups/:groupId/members/:userId — spec-aligned route */
+    async updateMemberByGroupId(groupId: string, userId: string, body: any, updatedBy: string) {
+        const trip = await this.tripRepo.findOne({ where: { groupId }, select: ['tripId'] });
+        if (!trip) throw new NotFoundException('No trip found for this group');
+
+        if (body.role || body.member_role) {
+            return this.updateMemberRole(trip.tripId, userId, body.role || body.member_role, updatedBy);
+        }
+
+        // Partial field updates (permissions only)
+        const member = await this.memberRepo.findOne({ where: { tripId: trip.tripId, userId, status: 'active' } });
+        if (!member) throw new NotFoundException('Member not found');
+
+        const updates: Partial<GroupMember> = {};
+        if (body.can_edit_schedule !== undefined) updates.canEditSchedule = body.can_edit_schedule;
+        if (body.can_edit_geofence !== undefined) updates.canManageGeofences = body.can_edit_geofence;
+        if (body.can_view_all_locations !== undefined) updates.canViewAllLocations = body.can_view_all_locations;
+
+        if (Object.keys(updates).length > 0) {
+            await this.memberRepo.update(member.memberId, updates);
+        }
+        return this.memberRepo.findOne({ where: { memberId: member.memberId } });
+    }
+
     async updateMemberRole(tripId: string, userId: string, newRole: string, updatedBy: string) {
         const member = await this.memberRepo.findOne({
             where: { tripId, userId, status: 'active' },
@@ -218,10 +244,19 @@ export class GroupsService {
     }
 
     async joinByCode(code: string, userId: string) {
+        // §23 8-step invite code validation
+        // Step 1: Code exists
         const invite = await this.inviteCodeRepo.findOne({ where: { code } });
-        if (!invite || !invite.isActive) throw new NotFoundException('Invalid, expired, or used-up invite code');
-        if (invite.expiresAt && new Date() > invite.expiresAt) throw new NotFoundException('Invalid, expired, or used-up invite code');
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new NotFoundException('Invalid, expired, or used-up invite code');
+        if (!invite) throw new BadRequestException('ERR_CODE_NOT_FOUND');
+
+        // Step 2: is_active = TRUE
+        if (!invite.isActive) throw new BadRequestException('ERR_CODE_INACTIVE');
+
+        // Step 3: Not expired
+        if (invite.expiresAt && new Date() > invite.expiresAt) throw new BadRequestException('ERR_CODE_EXPIRED');
+
+        // Step 4: Uses remaining
+        if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new BadRequestException('ERR_CODE_EXHAUSTED');
 
         const group = await this.groupRepo.findOne({ where: { groupId: invite.groupId } });
         if (!group) throw new NotFoundException('Group not found');
@@ -229,6 +264,12 @@ export class GroupsService {
         const trip = await this.tripRepo.findOne({ where: { groupId: group.groupId } });
         if (!trip) throw new NotFoundException('Trip not found for this group');
 
+        // Step 5: Trip status valid
+        if (!['scheduled', 'ongoing'].includes(trip.status || '')) {
+            throw new BadRequestException('ERR_TRIP_INVALID');
+        }
+
+        // Step 6: Not already a member
         const existingMember = await this.memberRepo.findOne({ where: { groupId: group.groupId, userId, status: 'active' } });
         if (existingMember) {
             return {
@@ -239,14 +280,19 @@ export class GroupsService {
             };
         }
 
-        // Add member
+        // Step 7: Member capacity check
+        if (group.maxMembers) {
+            const currentCount = await this.memberRepo.count({ where: { groupId: group.groupId, status: 'active' } });
+            if (currentCount >= group.maxMembers) {
+                throw new BadRequestException('ERR_TRIP_FULL');
+            }
+        }
+
+        // Step 8: Role capacity (simplified — no per-role hard limits enforced yet)
         const role = invite.targetRole;
         const newMember = await this.addMember(group.groupId, trip.tripId, userId, role);
 
         invite.usedCount += 1;
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) {
-            invite.isActive = false;
-        }
         await this.inviteCodeRepo.save(invite);
 
         return {
@@ -286,7 +332,14 @@ export class GroupsService {
             expiresAt.setDate(expiresAt.getDate() + data.expires_in_days);
         }
 
-        const codeString = Math.random().toString(36).substring(2, 8).toUpperCase();
+        // §23 §3.1: 7-char alphanumeric excluding O/0/I/l, retry on collision
+        let codeString = '';
+        for (let attempt = 0; attempt < 5; attempt++) {
+            codeString = this.generateInviteCode();
+            const exists = await this.inviteCodeRepo.findOne({ where: { code: codeString } });
+            if (!exists) break;
+            if (attempt === 4) throw new BadRequestException('Failed to generate unique invite code');
+        }
 
         const invite = this.inviteCodeRepo.create({
             groupId,
@@ -428,6 +481,140 @@ export class GroupsService {
 
         return {
             transfer_history: history
+        };
+    }
+
+    /** §23 §3.1: Generate 7-char alphanumeric code excluding O/0/I/l */
+    private generateInviteCode(): string {
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ123456789'; // excludes O,0,I,l
+        let code = '';
+        for (let i = 0; i < 7; i++) {
+            code += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return code;
+    }
+
+    // ── §6.D Schedule CRUD (group_id 기반) ──
+
+    private async getTripIdForGroup(groupId: string): Promise<string> {
+        const trip = await this.tripRepo.findOne({ where: { groupId }, select: ['tripId'] });
+        if (!trip) throw new NotFoundException('No trip found for this group');
+        return trip.tripId;
+    }
+
+    async getSchedules(groupId: string, query: any) {
+        const tripId = await this.getTripIdForGroup(groupId);
+        const qb = this.scheduleRepo.createQueryBuilder('s')
+            .where('s.tripId = :tripId', { tripId });
+
+        if (query.schedule_type) qb.andWhere('s.title ILIKE :type', { type: `%${query.schedule_type}%` });
+        if (query.start_time) qb.andWhere('s.startTime >= :start', { start: query.start_time });
+        if (query.end_time) qb.andWhere('s.endTime <= :end', { end: query.end_time });
+
+        qb.orderBy('s.startTime', 'ASC');
+        const schedules = await qb.getMany();
+
+        return {
+            schedules: schedules.map(s => ({
+                schedule_id: s.scheduleId,
+                trip_id: s.tripId,
+                title: s.title,
+                description: s.description,
+                schedule_date: s.scheduleDate,
+                start_time: s.startTime,
+                end_time: s.endTime,
+                location: s.location,
+                location_lat: s.locationLat,
+                location_lng: s.locationLng,
+                all_day: s.allDay,
+                order_index: s.orderIndex,
+                created_by: s.createdBy,
+                created_at: s.createdAt,
+            })),
+            count: schedules.length,
+        };
+    }
+
+    async createSchedule(groupId: string, userId: string, body: any) {
+        const tripId = await this.getTripIdForGroup(groupId);
+        if (!body.title || !body.start_time) {
+            throw new BadRequestException('title and start_time are required');
+        }
+
+        const schedule = this.scheduleRepo.create({
+            tripId,
+            title: body.title,
+            description: body.description,
+            scheduleDate: body.schedule_date ? new Date(body.schedule_date) : null,
+            startTime: new Date(body.start_time),
+            endTime: body.end_time ? new Date(body.end_time) : null,
+            location: body.location,
+            locationLat: body.location_lat,
+            locationLng: body.location_lng,
+            allDay: body.all_day ?? false,
+            orderIndex: body.order_index ?? 0,
+            createdBy: userId,
+        });
+
+        const saved = await this.scheduleRepo.save(schedule);
+        return { schedule_id: saved.scheduleId, message: 'Schedule created' };
+    }
+
+    async updateSchedule(groupId: string, scheduleId: string, userId: string, body: any) {
+        await this.getTripIdForGroup(groupId); // verify group exists
+
+        const schedule = await this.scheduleRepo.findOne({ where: { scheduleId } });
+        if (!schedule) throw new NotFoundException('Schedule not found');
+
+        if (body.title !== undefined) schedule.title = body.title;
+        if (body.description !== undefined) schedule.description = body.description;
+        if (body.schedule_date !== undefined) schedule.scheduleDate = body.schedule_date ? new Date(body.schedule_date) : null;
+        if (body.start_time !== undefined) schedule.startTime = new Date(body.start_time);
+        if (body.end_time !== undefined) schedule.endTime = body.end_time ? new Date(body.end_time) : null;
+        if (body.location !== undefined) schedule.location = body.location;
+        if (body.location_lat !== undefined) schedule.locationLat = body.location_lat;
+        if (body.location_lng !== undefined) schedule.locationLng = body.location_lng;
+        if (body.all_day !== undefined) schedule.allDay = body.all_day;
+        if (body.order_index !== undefined) schedule.orderIndex = body.order_index;
+
+        await this.scheduleRepo.save(schedule);
+        return { schedule_id: scheduleId, message: 'Schedule updated' };
+    }
+
+    async deleteSchedule(groupId: string, scheduleId: string) {
+        await this.getTripIdForGroup(groupId);
+
+        const schedule = await this.scheduleRepo.findOne({ where: { scheduleId } });
+        if (!schedule) throw new NotFoundException('Schedule not found');
+
+        await this.scheduleRepo.remove(schedule);
+        return { schedule_id: scheduleId, message: 'Schedule deleted' };
+    }
+
+    // ── §6.F 출석체크 ──
+
+    async startAttendance(groupId: string, userId: string, body: any) {
+        // Verify admin permission
+        const member = await this.memberRepo.findOne({ where: { groupId, userId, status: 'active' } });
+        if (!member || (member.memberRole !== 'captain' && member.memberRole !== 'crew_chief')) {
+            throw new ForbiddenException('Permission denied: admin role required');
+        }
+
+        const tripId = await this.getTripIdForGroup(groupId);
+
+        // Create attendance check record
+        const result = await this.dataSource.query(`
+            INSERT INTO tb_attendance_check (group_id, trip_id, initiated_by, message, status)
+            VALUES ($1, $2, $3, $4, 'pending')
+            RETURNING attendance_id, created_at
+        `, [groupId, tripId, userId, body.message || '출석체크를 확인해주세요']);
+
+        return {
+            attendance_id: result[0].attendance_id,
+            group_id: groupId,
+            status: 'pending',
+            message: 'Attendance check started',
+            created_at: result[0].created_at,
         };
     }
 }
