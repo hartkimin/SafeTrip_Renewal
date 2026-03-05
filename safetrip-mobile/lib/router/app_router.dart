@@ -35,20 +35,12 @@ class AppRouter {
         builder: (context, state) => const InitialScreen(),
       ),
       GoRoute(
-        path: RoutePaths.onboardingIntro,
+        path: RoutePaths.onboardingWelcome,
         builder: (context, state) => const ScreenWelcome(),
       ),
       GoRoute(
-        path: RoutePaths.roleSelect,
+        path: RoutePaths.onboardingPurpose,
         builder: (context, state) => const ScreenPurposeSelect(),
-      ),
-      GoRoute(
-        path: RoutePaths.termsConsent,
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final role = extra?['role'] as String? ?? 'crew';
-          return ScreenTermsConsent(selectedRole: role);
-        },
       ),
       GoRoute(
         path: RoutePaths.authPhone,
@@ -59,7 +51,15 @@ class AppRouter {
         },
       ),
       GoRoute(
-        path: RoutePaths.profileSetup,
+        path: RoutePaths.authTerms,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final role = extra?['role'] as String? ?? 'crew';
+          return ScreenTermsConsent(selectedRole: role);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.authProfile,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final userId = extra?['userId'] as String? ?? '';
@@ -113,7 +113,7 @@ class AppRouter {
       ),
       // 가디언 전용 메인 화면
       GoRoute(
-        path: '/main/guardian',
+        path: RoutePaths.mainGuardian,
         builder: (context, state) => const MainGuardianScreen(),
       ),
       // 딥링크 동적 라우트 (화면구성원칙 §9.2)
@@ -154,16 +154,16 @@ class AppRouter {
           return RoutePaths.tripJoin;
         }
         return authNotifier.isFirstLaunch
-            ? RoutePaths.onboardingIntro
-            : RoutePaths.roleSelect;
+            ? RoutePaths.onboardingWelcome
+            : RoutePaths.onboardingPurpose;
       }
       return authNotifier.hasActiveTrip ? RoutePaths.main : RoutePaths.noTripHome;
     }
 
     final authPaths = [
-      RoutePaths.onboardingIntro,
-      RoutePaths.roleSelect,
-      RoutePaths.termsConsent,
+      RoutePaths.onboardingWelcome,
+      RoutePaths.onboardingPurpose,
+      RoutePaths.authTerms,
       RoutePaths.authPhone,
     ];
     
