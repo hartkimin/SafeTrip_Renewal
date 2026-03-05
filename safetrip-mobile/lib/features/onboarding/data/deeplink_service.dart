@@ -12,6 +12,9 @@ class DeeplinkService {
   String? pendingInviteCode;
   String? pendingGuardianCode;
 
+  /// Callback for warm-start deep link events
+  void Function(String type, String value)? onDeepLink;
+
   /// Initialize and listen for deep links
   Future<void> init() async {
     // Check initial link (cold start)
@@ -40,6 +43,7 @@ class DeeplinkService {
       if (code != null) {
         pendingInviteCode = code;
         debugPrint('[DeeplinkService] Invite code captured: $code');
+        onDeepLink?.call('invite', code);
       }
     }
 
@@ -51,6 +55,7 @@ class DeeplinkService {
       if (linkId != null) {
         pendingGuardianCode = linkId;
         debugPrint('[DeeplinkService] Guardian link captured: $linkId');
+        onDeepLink?.call('guardian', linkId);
       }
     }
   }

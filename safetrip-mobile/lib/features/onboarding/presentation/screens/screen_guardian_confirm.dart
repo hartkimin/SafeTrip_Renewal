@@ -153,7 +153,7 @@ class _ScreenGuardianConfirmState extends State<ScreenGuardianConfirm> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryTeal.withOpacity(0.08),
+                    color: AppColors.primaryTeal.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(

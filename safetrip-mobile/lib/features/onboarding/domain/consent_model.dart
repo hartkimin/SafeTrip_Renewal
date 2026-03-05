@@ -6,6 +6,7 @@ class ConsentModel {
   final bool marketing;
   final bool? gdpr;
   final bool? firebaseTransfer;
+  final String version;
 
   const ConsentModel({
     this.termsOfService = false,
@@ -14,6 +15,7 @@ class ConsentModel {
     this.marketing = false,
     this.gdpr,
     this.firebaseTransfer,
+    this.version = '2026-03-01',
   });
 
   bool get allRequiredChecked {
@@ -31,6 +33,7 @@ class ConsentModel {
     bool? marketing,
     bool? gdpr,
     bool? firebaseTransfer,
+    String? version,
   }) {
     return ConsentModel(
       termsOfService: termsOfService ?? this.termsOfService,
@@ -39,6 +42,7 @@ class ConsentModel {
       marketing: marketing ?? this.marketing,
       gdpr: gdpr ?? this.gdpr,
       firebaseTransfer: firebaseTransfer ?? this.firebaseTransfer,
+      version: version ?? this.version,
     );
   }
 }

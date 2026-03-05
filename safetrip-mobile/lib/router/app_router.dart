@@ -197,6 +197,8 @@ class AppRouter {
     }
 
     // Protect auth/onboarding routes from authenticated users
+    // who have COMPLETED onboarding (consent + profile done).
+    // Users mid-onboarding must stay on the flow.
     final onboardingPaths = [
       RoutePaths.onboardingWelcome,
       RoutePaths.onboardingPurpose,
@@ -206,9 +208,14 @@ class AppRouter {
       RoutePaths.authProfile,
     ];
     if (isAuth && onboardingPaths.contains(path)) {
-      return authNotifier.hasActiveTrip
-          ? RoutePaths.main
-          : RoutePaths.noTripHome;
+      final onboardingDone =
+          authNotifier.consentCompleted && authNotifier.profileCompleted;
+      if (onboardingDone) {
+        return authNotifier.hasActiveTrip
+            ? RoutePaths.main
+            : RoutePaths.noTripHome;
+      }
+      // Still onboarding → let them stay
     }
 
     return null;

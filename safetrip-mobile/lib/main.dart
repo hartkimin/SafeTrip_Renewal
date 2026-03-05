@@ -85,7 +85,7 @@ class _MyAppState extends State<MyApp> {
     _authNotifier = AuthNotifier();
     _appRouter = AppRouter(_authNotifier);
 
-    // Forward deep link params to AuthNotifier
+    // Forward deep link params to AuthNotifier (cold start + warm start)
     final deeplink = DeeplinkService.instance;
     if (deeplink.pendingInviteCode != null) {
       _authNotifier.setPendingInviteCode(deeplink.pendingInviteCode!);
@@ -93,6 +93,14 @@ class _MyAppState extends State<MyApp> {
     if (deeplink.pendingGuardianCode != null) {
       _authNotifier.setPendingGuardianCode(deeplink.pendingGuardianCode!);
     }
+    // Listen for warm-start deep links
+    deeplink.onDeepLink = (type, value) {
+      if (type == 'invite') {
+        _authNotifier.setPendingInviteCode(value);
+      } else if (type == 'guardian') {
+        _authNotifier.setPendingGuardianCode(value);
+      }
+    };
 
     debugPrint('[MyApp] initState done');
   }

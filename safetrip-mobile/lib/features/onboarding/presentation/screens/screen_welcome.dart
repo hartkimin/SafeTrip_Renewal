@@ -53,7 +53,7 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
         curve: Curves.easeInOut,
       );
     } else {
-      context.go(RoutePaths.roleSelect);
+      context.go(RoutePaths.onboardingPurpose);
     }
   }
 
@@ -76,7 +76,7 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
               top: MediaQuery.of(context).padding.top + AppSpacing.sm,
               right: AppSpacing.md,
               child: TextButton(
-                onPressed: () => context.go(RoutePaths.roleSelect),
+                onPressed: () => context.go(RoutePaths.onboardingPurpose),
                 child: Text(
                   '건너뛰기',
                   style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
