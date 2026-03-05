@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../features/onboarding/data/onboarding_repository.dart';
 import '../../router/route_paths.dart';
 
 class ScreenTripJoinCode extends StatefulWidget {
@@ -16,10 +17,10 @@ class ScreenTripJoinCode extends StatefulWidget {
 
 class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   final List<TextEditingController> _controllers = List.generate(
-    7,
+    6,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(7, (_) => FocusNode());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isLoading = false;
 
@@ -35,26 +36,45 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   }
 
   String get _fullCode => _controllers.map((c) => c.text).join().toUpperCase();
-  bool get _isComplete => _fullCode.length == 7;
+  bool get _isComplete => _fullCode.length == 6;
 
   Future<void> _onJoin() async {
     if (!_isComplete) return;
 
     setState(() => _isLoading = true);
     try {
-      // 7자리 코드로 참여 로직 (실제로는 여기서 API 연동)
-      // 성공 가정
+      final repo = OnboardingRepository();
+      final info = await repo.previewInviteCode(_fullCode);
+      if (info == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('유효하지 않은 초대코드입니다. 캡틴에게 확인해주세요.')),
+          );
+        }
+        return;
+      }
+
+      // Store the code for later use after auth flow
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('group_id', 'dummy_group_id');
+      await prefs.setString('pending_invite_code', _fullCode);
 
       if (mounted) {
-        context.go(RoutePaths.main);
+        final userId = prefs.getString('user_id');
+        if (userId == null || userId.isEmpty) {
+          // Not authenticated yet — go through auth flow
+          context.push(RoutePaths.authPhone, extra: {'role': 'crew'});
+        } else {
+          // Already authenticated — go directly to invite confirm
+          context.go(RoutePaths.onboardingInviteConfirm, extra: {
+            'inviteCode': _fullCode,
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('참여에 실패했습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('참여에 실패했습니다.')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -89,7 +109,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '캡틴에게 받은 7자리\n코드를 입력해주세요',
+                      '캡틴에게 받은 6자리\n코드를 입력해주세요',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.textTertiary,
@@ -98,10 +118,10 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                     const SizedBox(height: AppSpacing.xxl),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(7, (index) {
+                      children: List.generate(6, (index) {
                         return SizedBox(
                           width:
-                              (MediaQuery.of(context).size.width - 48 - 36) / 7,
+                              (MediaQuery.of(context).size.width - 48 - 30) / 6,
                           height: 56,
                           child: TextField(
                             controller: _controllers[index],
@@ -130,7 +150,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                             ),
                             onChanged: (value) {
                               if (value.isNotEmpty) {
-                                if (index < 6) {
+                                if (index < 5) {
                                   _focusNodes[index + 1].requestFocus();
                                 } else {
                                   _focusNodes[index].unfocus();
