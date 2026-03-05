@@ -29,7 +29,6 @@ class ScreenProfileSetup extends StatefulWidget {
 
 class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
   final _nameController = TextEditingController();
-  final _birthDateController = TextEditingController();
   final _emergencyContactController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _imagePicker = ImagePicker();
@@ -37,36 +36,6 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
 
   File? _selectedImage;
   bool _isLoading = false;
-  DateTime? _selectedBirthDate;
-
-  Future<void> _selectBirthDate() async {
-    final now = DateTime.now();
-    final initialDate = _selectedBirthDate ?? DateTime(now.year - 20, 1, 1);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(now.year - 100),
-      lastDate: now,
-    );
-
-    if (picked != null && mounted) {
-      setState(() {
-        _selectedBirthDate = picked;
-        _birthDateController.text =
-            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      });
-    }
-  }
-
-  int _calculateAge(DateTime birthDate) {
-    final now = DateTime.now();
-    int age = now.year - birthDate.year;
-    if (now.month < birthDate.month ||
-        (now.month == birthDate.month && now.day < birthDate.day)) {
-      age--;
-    }
-    return age;
-  }
 
   Future<void> _pickImage() async {
     final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
@@ -82,38 +51,56 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
     try {
       final name = _nameController.text.trim();
       final emergencyContact = _emergencyContactController.text.trim();
-      
+      final prefs = await SharedPreferences.getInstance();
+
+      // Birth date was saved by screen_birth_date.dart
+      final birthDate = prefs.getString('date_of_birth');
+
       if (!skipProfile) {
         await _apiService.updateUserProfile(
           widget.userId,
           name,
-          birthDate: _birthDateController.text,
+          birthDate: birthDate,
           emergencyContact: emergencyContact.isNotEmpty ? emergencyContact : null,
         );
       }
 
-      final prefs = await SharedPreferences.getInstance();
       if (name.isNotEmpty) await prefs.setString('user_name', name);
       await prefs.setString('user_role', widget.role);
-      
-      int age = 20;
-      if (_selectedBirthDate != null) {
-        age = _calculateAge(_selectedBirthDate!);
-        await prefs.setBool('is_minor', age < 18);
-      }
 
       await widget.authNotifier.completeOnboarding();
-      if (!mounted) return;
+      await widget.authNotifier.markProfileCompleted();
 
-      // 미성년자 처리 (간소화됨)
-      if (age < 18) {
-        // TODO: Minor consent screen if needed
+      // Check for pending invite code (Scenario B)
+      final pendingCode = prefs.getString('pending_invite_code');
+      if (pendingCode != null && pendingCode.isNotEmpty && mounted) {
+        context.go(RoutePaths.onboardingInviteConfirm, extra: {
+          'inviteCode': pendingCode,
+        });
+        return;
       }
 
-      final groupId = prefs.getString('group_id') ?? '';
-      await widget.authNotifier.setAuthenticated(hasTrip: groupId.isNotEmpty);
-      
-      if (mounted) context.go(RoutePaths.main);
+      // Check for pending guardian code (Scenario C)
+      final pendingGuardian = prefs.getString('pending_guardian_code');
+      if (pendingGuardian != null && pendingGuardian.isNotEmpty && mounted) {
+        context.go(RoutePaths.onboardingGuardianConfirm, extra: {
+          'guardianCode': pendingGuardian,
+        });
+        return;
+      }
+
+      // Scenario A: captain — go to trip create
+      if (widget.role == 'captain') {
+        await widget.authNotifier.setAuthenticated(hasTrip: false);
+        if (mounted) context.go(RoutePaths.tripCreate);
+      } else {
+        // Default: go to main or no-trip-home
+        final groupId = prefs.getString('group_id') ?? '';
+        await widget.authNotifier.setAuthenticated(hasTrip: groupId.isNotEmpty);
+        if (mounted) {
+          context.go(groupId.isNotEmpty ? RoutePaths.main : RoutePaths.noTripHome);
+        }
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장에 실패했습니다.')));
     } finally {
@@ -156,14 +143,6 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
                         controller: _nameController,
                         decoration: const InputDecoration(labelText: '이름', hintText: '이름을 입력하세요'),
                         validator: (v) => (v == null || v.isEmpty) ? '이름을 입력해주세요' : null,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _birthDateController,
-                        readOnly: true,
-                        onTap: _selectBirthDate,
-                        decoration: const InputDecoration(labelText: '생년월일', hintText: 'YYYY-MM-DD', suffixIcon: Icon(Icons.calendar_today)),
-                        validator: (v) => (v == null || v.isEmpty) ? '생년월일을 선택해주세요' : null,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextFormField(
