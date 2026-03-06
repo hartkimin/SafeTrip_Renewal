@@ -34,6 +34,7 @@ import { EventLogModule } from './modules/event-log/event-log.module';
 import { MofaModule } from './modules/mofa/mofa.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AiModule } from './modules/ai/ai.module';
+import { SchedulesModule } from './modules/schedules/schedules.module';
 
 @Module({
     imports: [
@@ -102,6 +103,7 @@ import { AiModule } from './modules/ai/ai.module';
         MofaModule,
         TasksModule,
         AiModule,
+        SchedulesModule,
     ],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
