@@ -62,7 +62,24 @@ class WelcomeSlidePage extends StatelessWidget {
               ),
             ),
 
-          // Layer 4: Content (parallax at 1.0x for depth effect)
+          // Layer 4: Dark scrim for WCAG AA contrast (§3.5)
+          // Ensures white text meets 4.5:1 ratio even on bright backgrounds
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.15),
+                  Colors.black.withValues(alpha: 0.35),
+                  Colors.black.withValues(alpha: 0.15),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+
+          // Layer 5: Content (parallax at 1.0x for depth effect)
           Transform.translate(
             offset: Offset(parallaxOffset, 0),
             child: Center(
@@ -86,7 +103,7 @@ class WelcomeSlidePage extends StatelessWidget {
                     Text(
                       subtitle,
                       style: AppTypography.bodyLarge.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withValues(alpha: 0.9),
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,

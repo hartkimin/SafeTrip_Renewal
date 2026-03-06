@@ -31,6 +31,7 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
   double _pageOffset = 0.0;
   bool _reducedMotion = false;
   WelcomeAbVariant _abVariant = WelcomeAbVariant.a;
+  bool _isAutoAdvancing = false;
 
   // §3.2 Phase 2 slide data — colors fixed per spec
   static const _slideColors = [
@@ -81,16 +82,12 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
     _autoAdvanceTimer?.cancel();
     _autoAdvanceTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!_isLastPage && mounted) {
+        _isAutoAdvancing = true;
         _pageController.nextPage(
           duration: _reducedMotion
               ? Duration.zero
               : const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-        );
-        // Analytics: auto-advance
-        WelcomeAnalytics.slideViewed(
-          slideIndex: _currentPage + 1,
-          autoAdvance: true,
         );
       } else {
         _autoAdvanceTimer?.cancel();
@@ -146,10 +143,12 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: (i) {
+                final wasAutoAdvance = _isAutoAdvancing;
+                _isAutoAdvancing = false;
                 setState(() => _currentPage = i);
                 WelcomeAnalytics.slideViewed(
                   slideIndex: i,
-                  autoAdvance: false,
+                  autoAdvance: wasAutoAdvance,
                 );
               },
               itemCount: _slideCount,
