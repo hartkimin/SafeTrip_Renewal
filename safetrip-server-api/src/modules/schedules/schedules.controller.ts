@@ -76,6 +76,21 @@ export class SchedulesController {
         };
     }
 
+    @Get('share-timeline')
+    @ApiOperation({ summary: '공유 타임라인 세그먼트 조회 (privacy_first)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiQuery({ name: 'date', required: true, description: 'YYYY-MM-DD' })
+    async getShareTimeline(
+        @Param('tripId') tripId: string,
+        @Query('date') date: string,
+    ) {
+        if (!date) {
+            throw new BadRequestException('date is required');
+        }
+        const timeline = await this.schedulesService.getShareTimeline(tripId, date);
+        return { success: true, data: timeline };
+    }
+
     @Post()
     @ApiOperation({ summary: '일정 생성' })
     @ApiParam({ name: 'tripId', type: 'string' })

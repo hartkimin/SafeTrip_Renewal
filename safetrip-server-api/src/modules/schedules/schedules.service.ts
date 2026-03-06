@@ -320,6 +320,128 @@ export class SchedulesService {
     }
 
     /**
+     * GET share timeline segments for a given trip and date.
+     * §4.5 privacy_first mode: schedule-linked sharing.
+     *
+     * Segments:
+     *   - 'shared'  : schedule start_time..end_time (green)
+     *   - 'buffer'  : +/-15 min around each schedule (light green)
+     *   - 'off'     : gaps between schedules (gray)
+     *   - Auto-connect: gaps <= 30 min between schedules merge into 'shared'
+     */
+    async getShareTimeline(
+        tripId: string,
+        date: string,
+    ): Promise<{
+        segments: { start: string; end: string; type: 'shared' | 'buffer' | 'off' }[];
+        date: string;
+    }> {
+        const schedules = await this.getSchedulesByDate(tripId, date);
+
+        // Filter schedules with valid start_time and end_time, not all-day
+        const timed = schedules
+            .filter((s) => s.startTime && s.endTime && !s.allDay)
+            .map((s) => ({
+                start: new Date(s.startTime!).getTime(),
+                end: new Date(s.endTime!).getTime(),
+            }))
+            .sort((a, b) => a.start - b.start);
+
+        if (timed.length === 0) {
+            return { segments: [], date };
+        }
+
+        const BUFFER_MS = 15 * 60 * 1000; // 15 minutes
+        const AUTO_CONNECT_MS = 30 * 60 * 1000; // 30 minutes
+
+        // Step 1: Merge overlapping / auto-connect (gap <= 30min) schedule ranges
+        const merged: { start: number; end: number }[] = [];
+        let current = { ...timed[0] };
+
+        for (let i = 1; i < timed.length; i++) {
+            const next = timed[i];
+            const gap = next.start - current.end;
+
+            if (gap <= AUTO_CONNECT_MS) {
+                // Merge: extend current range to cover next
+                current.end = Math.max(current.end, next.end);
+            } else {
+                merged.push({ ...current });
+                current = { ...next };
+            }
+        }
+        merged.push({ ...current });
+
+        // Step 2: Build segments with buffers and off-gaps
+        const segments: { start: string; end: string; type: 'shared' | 'buffer' | 'off' }[] = [];
+
+        const toISO = (ms: number): string => new Date(ms).toISOString();
+
+        for (let i = 0; i < merged.length; i++) {
+            const block = merged[i];
+            const bufferStart = block.start - BUFFER_MS;
+            const bufferEnd = block.end + BUFFER_MS;
+
+            // Off-gap before this block (from previous buffer-end to this buffer-start)
+            if (i === 0) {
+                // No off-gap before the very first block -- timeline starts at buffer
+            } else {
+                const prevBufferEnd = merged[i - 1].end + BUFFER_MS;
+                if (bufferStart > prevBufferEnd) {
+                    segments.push({
+                        start: toISO(prevBufferEnd),
+                        end: toISO(bufferStart),
+                        type: 'off',
+                    });
+                }
+            }
+
+            // Buffer before shared block
+            if (bufferStart < block.start) {
+                // Clamp: don't overlap with previous block's post-buffer
+                let clampedStart = bufferStart;
+                if (i > 0) {
+                    const prevBufferEnd = merged[i - 1].end + BUFFER_MS;
+                    clampedStart = Math.max(clampedStart, prevBufferEnd);
+                }
+                if (clampedStart < block.start) {
+                    segments.push({
+                        start: toISO(clampedStart),
+                        end: toISO(block.start),
+                        type: 'buffer',
+                    });
+                }
+            }
+
+            // Shared block
+            segments.push({
+                start: toISO(block.start),
+                end: toISO(block.end),
+                type: 'shared',
+            });
+
+            // Buffer after shared block
+            if (block.end < bufferEnd) {
+                // Clamp: don't overlap with next block's pre-buffer
+                let clampedEnd = bufferEnd;
+                if (i < merged.length - 1) {
+                    const nextBufferStart = merged[i + 1].start - BUFFER_MS;
+                    clampedEnd = Math.min(clampedEnd, nextBufferStart);
+                }
+                if (clampedEnd > block.end) {
+                    segments.push({
+                        start: toISO(block.end),
+                        end: toISO(clampedEnd),
+                        type: 'buffer',
+                    });
+                }
+            }
+        }
+
+        return { segments, date };
+    }
+
+    /**
      * GET overlapping schedules for conflict detection.
      * Finds schedules on the same date whose time ranges overlap.
      */
