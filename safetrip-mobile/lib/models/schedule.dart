@@ -16,6 +16,7 @@ class Schedule {
     required this.startTime,
     this.endTime,
     this.allDay = false,
+    this.scheduleDate,
     this.participants,
     this.estimatedCost,
     this.currencyCode,
@@ -73,28 +74,33 @@ class Schedule {
     final timezone = json['timezone'] as String?;
 
     return Schedule(
-      scheduleId: json['schedule_id'] as String? ?? json['scheduleId'] as String? ?? '',
+      scheduleId: json['travel_schedule_id']?.toString() ?? json['schedule_id']?.toString() ?? json['scheduleId']?.toString() ?? '',
       tripId: json['trip_id'] as String? ?? json['tripId'] as String?,
       groupId: json['group_id'] as String? ?? json['groupId'] as String?,
       createdBy: json['created_by'] as String? ?? json['createdBy'] as String? ?? '',
       title: json['title'] as String? ?? '',
       description: json['description'] as String?,
-      scheduleType: json['schedule_type'] as String? ?? json['scheduleType'] as String? ?? 'activity',
+      scheduleType: json['schedule_type'] as String? ?? json['scheduleType'] as String? ?? 'other',
       locationName: json['location_name'] as String? ?? json['locationName'] as String?,
       locationAddress: json['location_address'] as String? ?? json['locationAddress'] as String?,
-      locationCoords: json['location_coords'] != null
-          ? Map<String, double>.from(
-              (json['location_coords'] as Map).map(
-                (key, value) =>
-                    MapEntry(key as String, (value as num).toDouble()),
-              ),
-            )
-          : null,
+      locationCoords: (json['location_lat'] != null && json['location_lng'] != null)
+          ? {'latitude': (json['location_lat'] as num).toDouble(), 'longitude': (json['location_lng'] as num).toDouble()}
+          : (json['location_coords'] != null
+              ? Map<String, double>.from(
+                  (json['location_coords'] as Map).map(
+                    (key, value) =>
+                        MapEntry(key as String, (value as num).toDouble()),
+                  ),
+                )
+              : (json['locationCoords'] != null
+                  ? Map<String, double>.from(json['locationCoords'] as Map)
+                  : null)),
       startTime: json['start_time'] != null ? parseWithTimezone(json['start_time'] as String, timezone) : DateTime.now(),
       endTime: json['end_time'] != null
           ? parseWithTimezone(json['end_time'] as String, timezone)
           : null,
-      allDay: json['all_day'] as bool? ?? false,
+      allDay: json['all_day'] as bool? ?? json['allDay'] as bool? ?? false,
+      scheduleDate: json['schedule_date'] as String?,
       participants: json['participants'] != null
           ? List<Map<String, dynamic>>.from(json['participants'] as List)
           : null,
@@ -137,6 +143,7 @@ class Schedule {
   final DateTime startTime;
   final DateTime? endTime;
   final bool allDay;
+  final String? scheduleDate;
   final List<Map<String, dynamic>>? participants;
   final double? estimatedCost;
   final String? currencyCode;
@@ -169,6 +176,7 @@ class Schedule {
       'start_time': startTime.toIso8601String(),
       'end_time': endTime?.toIso8601String(),
       'all_day': allDay,
+      'schedule_date': scheduleDate,
       'participants': participants,
       'estimated_cost': estimatedCost,
       'currency_code': currencyCode,
@@ -202,6 +210,7 @@ class Schedule {
     DateTime? startTime,
     DateTime? endTime,
     bool? allDay,
+    String? scheduleDate,
     List<Map<String, dynamic>>? participants,
     double? estimatedCost,
     String? currencyCode,
@@ -233,6 +242,7 @@ class Schedule {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       allDay: allDay ?? this.allDay,
+      scheduleDate: scheduleDate ?? this.scheduleDate,
       participants: participants ?? this.participants,
       estimatedCost: estimatedCost ?? this.estimatedCost,
       currencyCode: currencyCode ?? this.currencyCode,
