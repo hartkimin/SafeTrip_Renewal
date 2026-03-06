@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS tb_schedule_history (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    schedule_id     UUID NOT NULL,
+    schedule_id     UUID NOT NULL REFERENCES tb_travel_schedule(travel_schedule_id) ON DELETE CASCADE,
     modified_by     VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
     field_name      VARCHAR(50) NOT NULL,
     old_value       TEXT,

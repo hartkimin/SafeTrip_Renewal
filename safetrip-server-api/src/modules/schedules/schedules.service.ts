@@ -27,8 +27,7 @@ export class SchedulesService {
 
     /**
      * Check if user has edit permission on schedules for the given trip.
-     * Captain and crew_chief always can; crew needs canEditSchedule=true.
-     * Guardian cannot edit.
+     * §5.1: 캡틴/크루장만 CUD 가능 — crew와 guardian은 불가.
      */
     async checkEditPermission(tripId: string, userId: string): Promise<GroupMember> {
         const member = await this.memberRepo.findOne({
@@ -36,21 +35,12 @@ export class SchedulesService {
         });
 
         if (!member) {
-            throw new ForbiddenException('You are not a member of this trip');
+            throw new ForbiddenException('여행 멤버가 아닙니다');
         }
 
-        if (member.memberRole === 'guardian') {
-            throw new ForbiddenException('Guardians cannot edit schedules');
-        }
-
-        // Captain and crew_chief always have edit permission
-        if (member.memberRole === 'captain' || member.memberRole === 'crew_chief') {
-            return member;
-        }
-
-        // Crew needs explicit canEditSchedule permission
-        if (!member.canEditSchedule) {
-            throw new ForbiddenException('You do not have permission to edit schedules');
+        // §5.1: Only captain and crew_chief can create/update/delete schedules
+        if (member.memberRole !== 'captain' && member.memberRole !== 'crew_chief') {
+            throw new ForbiddenException('일정 수정 권한이 없습니다 (캡틴/크루장만 가능)');
         }
 
         return member;
@@ -159,7 +149,7 @@ export class SchedulesService {
             title: data.title,
             description: data.description || null,
             location: data.location || null,
-            scheduleType: data.schedule_type || 'activity',
+            scheduleType: data.schedule_type || 'other',
             startTime: data.start_time ? new Date(data.start_time) : null,
             endTime: data.end_time ? new Date(data.end_time) : null,
             allDay: data.all_day || false,

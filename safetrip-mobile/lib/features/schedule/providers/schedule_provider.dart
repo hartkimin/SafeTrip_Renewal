@@ -122,7 +122,10 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
         '/api/v1/trips/${state.tripId}/schedules/dates',
       );
       if (result.data?['success'] == true) {
-        final dates = List<String>.from(result.data['data'] ?? []);
+        final data = result.data['data'];
+        // Server returns { data: { dates: [...] } }
+        final datesList = data is Map ? (data['dates'] ?? []) : (data ?? []);
+        final dates = List<String>.from(datesList);
         state = state.copyWith(scheduleDates: dates);
       }
     } catch (_) {}
@@ -140,10 +143,12 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
         queryParameters: {'date': dateStr},
       );
       if (result.data?['success'] == true) {
-        final list = (result.data['data'] as List?)
-                ?.map((e) => Schedule.fromJson(e as Map<String, dynamic>))
-                .toList() ??
-            [];
+        final data = result.data['data'];
+        // Server returns { data: { schedules: [...], total: N } }
+        final schedulesList = data is Map ? (data['schedules'] ?? []) : (data ?? []);
+        final list = (schedulesList as List)
+                .map((e) => Schedule.fromJson(e as Map<String, dynamic>))
+                .toList();
         list.sort((a, b) => a.startTime.compareTo(b.startTime));
         state = state.copyWith(schedules: list, isLoading: false);
       }

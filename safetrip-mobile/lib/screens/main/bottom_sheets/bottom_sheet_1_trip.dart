@@ -358,17 +358,22 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
   List<_ScheduleEntry> _sortSchedules(List<Schedule> schedules) {
     final now = DateTime.now();
     final entries = <_ScheduleEntry>[];
+    // §3: 진행 중 강조는 active 상태에서만 (planning/completed 제외)
+    final scheduleState = ref.read(scheduleProvider);
+    final isActive = scheduleState.tripStatus == 'active';
 
     for (final s in schedules) {
       final start = s.startTime;
       final end = s.endTime ?? s.startTime.add(const Duration(hours: 1));
 
       String status;
-      if (start.isBefore(now) && end.isAfter(now) ||
-          start.isAtSameMomentAs(now) ||
-          end.isAtSameMomentAs(now)) {
+      if (isActive &&
+          (start.isBefore(now) && end.isAfter(now) ||
+              start.isAtSameMomentAs(now) ||
+              end.isAtSameMomentAs(now))) {
         status = 'current';
-      } else if (now.isBefore(start) &&
+      } else if (isActive &&
+          now.isBefore(start) &&
           start.difference(now) < const Duration(minutes: 15)) {
         status = 'upcoming';
       } else if (end.isBefore(now)) {
