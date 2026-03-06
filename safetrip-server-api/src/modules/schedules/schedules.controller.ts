@@ -12,12 +12,16 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SchedulesService } from './schedules.service';
+import { AiSuggestService } from './ai-suggest.service';
 
 @ApiTags('Schedules')
 @ApiBearerAuth('firebase-auth')
 @Controller('trips/:tripId/schedules')
 export class SchedulesController {
-    constructor(private readonly schedulesService: SchedulesService) {}
+    constructor(
+        private readonly schedulesService: SchedulesService,
+        private readonly aiSuggestService: AiSuggestService,
+    ) {}
 
     @Get()
     @ApiOperation({ summary: '일정 목록 조회 (날짜별 필터 가능)' })
@@ -133,6 +137,17 @@ export class SchedulesController {
             data: schedule,
             message: 'Schedule created successfully',
         };
+    }
+
+    @Post('ai-suggest')
+    @ApiOperation({ summary: 'AI 일정 추천 (stub)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    async aiSuggest(
+        @Param('tripId') tripId: string,
+        @Body() body: { prompt?: string },
+    ) {
+        const result = await this.aiSuggestService.suggest(tripId, body?.prompt);
+        return { success: true, data: result };
     }
 
     @Patch(':scheduleId')
