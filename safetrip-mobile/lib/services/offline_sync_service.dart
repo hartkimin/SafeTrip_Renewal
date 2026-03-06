@@ -19,6 +19,14 @@ class OfflineSyncService {
   static const String _tableScheduleDraft = 'local_schedule_draft';
   static const String _tableCacheMeta = 'local_cache_meta';
 
+  // §3.3 위치 큐 제한
+  static const int _maxLocationRecords = 8640;
+  static const int _maxLocationHours = 72;
+  static const int _locationBatchSize = 100;
+
+  // §3.4 채팅 큐 제한
+  static const int _maxChatMessages = 100;
+
   bool _isSyncing = false;
 
   Future<Database> get database async {
@@ -152,6 +160,22 @@ class OfflineSyncService {
   }) async {
     try {
       final db = await database;
+
+      // §3.3 위치 큐 상한 — 8,640건 초과 시 가장 오래된 레코드 삭제
+      final count = Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM $_tableLocations'),
+          ) ??
+          0;
+      if (count >= _maxLocationRecords) {
+        final excess = count - _maxLocationRecords + 1;
+        await db.rawDelete('''
+          DELETE FROM $_tableLocations WHERE id IN (
+            SELECT id FROM $_tableLocations ORDER BY timestamp ASC LIMIT ?
+          )
+        ''', [excess]);
+        debugPrint('[OfflineSync] 위치 큐 가득 참 — $excess건 삭제');
+      }
+
       await db.insert(_tableLocations, {
         'user_id': userId,
         'trip_id': tripId,
@@ -229,11 +253,11 @@ class OfflineSyncService {
         }
       }
 
-      // 2. 위치 데이터 벌크 동기화
+      // 2. 위치 데이터 벌크 동기화 (§3.3 — 최신 데이터 우선 업로드)
       final locList = await db.query(
         _tableLocations,
-        orderBy: 'timestamp ASC',
-        limit: 100,
+        orderBy: 'timestamp DESC',
+        limit: _locationBatchSize,
       );
       if (locList.isNotEmpty) {
         debugPrint('[OfflineSync] 위치 데이터 동기화 시작 (${locList.length}건)');
@@ -324,6 +348,24 @@ class OfflineSyncService {
     return locCount + sosCount;
   }
 
+  /// §3.3 72시간 초과 위치 데이터 정리
+  Future<int> cleanExpiredLocations() async {
+    final db = await database;
+    final cutoff = DateTime.now()
+        .subtract(const Duration(hours: _maxLocationHours))
+        .toUtc()
+        .toIso8601String();
+    final deleted = await db.delete(
+      _tableLocations,
+      where: 'timestamp < ?',
+      whereArgs: [cutoff],
+    );
+    if (deleted > 0) {
+      debugPrint('[OfflineSync] 72시간 초과 위치 $deleted건 삭제');
+    }
+    return deleted;
+  }
+
   // ── Cache Meta (§5.5) ──────────────────────────────────────────────
 
   /// 캐시 메타데이터 저장 (upsert)
@@ -397,6 +439,19 @@ class OfflineSyncService {
   }) async {
     try {
       final db = await database;
+
+      // §3.4 채팅 큐 100건 제한 — 미동기화 메시지가 한도에 도달하면 거부
+      final count = Sqflite.firstIntValue(
+            await db.rawQuery(
+              "SELECT COUNT(*) FROM $_tableChat WHERE is_synced = 0",
+            ),
+          ) ??
+          0;
+      if (count >= _maxChatMessages) {
+        debugPrint('[OfflineSync] 채팅 큐 한도 도달 (${_maxChatMessages}건)');
+        return false;
+      }
+
       await db.insert(_tableChat, {
         'trip_id': tripId,
         'sender_id': senderId,
