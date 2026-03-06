@@ -157,7 +157,7 @@ class AppRouter {
       ),
       GoRoute(
         path: RoutePaths.tripJoin,
-        builder: (context, state) => const ScreenTripJoinCode(),
+        builder: (context, state) => ScreenTripJoinCode(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.tripDemo,
@@ -231,14 +231,17 @@ class AppRouter {
       if (authNotifier.requiresForceUpdate) return null;
 
       if (!isAuth) {
-        // Check for deep link scenarios (§4.3)
+        // DOC-T3-WLC-029 §3.2 Phase 1: Deep link context detection
         if (authNotifier.pendingInviteCode != null) {
-          return RoutePaths.authPhone; // invite code → auth first
+          // Invite code → skip slides, go to Phase 3 (purpose/trip-join)
+          // tripJoin screen handles auto-fill from pendingInviteCode
+          return RoutePaths.tripJoin;
         }
         if (authNotifier.pendingGuardianCode != null) {
-          return RoutePaths.authPhone; // guardian → auth first
+          // Guardian code → skip slides, go to auth (guardian needs account)
+          return RoutePaths.authPhone;
         }
-        // Route A: new user / Route B: returning unauthenticated (§4.1)
+        // Route A: new user → welcome slides / Route B: returning → purpose
         return authNotifier.isFirstLaunch
             ? RoutePaths.onboardingWelcome
             : RoutePaths.onboardingPurpose;

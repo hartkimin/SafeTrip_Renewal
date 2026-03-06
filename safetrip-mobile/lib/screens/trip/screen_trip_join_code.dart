@@ -6,10 +6,14 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../features/onboarding/data/onboarding_repository.dart';
+import '../../router/auth_notifier.dart';
 import '../../router/route_paths.dart';
 
 class ScreenTripJoinCode extends StatefulWidget {
-  const ScreenTripJoinCode({super.key});
+  const ScreenTripJoinCode({super.key, this.authNotifier});
+
+  /// Optional AuthNotifier for deep link auto-fill (DOC-T3-WLC-029 §3.2)
+  final AuthNotifier? authNotifier;
 
   @override
   State<ScreenTripJoinCode> createState() => _ScreenTripJoinCodeState();
@@ -23,6 +27,30 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // DOC-T3-WLC-029 §3.2: Auto-fill invite code from deep link
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authNotifier = widget.authNotifier;
+      if (authNotifier == null) return;
+      final pendingCode = authNotifier.pendingInviteCode;
+      if (pendingCode != null && pendingCode.isNotEmpty) {
+        // Fill each character into the 6-digit code controllers
+        final code = pendingCode.toUpperCase();
+        for (int i = 0; i < code.length && i < _controllers.length; i++) {
+          _controllers[i].text = code[i];
+        }
+        authNotifier.clearPendingInviteCode();
+        setState(() {});
+        // Auto-submit if code is complete
+        if (code.length == 6) {
+          _onJoin();
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
