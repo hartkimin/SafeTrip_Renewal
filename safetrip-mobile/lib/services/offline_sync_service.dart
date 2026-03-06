@@ -15,6 +15,9 @@ class OfflineSyncService {
   Database? _database;
   static const String _tableLocations = 'TB_OFFLINE_LOCATION';
   static const String _tableSOS = 'TB_OFFLINE_SOS';
+  static const String _tableChat = 'local_chat_queue';
+  static const String _tableScheduleDraft = 'local_schedule_draft';
+  static const String _tableCacheMeta = 'local_cache_meta';
 
   bool _isSyncing = false;
 
@@ -30,52 +33,106 @@ class OfflineSyncService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
-        // 위치 데이터 큐
-        await db.execute('''
-          CREATE TABLE $_tableLocations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            trip_id TEXT,
-            latitude REAL NOT NULL,
-            longitude REAL NOT NULL,
-            accuracy REAL,
-            altitude REAL,
-            speed REAL,
-            heading REAL,
-            battery_level INTEGER,
-            battery_is_charging INTEGER,
-            network_type TEXT,
-            timestamp TEXT NOT NULL,
-            created_at INTEGER DEFAULT (strftime('%s', 'now'))
-          )
-        ''');
-
-        // SOS 데이터 큐
-        await db.execute('''
-          CREATE TABLE $_tableSOS (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sos_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            trip_id TEXT NOT NULL,
-            latitude REAL NOT NULL,
-            longitude REAL NOT NULL,
-            trigger_type TEXT NOT NULL,
-            message TEXT,
-            timestamp TEXT NOT NULL,
-            created_at INTEGER DEFAULT (strftime('%s', 'now'))
-          )
-        ''');
-
-        await db.execute(
-          'CREATE INDEX idx_offline_loc_time ON $_tableLocations(timestamp)',
-        );
-        await db.execute(
-          'CREATE INDEX idx_offline_sos_time ON $_tableSOS(timestamp)',
-        );
+        await _createTablesV1(db);
+        await _createTablesV2(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _createTablesV2(db);
+        }
       },
     );
+  }
+
+  /// V1 테이블: 위치 데이터 큐, SOS 데이터 큐
+  Future<void> _createTablesV1(Database db) async {
+    // 위치 데이터 큐
+    await db.execute('''
+      CREATE TABLE $_tableLocations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        trip_id TEXT,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        accuracy REAL,
+        altitude REAL,
+        speed REAL,
+        heading REAL,
+        battery_level INTEGER,
+        battery_is_charging INTEGER,
+        network_type TEXT,
+        timestamp TEXT NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    ''');
+
+    // SOS 데이터 큐
+    await db.execute('''
+      CREATE TABLE $_tableSOS (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sos_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        trip_id TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        trigger_type TEXT NOT NULL,
+        message TEXT,
+        timestamp TEXT NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX idx_offline_loc_time ON $_tableLocations(timestamp)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_offline_sos_time ON $_tableSOS(timestamp)',
+    );
+  }
+
+  /// V2 테이블: 채팅 큐, 일정 드래프트, 캐시 메타 (§5.3-5.5)
+  Future<void> _createTablesV2(Database db) async {
+    // 채팅 큐 (§5.3)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_tableChat (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id TEXT NOT NULL,
+        sender_id TEXT NOT NULL,
+        message_type TEXT DEFAULT 'text',
+        content TEXT NOT NULL,
+        local_id TEXT NOT NULL UNIQUE,
+        is_synced INTEGER DEFAULT 0,
+        retry_count INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
+    ''');
+
+    // 일정 드래프트 (§5.4)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_tableScheduleDraft (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        schedule_id TEXT,
+        trip_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0,
+        conflict_status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now'))
+      )
+    ''');
+
+    // 캐시 메타 (§5.5)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_tableCacheMeta (
+        cache_key TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        cached_at TEXT NOT NULL,
+        expires_at TEXT,
+        version INTEGER DEFAULT 1
+      )
+    ''');
   }
 
   /// 위치 데이터 큐에 추가
@@ -265,5 +322,237 @@ class OfflineSyncService {
         ) ??
         0;
     return locCount + sosCount;
+  }
+
+  // ── Cache Meta (§5.5) ──────────────────────────────────────────────
+
+  /// 캐시 메타데이터 저장 (upsert)
+  Future<void> setCacheMeta({
+    required String cacheKey,
+    required String data,
+    String? expiresAt,
+  }) async {
+    try {
+      final db = await database;
+      await db.insert(
+        _tableCacheMeta,
+        {
+          'cache_key': cacheKey,
+          'data': data,
+          'cached_at': DateTime.now().toUtc().toIso8601String(),
+          'expires_at': expiresAt,
+          'version': 1,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      debugPrint('[OfflineSync] 캐시 메타 저장: $cacheKey');
+    } catch (e) {
+      debugPrint('[OfflineSync] 캐시 메타 저장 실패: $e');
+    }
+  }
+
+  /// 캐시 메타데이터 조회 (만료된 항목은 null 반환)
+  Future<Map<String, dynamic>?> getCacheMeta(String cacheKey) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        _tableCacheMeta,
+        where: 'cache_key = ?',
+        whereArgs: [cacheKey],
+        limit: 1,
+      );
+      if (results.isEmpty) return null;
+
+      final row = results.first;
+      // 만료 시간이 설정되어 있고, 현재 시간이 만료 시간을 초과하면 null 반환
+      final expiresAt = row['expires_at'] as String?;
+      if (expiresAt != null) {
+        final expiry = DateTime.tryParse(expiresAt);
+        if (expiry != null && DateTime.now().toUtc().isAfter(expiry)) {
+          // 만료된 캐시 삭제
+          await db.delete(
+            _tableCacheMeta,
+            where: 'cache_key = ?',
+            whereArgs: [cacheKey],
+          );
+          return null;
+        }
+      }
+      return row;
+    } catch (e) {
+      debugPrint('[OfflineSync] 캐시 메타 조회 실패: $e');
+      return null;
+    }
+  }
+
+  // ── Chat Queue (§5.3) ──────────────────────────────────────────────
+
+  /// 채팅 메시지를 오프라인 큐에 추가
+  Future<bool> pushChat({
+    required String tripId,
+    required String senderId,
+    required String content,
+    required String localId,
+    String messageType = 'text',
+  }) async {
+    try {
+      final db = await database;
+      await db.insert(_tableChat, {
+        'trip_id': tripId,
+        'sender_id': senderId,
+        'message_type': messageType,
+        'content': content,
+        'local_id': localId,
+        'is_synced': 0,
+        'retry_count': 0,
+      });
+      debugPrint('[OfflineSync] 채팅 큐 추가 성공: $localId');
+      return true;
+    } catch (e) {
+      debugPrint('[OfflineSync] 채팅 큐 추가 실패: $e');
+      return false;
+    }
+  }
+
+  /// 미동기화 채팅 메시지 조회
+  Future<List<Map<String, dynamic>>> getPendingChats({int limit = 50}) async {
+    try {
+      final db = await database;
+      return await db.query(
+        _tableChat,
+        where: 'is_synced = 0',
+        orderBy: 'created_at ASC',
+        limit: limit,
+      );
+    } catch (e) {
+      debugPrint('[OfflineSync] 미동기화 채팅 조회 실패: $e');
+      return [];
+    }
+  }
+
+  /// 채팅 메시지 동기화 완료 처리
+  Future<void> markChatSynced(int id) async {
+    try {
+      final db = await database;
+      await db.update(
+        _tableChat,
+        {'is_synced': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      debugPrint('[OfflineSync] 채팅 동기화 완료: id=$id');
+    } catch (e) {
+      debugPrint('[OfflineSync] 채팅 동기화 처리 실패: $e');
+    }
+  }
+
+  /// 미동기화 채팅 메시지 개수 조회
+  Future<int> getPendingChatCount() async {
+    try {
+      final db = await database;
+      return Sqflite.firstIntValue(
+            await db.rawQuery(
+              'SELECT COUNT(*) FROM $_tableChat WHERE is_synced = 0',
+            ),
+          ) ??
+          0;
+    } catch (e) {
+      debugPrint('[OfflineSync] 미동기화 채팅 개수 조회 실패: $e');
+      return 0;
+    }
+  }
+
+  // ── Schedule Draft (§5.4) ──────────────────────────────────────────
+
+  /// 일정 드래프트를 오프라인 큐에 추가
+  Future<void> pushScheduleDraft({
+    String? scheduleId,
+    required String tripId,
+    required String action,
+    required String payload,
+  }) async {
+    try {
+      final db = await database;
+      await db.insert(_tableScheduleDraft, {
+        'schedule_id': scheduleId,
+        'trip_id': tripId,
+        'action': action,
+        'payload': payload,
+        'is_synced': 0,
+        'conflict_status': 'pending',
+      });
+      debugPrint('[OfflineSync] 일정 드래프트 추가 성공: $action');
+    } catch (e) {
+      debugPrint('[OfflineSync] 일정 드래프트 추가 실패: $e');
+    }
+  }
+
+  /// 미동기화 일정 드래프트 조회
+  Future<List<Map<String, dynamic>>> getPendingScheduleDrafts() async {
+    try {
+      final db = await database;
+      return await db.query(
+        _tableScheduleDraft,
+        where: 'is_synced = 0',
+        orderBy: 'created_at ASC',
+      );
+    } catch (e) {
+      debugPrint('[OfflineSync] 미동기화 일정 드래프트 조회 실패: $e');
+      return [];
+    }
+  }
+
+  /// 충돌 상태인 드래프트 조회
+  Future<List<Map<String, dynamic>>> getConflictedDrafts() async {
+    try {
+      final db = await database;
+      return await db.query(
+        _tableScheduleDraft,
+        where: "conflict_status = 'conflict'",
+        orderBy: 'created_at ASC',
+      );
+    } catch (e) {
+      debugPrint('[OfflineSync] 충돌 드래프트 조회 실패: $e');
+      return [];
+    }
+  }
+
+  /// 일정 드래프트 동기화 완료 및 충돌 상태 업데이트
+  Future<void> markScheduleSynced(int id, String conflictStatus) async {
+    try {
+      final db = await database;
+      await db.update(
+        _tableScheduleDraft,
+        {
+          'is_synced': 1,
+          'conflict_status': conflictStatus,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      debugPrint(
+        '[OfflineSync] 일정 드래프트 동기화 완료: id=$id, status=$conflictStatus',
+      );
+    } catch (e) {
+      debugPrint('[OfflineSync] 일정 드래프트 동기화 처리 실패: $e');
+    }
+  }
+
+  /// 충돌 드래프트 해결 처리
+  Future<void> resolveConflict(int id, String resolution) async {
+    try {
+      final db = await database;
+      await db.update(
+        _tableScheduleDraft,
+        {'conflict_status': resolution},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      debugPrint(
+        '[OfflineSync] 충돌 해결 완료: id=$id, resolution=$resolution',
+      );
+    } catch (e) {
+      debugPrint('[OfflineSync] 충돌 해결 실패: $e');
+    }
   }
 }
