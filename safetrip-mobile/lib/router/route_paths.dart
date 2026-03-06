@@ -40,6 +40,11 @@ class RoutePaths {
   static const paymentPricingGuide = '/payment/pricing-guide';
   static const paymentSuccess = '/payment/success';
 
+  // Demo
+  static const demoScenarioSelect = '/demo/scenario-select';
+  static const demoMain = '/demo/main';
+  static const demoComplete = '/demo/complete';
+
   // Dynamic
   static const tripDetail = '/trip/:tripId';
   static const tripSchedule = '/trip/:tripId/schedule';
