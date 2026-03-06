@@ -10,6 +10,9 @@ class ApiService {
   late final Dio _dio;
   final String baseUrl;
 
+  /// 외부에서 커스텀 API 호출 시 사용 (인증 인터셉터 포함)
+  Dio get dio => _dio;
+
   ApiService({String? baseUrl})
     : baseUrl =
           baseUrl ??
@@ -1216,6 +1219,92 @@ class ApiService {
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] requestAccountDeletion Error: $e');
+      return false;
+    }
+  }
+
+  // ===== 채팅 (Chat) =====
+
+  /// GET /api/v1/chats/trip/:tripId/rooms — 채팅방 목록 조회
+  Future<List<Map<String, dynamic>>> getChatRooms(String tripId) async {
+    try {
+      final response = await _dio.get('/api/v1/chats/trip/$tripId/rooms');
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getChatRooms Error: $e');
+      return [];
+    }
+  }
+
+  /// GET /api/v1/chats/rooms/:roomId/messages — 메시지 조회 (커서 기반)
+  Future<List<Map<String, dynamic>>> getChatMessages(
+    String roomId, {
+    String? cursor,
+    int limit = 50,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'limit': limit};
+      if (cursor != null) queryParams['cursor'] = cursor;
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/messages',
+        queryParameters: queryParams,
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getChatMessages Error: $e');
+      return [];
+    }
+  }
+
+  /// POST /api/v1/chats/rooms/:roomId/messages — 메시지 전송
+  Future<Map<String, dynamic>?> sendChatMessage({
+    required String roomId,
+    required String content,
+    String messageType = 'text',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/rooms/$roomId/messages',
+        data: {
+          'content': content,
+          'message_type': messageType,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ?? response.data;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] sendChatMessage Error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/chats/rooms/:roomId/read — 읽음 처리
+  Future<bool> markChatRead({
+    required String roomId,
+    required String lastReadMessageId,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/v1/chats/rooms/$roomId/read',
+        data: {'lastReadMessageId': lastReadMessageId},
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] markChatRead Error: $e');
       return false;
     }
   }
