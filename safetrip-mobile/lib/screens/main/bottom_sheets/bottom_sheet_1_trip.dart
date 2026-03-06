@@ -13,6 +13,7 @@ import '../../../services/api_service.dart';
 import '../../../widgets/schedule/date_timeline_bar.dart';
 import '../../../widgets/schedule/schedule_card.dart';
 import '../../../widgets/schedule/share_timeline_bar.dart';
+import '../../../widgets/schedule/trip_progress_bar.dart';
 import '../../../models/schedule.dart';
 import 'modals/add_schedule_modal.dart';
 import 'modals/ai_schedule_modal.dart';
@@ -119,6 +120,12 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
           if (scheduleState.showShareTimeline)
             ShareTimelineBar(
               segments: scheduleState.shareTimelineSegments,
+            ),
+          // Region C-1: Trip progress bar (active trips only)
+          if (scheduleState.tripStatus == 'active')
+            TripProgressBar(
+              completedCount: _countCompletedSchedules(scheduleState.schedules),
+              totalCount: scheduleState.schedules.length,
             ),
           // Region D: Schedule card list
           Expanded(child: _buildScheduleCardList(scheduleState)),
@@ -266,6 +273,25 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
   }
 
   // ──────────────────────────────────────────────
+  // Completed Schedule Counter
+  // ──────────────────────────────────────────────
+
+  /// 완료된 일정 수를 카운트한다.
+  /// isCompleted 플래그 또는 endTime < now 조건으로 판별한다.
+  int _countCompletedSchedules(List<Schedule> schedules) {
+    final now = DateTime.now();
+    int count = 0;
+    for (final s in schedules) {
+      if (s.isCompleted) {
+        count++;
+      } else if (s.endTime != null && s.endTime!.isBefore(now)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // ──────────────────────────────────────────────
   // Region D: Schedule Card List
   // ──────────────────────────────────────────────
 
@@ -353,6 +379,7 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
           schedule: entry.schedule,
           status: entry.status,
           canEdit: scheduleState.canEdit,
+          tripId: scheduleState.tripId,
           onTap: () {
             // TODO: 일정 상세 보기 / 수정 모달
           },
