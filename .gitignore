@@ -175,3 +175,6 @@ temp_*.txt
 safetrip-mobile-legacy/
 gemini-superpowers-antigravity/
 
+
+# Worktrees
+.worktrees/
