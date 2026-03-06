@@ -18,7 +18,9 @@ import '../../managers/marker_manager.dart';
 import '../../models/location.dart' as location_model;
 import '../../router/auth_notifier.dart';
 import '../../services/api_service.dart';
+import '../../services/device_status_service.dart';
 import '../../services/location_service.dart';
+import '../../services/offline_sync_service.dart';
 import '../../services/sos_service.dart';
 import '../../widgets/components/offline_banner.dart';
 import '../../widgets/components/privacy_banner.dart';
@@ -84,6 +86,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
   /// SOS 발신자 이름 (§10.1 오버레이 표시용)
   String? _sosUserName;
 
+  /// §4.2, §8.3: 동기화 완료 알림 구독
+  late final StreamSubscription<SyncResult> _syncSubscription;
+
   /// §3.3: 프로그래밍적 시트 이동 시 점프 가드 우회 콜백
   void Function()? _markSheetProgrammatic;
 
@@ -95,6 +100,29 @@ class _MainScreenState extends ConsumerState<MainScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // §4.2, §8.3: 동기화 완료 토스트 알림
+    _syncSubscription =
+        DeviceStatusService().syncResultStream.listen((result) {
+      if (!mounted) return;
+      if (result.synced > 0 && !result.hasFailures) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('오프라인 중 ${result.synced}건의 데이터가 동기화되었습니다.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (result.hasFailures) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('일부 데이터 동기화 실패. 재시도 중...'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
 
     _firebaseLocationManager = FirebaseLocationManager(
       onUsersUpdated: (users) {
@@ -270,6 +298,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   @override
   void dispose() {
+    _syncSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _firebaseLocationManager.dispose();
     _userMarkersNotifier.dispose();

@@ -19,6 +19,12 @@ class DeviceStatusService {
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
   StreamSubscription<PermissionStatus>? _permissionSubscription;
 
+  final StreamController<SyncResult> _syncResultController =
+      StreamController<SyncResult>.broadcast();
+
+  /// 동기화 완료 결과 스트림
+  Stream<SyncResult> get syncResultStream => _syncResultController.stream;
+
   PermissionStatus? _lastPermissionStatus;
   String? _lastNetworkType;
   final Set<int> _batteryWarningSent = {};
@@ -39,7 +45,11 @@ class DeviceStatusService {
       debugPrint('[DeviceStatusService] 초기화 완료');
 
       // 초기 동기화 시도
-      _offlineSyncService.syncData(_apiService);
+      final initialSyncResult =
+          await _offlineSyncService.syncData(_apiService);
+      if (initialSyncResult.total > 0) {
+        _syncResultController.add(initialSyncResult);
+      }
     } catch (e) {
       debugPrint('[DeviceStatusService] 초기화 실패: $e');
     }
@@ -57,7 +67,11 @@ class DeviceStatusService {
         if (result != ConnectivityResult.none) {
           // 연결됨 -> 데이터 동기화 시도
           debugPrint('[DeviceStatusService] 네트워크 연결됨 -> 오프라인 데이터 동기화 시도');
-          _offlineSyncService.syncData(_apiService);
+          final syncResult =
+              await _offlineSyncService.syncData(_apiService);
+          if (syncResult.total > 0) {
+            _syncResultController.add(syncResult);
+          }
         }
 
         if (previousType != null && previousType != currentType) {
@@ -299,6 +313,7 @@ class DeviceStatusService {
       debugPrint('[DeviceStatusService] Permission Stream 정리 중 오류 (무시): $e');
     }
     
+    _syncResultController.close();
     _connectivitySubscription = null;
     _permissionSubscription = null;
     _isInitialized = false;
