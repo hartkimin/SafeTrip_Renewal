@@ -1260,4 +1260,40 @@ class ApiService {
       return [];
     }
   }
+
+  // ===== 긴급 연락처 / 안전가이드 (Emergency / Safety Guide, §3.1) =====
+
+  /// GET /api/v1/trips/:tripId/emergency-contacts — 긴급 연락처 조회
+  /// TODO: 백엔드 엔드포인트 구현 후 실제 API 경로로 교체
+  Future<Map<String, dynamic>?> getEmergencyContacts(String tripId) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/trips/$tripId/emergency-contacts',
+      );
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getEmergencyContacts Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/countries/:countryCode/safety-guide — 국가별 안전가이드 조회
+  /// TODO: 백엔드 엔드포인트 구현 후 실제 API 경로로 교체
+  Future<Map<String, dynamic>?> getSafetyGuide(String countryCode) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/countries/$countryCode/safety-guide',
+      );
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuide Error: $e');
+      return null;
+    }
+  }
 }
