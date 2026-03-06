@@ -56,6 +56,7 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
     super.initState();
     _pageController = PageController()
       ..addListener(() {
+        if (!mounted) return;
         setState(() {
           _pageOffset = (_pageController.page ?? 0) - _currentPage;
         });
@@ -63,18 +64,19 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
 
     _initAbVariant();
     _startAutoAdvance();
-
-    // Analytics: welcome_view (§7.3)
-    WelcomeAnalytics.welcomeView(
-      abVariant: _abVariant.name,
-      timeOfDay: AppColors.timeOfDayName(),
-      deeplinkPresent: false, // deep link users skip welcome entirely
-    );
   }
 
   Future<void> _initAbVariant() async {
     final variant = await WelcomeAbTestService.getVariant();
-    if (mounted) setState(() => _abVariant = variant);
+    if (!mounted) return;
+    setState(() => _abVariant = variant);
+
+    // Analytics: welcome_view (§7.3) — fires after A/B variant is resolved
+    WelcomeAnalytics.welcomeView(
+      abVariant: variant.name,
+      timeOfDay: AppColors.timeOfDayName(),
+      deeplinkPresent: false,
+    );
   }
 
   /// §3.2: Auto-advance every 5 seconds when no user interaction
