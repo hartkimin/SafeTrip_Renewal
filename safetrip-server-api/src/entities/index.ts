@@ -25,6 +25,7 @@ export {
 // Schedule & Geofence Domain (D)
 export { Schedule } from './schedule.entity';
 export { TravelSchedule } from './travel-schedule.entity';
+export { ScheduleHistory } from './schedule-history.entity';
 export { Geofence, GeofenceEvent, GeofencePenalty } from './geofence.entity';
 
 // Location Domain (E)
