@@ -33,7 +33,12 @@ class WeatherInfo {
   }
 
   /// 날씨 아이콘 코드를 이모지로 변환한다.
+  /// 서버가 이미 이모지를 반환하는 경우 그대로 사용한다.
   String get emoji {
+    // 서버가 이미 이모지를 반환하면 그대로 사용
+    if (icon.length > 3 || icon.contains('\u{FE0F}') || icon.codeUnits.any((c) => c > 127)) {
+      return icon;
+    }
     // OpenWeatherMap icon code -> emoji
     switch (icon) {
       case '01d':
@@ -126,20 +131,20 @@ class _ScheduleCardState extends ConsumerState<ScheduleCard> {
   static Color _iconBgForType(String type) {
     switch (type) {
       case 'move':
-        return const Color(0xFFE3F2FD);
+        return AppColors.scheduleMoveBg;
       case 'stay':
-        return const Color(0xFFF3E5F5);
+        return AppColors.scheduleStayBg;
       case 'meal':
-        return const Color(0xFFFFF3E0);
+        return AppColors.scheduleMealBg;
       case 'sightseeing':
-        return const Color(0xFFE8F5E9);
+        return AppColors.scheduleSightseeingBg;
       case 'shopping':
-        return const Color(0xFFFCE4EC);
+        return AppColors.scheduleShoppingBg;
       case 'meeting':
-        return const Color(0xFFE0F2F1);
+        return AppColors.scheduleMeetingBg;
       case 'other':
       default:
-        return const Color(0xFFF5F5F5);
+        return AppColors.scheduleOtherBg;
     }
   }
 
@@ -147,15 +152,15 @@ class _ScheduleCardState extends ConsumerState<ScheduleCard> {
   static Color _iconColorForType(String type) {
     switch (type) {
       case 'move':
-        return const Color(0xFF1565C0);
+        return AppColors.scheduleMoveIcon;
       case 'stay':
-        return const Color(0xFF7B1FA2);
+        return AppColors.scheduleStayIcon;
       case 'meal':
-        return const Color(0xFFE65100);
+        return AppColors.scheduleMealIcon;
       case 'sightseeing':
-        return const Color(0xFF2E7D32);
+        return AppColors.scheduleSightseeingIcon;
       case 'shopping':
-        return const Color(0xFFC62828);
+        return AppColors.scheduleShoppingIcon;
       case 'meeting':
         return AppColors.primaryTeal;
       case 'other':

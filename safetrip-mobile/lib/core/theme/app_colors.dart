@@ -86,4 +86,18 @@ abstract class AppColors {
   static const Color tripPlanning = AppTokens.secondaryAmber; // planning
   static const Color tripActive = AppTokens.semanticSuccess; // active
   static const Color tripCompleted = AppTokens.basic08; // completed
+
+  // ─ 일정 타입별 컬러 (schedule_type) ─────────────────────────────
+  static const Color scheduleMoveBg = AppTokens.softBlueWeak;
+  static const Color scheduleMoveIcon = Color(0xFF1565C0);
+  static const Color scheduleStayBg = AppTokens.softPurpleLight;
+  static const Color scheduleStayIcon = Color(0xFF7B1FA2);
+  static const Color scheduleMealBg = AppTokens.softYellowLight;
+  static const Color scheduleMealIcon = Color(0xFFE65100);
+  static const Color scheduleSightseeingBg = AppTokens.softGreenLight;
+  static const Color scheduleSightseeingIcon = Color(0xFF2E7D32);
+  static const Color scheduleShoppingBg = AppTokens.coral01;
+  static const Color scheduleShoppingIcon = Color(0xFFC62828);
+  static const Color scheduleMeetingBg = AppTokens.teal03;
+  static const Color scheduleOtherBg = AppTokens.bgBasic04;
 }

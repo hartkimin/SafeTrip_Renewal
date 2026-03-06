@@ -3,7 +3,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
-/// 여행 진행률 표시 위젯.
+/// 오늘 일정 진행률 표시 위젯.
 /// 완료된 일정 수 / 전체 일정 수를 기반으로 진행률 바를 표시한다.
 /// tripStatus == 'active' 일 때만 표시한다.
 class TripProgressBar extends StatelessWidget {
@@ -42,7 +42,7 @@ class TripProgressBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 텍스트: "여행 진행률 65% (13/20 일정 완료)"
+          // 텍스트: "오늘 일정 65% (13/20 완료)"
           Row(
             children: [
               const Icon(
@@ -60,7 +60,7 @@ class TripProgressBar extends StatelessWidget {
                     children: [
                       const TextSpan(
                         text:
-                            '\uC5EC\uD589 \uC9C4\uD589\uB960 ', // 여행 진행률
+                            '\uC624\uB298 \uC77C\uC815 ', // 오늘 일정
                       ),
                       TextSpan(
                         text: '$percentText%',
@@ -71,7 +71,7 @@ class TripProgressBar extends StatelessWidget {
                       ),
                       TextSpan(
                         text:
-                            ' ($completedCount/$totalCount \uC77C\uC815 \uC644\uB8CC)', // 일정 완료
+                            ' ($completedCount/$totalCount \uC644\uB8CC)', // 완료
                       ),
                     ],
                   ),

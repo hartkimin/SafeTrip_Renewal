@@ -176,6 +176,14 @@ export class ScheduleVoteService {
             throw new BadRequestException('Vote deadline has passed');
         }
 
+        // Verify user is an active member of the trip
+        const member = await this.memberRepo.findOne({
+            where: { tripId: vote.tripId, userId, status: 'active' },
+        });
+        if (!member) {
+            throw new ForbiddenException('Not a member of this trip');
+        }
+
         // Verify option belongs to this vote
         const option = await this.optionRepo.findOne({
             where: { id: optionId, voteId },
