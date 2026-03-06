@@ -1,0 +1,131 @@
+{
+  "scenario_id": "s2",
+  "title": "친구들과 해외여행",
+  "subtitle": "도쿄 7일간 자유여행 · 표준 모드",
+  "privacy_grade": "standard",
+  "duration_days": 7,
+  "destination": {
+    "name": "도쿄",
+    "country_code": "JP",
+    "country_name": "일본",
+    "lat": 35.6762,
+    "lng": 139.6503,
+    "timezone": "Asia/Tokyo"
+  },
+  "members": [
+    {"id": "m_captain", "name": "김지민", "role": "captain"},
+    {"id": "m_chief1", "name": "이수현", "role": "crew_chief"},
+    {"id": "m_crew01", "name": "박도윤", "role": "crew"},
+    {"id": "m_crew02", "name": "최하린", "role": "crew"},
+    {"id": "m_crew03", "name": "정우빈", "role": "crew"},
+    {"id": "m_crew04", "name": "한소율", "role": "crew"}
+  ],
+  "guardian_links": [],
+  "schedules": [
+    {
+      "day": 1,
+      "title": "도쿄 도착 & 시부야",
+      "items": [
+        {"time": "14:00", "title": "나리타공항 도착", "lat": 35.7720, "lng": 140.3929},
+        {"time": "16:30", "title": "시부야 스크램블 교차로", "lat": 35.6595, "lng": 139.7004},
+        {"time": "18:00", "title": "저녁 (이자카야)", "lat": 35.6614, "lng": 139.7036}
+      ]
+    },
+    {
+      "day": 2,
+      "title": "아사쿠사 & 아키하바라",
+      "items": [
+        {"time": "09:00", "title": "센소지", "lat": 35.7148, "lng": 139.7967},
+        {"time": "12:00", "title": "점심 (라멘)", "lat": 35.7100, "lng": 139.7950},
+        {"time": "14:00", "title": "아키하바라", "lat": 35.7023, "lng": 139.7745},
+        {"time": "17:00", "title": "도쿄타워", "lat": 35.6586, "lng": 139.7454}
+      ]
+    },
+    {
+      "day": 3,
+      "title": "하라주쿠 & 신주쿠",
+      "items": [
+        {"time": "10:00", "title": "메이지 신궁", "lat": 35.6764, "lng": 139.6993},
+        {"time": "12:00", "title": "다케시타 거리", "lat": 35.6717, "lng": 139.7026},
+        {"time": "14:00", "title": "오모테산도", "lat": 35.6654, "lng": 139.7122},
+        {"time": "17:00", "title": "신주쿠 교엔", "lat": 35.6852, "lng": 139.7100}
+      ]
+    },
+    {
+      "day": 4,
+      "title": "자유시간 (소그룹)",
+      "items": [
+        {"time": "10:00", "title": "자유시간 시작", "lat": 35.6762, "lng": 139.6503},
+        {"time": "18:00", "title": "집합 (이케부쿠로)", "lat": 35.7295, "lng": 139.7109}
+      ]
+    },
+    {
+      "day": 5,
+      "title": "오다이바 & 도요스",
+      "items": [
+        {"time": "09:30", "title": "팀랩 보더리스", "lat": 35.6267, "lng": 139.7766},
+        {"time": "12:30", "title": "도요스 시장", "lat": 35.6459, "lng": 139.7831},
+        {"time": "15:00", "title": "오다이바 해변공원", "lat": 35.6304, "lng": 139.7750}
+      ]
+    },
+    {
+      "day": 6,
+      "title": "닛코 당일치기",
+      "items": [
+        {"time": "07:30", "title": "아사쿠사역 출발", "lat": 35.7101, "lng": 139.8107},
+        {"time": "10:00", "title": "닛코 도쇼구", "lat": 36.7579, "lng": 139.5990},
+        {"time": "14:00", "title": "주젠지 호수", "lat": 36.7400, "lng": 139.4900},
+        {"time": "18:00", "title": "도쿄 복귀", "lat": 35.7101, "lng": 139.8107}
+      ]
+    },
+    {
+      "day": 7,
+      "title": "마지막 쇼핑 & 귀국",
+      "items": [
+        {"time": "09:00", "title": "긴자 쇼핑", "lat": 35.6722, "lng": 139.7649},
+        {"time": "12:00", "title": "점심 (스시)", "lat": 35.6700, "lng": 139.7650},
+        {"time": "14:00", "title": "나리타공항 출발", "lat": 35.7720, "lng": 140.3929}
+      ]
+    }
+  ],
+  "simulation_events": [
+    {"time_offset_minutes": 0, "type": "trip_start", "description": "도쿄 여행이 시작되었습니다!"},
+    {"time_offset_minutes": 60, "type": "geofence_in", "description": "시부야 일정 구역 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 180, "type": "chat_message", "description": "이수현: 시부야 인크레더블! 사진 많이 찍었어"},
+    {"time_offset_minutes": 360, "type": "geofence_out", "description": "박도윤님이 자유시간 중 1km 이상 이동", "member_id": "m_crew01"},
+    {"time_offset_minutes": 480, "type": "notification", "description": "자유시간 종료 30분 전 알림"},
+    {"time_offset_minutes": 720, "type": "daily_summary", "description": "1일차 완료: 전원 안전"},
+    {"time_offset_minutes": 1440, "type": "daily_summary", "description": "2일차 완료: 전원 안전"},
+    {"time_offset_minutes": 2160, "type": "geofence_out", "description": "한소율님이 하라주쿠에서 이탈", "member_id": "m_crew04"},
+    {"time_offset_minutes": 2170, "type": "geofence_in", "description": "한소율님 복귀 확인", "member_id": "m_crew04"},
+    {"time_offset_minutes": 4320, "type": "sos_drill", "description": "SOS 연습 발동 (정우빈)", "member_id": "m_crew03"},
+    {"time_offset_minutes": 4325, "type": "sos_resolved", "description": "SOS 연습 종료"},
+    {"time_offset_minutes": 10080, "type": "trip_end", "description": "도쿄 여행 종료! 전원 안전 귀국"}
+  ],
+  "location_tracks": {
+    "m_captain": [
+      {"t": 0, "lat": 35.7720, "lng": 140.3929},
+      {"t": 30, "lat": 35.7200, "lng": 140.0500},
+      {"t": 60, "lat": 35.6595, "lng": 139.7004},
+      {"t": 90, "lat": 35.6614, "lng": 139.7036},
+      {"t": 120, "lat": 35.6614, "lng": 139.7036},
+      {"t": 150, "lat": 35.6762, "lng": 139.6503}
+    ],
+    "m_crew01": [
+      {"t": 0, "lat": 35.7720, "lng": 140.3929},
+      {"t": 30, "lat": 35.7205, "lng": 140.0510},
+      {"t": 60, "lat": 35.6598, "lng": 139.7010},
+      {"t": 90, "lat": 35.6618, "lng": 139.7040},
+      {"t": 120, "lat": 35.6620, "lng": 139.7050},
+      {"t": 150, "lat": 35.6765, "lng": 139.6510}
+    ],
+    "m_chief1": [
+      {"t": 0, "lat": 35.7720, "lng": 140.3929},
+      {"t": 30, "lat": 35.7198, "lng": 140.0495},
+      {"t": 60, "lat": 35.6592, "lng": 139.7000},
+      {"t": 90, "lat": 35.6610, "lng": 139.7032},
+      {"t": 120, "lat": 35.6610, "lng": 139.7032},
+      {"t": 150, "lat": 35.6760, "lng": 139.6498}
+    ]
+  }
+}
