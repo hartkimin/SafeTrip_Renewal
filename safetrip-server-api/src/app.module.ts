@@ -14,6 +14,7 @@ import { appConfig } from './config/app.config';
 import { LoggerModule } from './common/logger/logger.module';
 import { FirebaseModule } from './config/firebase/firebase.module';
 import { HealthModule } from './modules/health/health.module';
+import { VersionModule } from './modules/version/version.module';
 
 // Domain modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -83,6 +84,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
         LoggerModule,
         FirebaseModule,
         HealthModule,
+        VersionModule,
 
         // ── Domain Modules ────────────────────────────────────────────
         AuthModule,

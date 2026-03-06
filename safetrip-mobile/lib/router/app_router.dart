@@ -43,7 +43,7 @@ class AppRouter {
     routes: [
       GoRoute(
         path: RoutePaths.splash,
-        builder: (context, state) => const InitialScreen(),
+        builder: (context, state) => InitialScreen(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.onboardingWelcome,
@@ -219,25 +219,31 @@ class AppRouter {
     // Demo routes don't need auth
     if (path.startsWith('/demo/')) return null;
 
-    // Still loading → stay on splash
+    // Still loading auth state → stay on splash
     if (isLoading) return path == RoutePaths.splash ? null : RoutePaths.splash;
 
-    // Splash: decide where to go
+    // Splash: wait for both auth loading AND splash initialization (DOC-T3-SPL-028 §3)
     if (path == RoutePaths.splash) {
+      // Wait for splash initialization to complete
+      if (!authNotifier.initCompleted) return null;
+
+      // Force update blocks all navigation (§7.1)
+      if (authNotifier.requiresForceUpdate) return null;
+
       if (!isAuth) {
-        // Check for deep link scenarios
+        // Check for deep link scenarios (§4.3)
         if (authNotifier.pendingInviteCode != null) {
-          return RoutePaths.authPhone; // B: invite code → auth first
+          return RoutePaths.authPhone; // invite code → auth first
         }
         if (authNotifier.pendingGuardianCode != null) {
-          return RoutePaths.authPhone; // C: guardian → auth first
+          return RoutePaths.authPhone; // guardian → auth first
         }
-        // A or D: normal flow
+        // Route A: new user / Route B: returning unauthenticated (§4.1)
         return authNotifier.isFirstLaunch
             ? RoutePaths.onboardingWelcome
             : RoutePaths.onboardingPurpose;
       }
-      // Authenticated: go to main
+      // Authenticated: Route B (§4.2)
       return authNotifier.hasActiveTrip
           ? RoutePaths.main
           : RoutePaths.noTripHome;
