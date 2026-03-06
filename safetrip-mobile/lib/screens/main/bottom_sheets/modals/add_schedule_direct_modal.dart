@@ -13,6 +13,7 @@ import '../../../../services/offline_sync_service.dart';
 import '../../../../models/geofence.dart';
 import '../../../../models/schedule.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:intl/intl.dart';
 
 class AddScheduleDirectModal extends StatefulWidget { // 수정 모드일 때 기존 일정 데이터
 
@@ -72,17 +73,15 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
 
   final ApiService _apiService = ApiService();
 
-  // 일정 유형 목록
+  // 일정 유형 목록 (7 types — 원칙 문서 기준)
   final List<Map<String, dynamic>> _scheduleTypes = [
-    {'id': 'sightseeing', 'label': '관광', 'icon': FontAwesomeIcons.camera},
+    {'id': 'move', 'label': '이동', 'icon': FontAwesomeIcons.plane},
+    {'id': 'stay', 'label': '숙박', 'icon': FontAwesomeIcons.hotel},
     {'id': 'meal', 'label': '식사', 'icon': FontAwesomeIcons.utensils},
-    {'id': 'accommodation', 'label': '숙소', 'icon': FontAwesomeIcons.house},
-    {'id': 'shopping', 'label': '쇼핑', 'icon': FontAwesomeIcons.cartShopping},
-    {'id': 'activity', 'label': '액티비티', 'icon': FontAwesomeIcons.personRunning},
-    {'id': 'transport', 'label': '이동', 'icon': FontAwesomeIcons.bus},
-    {'id': 'gathering', 'label': '집합', 'icon': FontAwesomeIcons.fontAwesome},
-    {'id': 'free', 'label': '자유', 'icon': FontAwesomeIcons.route},
-    {'id': 'other', 'label': '기타', 'icon': FontAwesomeIcons.earthAmericas},
+    {'id': 'sightseeing', 'label': '관광', 'icon': FontAwesomeIcons.locationDot},
+    {'id': 'shopping', 'label': '쇼핑', 'icon': FontAwesomeIcons.bagShopping},
+    {'id': 'meeting', 'label': '모임', 'icon': FontAwesomeIcons.userGroup},
+    {'id': 'other', 'label': '기타', 'icon': FontAwesomeIcons.thumbtack},
   ];
 
   @override
@@ -1866,6 +1865,7 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
           'schedule_type': _selectedScheduleType,
           'start_time': startTimeUTC.toIso8601String(),
           'end_time': endTimeUTC.toIso8601String(),
+          'schedule_date': DateFormat('yyyy-MM-dd').format(_selectedStartDateTime),
           'location_name': _placeNameController.text.trim().isEmpty
               ? null
               : _placeNameController.text.trim(),
@@ -1922,6 +1922,7 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
           scheduleType: _selectedScheduleType,
           startTime: startTimeUTC.toIso8601String(),
           endTime: endTimeUTC.toIso8601String(),
+          scheduleDate: DateFormat('yyyy-MM-dd').format(_selectedStartDateTime),
           locationName: _placeNameController.text.trim().isEmpty
               ? null
               : _placeNameController.text.trim(),
@@ -1989,6 +1990,7 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
           scheduleType: _selectedScheduleType!,
           startTime: startTimeUTC.toIso8601String(),
           endTime: endTimeUTC.toIso8601String(),
+          scheduleDate: DateFormat('yyyy-MM-dd').format(_selectedStartDateTime),
           locationName: _placeNameController.text.trim().isEmpty
               ? null
               : _placeNameController.text.trim(),

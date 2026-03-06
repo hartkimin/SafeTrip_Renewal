@@ -630,6 +630,7 @@ class ApiService {
     bool? geofenceTriggerOnExit,
     num? geofenceRadiusMeters,
     String? timezone,
+    String? scheduleDate,
   }) async {
     try {
       final data = <String, dynamic>{'title': title};
@@ -664,6 +665,7 @@ class ApiService {
         data['geofence_radius_meters'] = geofenceRadiusMeters;
       }
       if (timezone != null) data['timezone'] = timezone;
+      if (scheduleDate != null) data['schedule_date'] = scheduleDate;
       final response = await _dio.post('/api/v1/schedules', data: data);
       if (response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>?;
@@ -694,6 +696,7 @@ class ApiService {
     bool? geofenceTriggerOnExit,
     num? geofenceRadiusMeters,
     String? timezone,
+    String? scheduleDate,
   }) async {
     try {
       final data = <String, dynamic>{};
@@ -720,6 +723,7 @@ class ApiService {
         data['geofence_radius_meters'] = geofenceRadiusMeters;
       }
       if (timezone != null) data['timezone'] = timezone;
+      if (scheduleDate != null) data['schedule_date'] = scheduleDate;
       final response = await _dio.put(
         '/api/v1/schedules/$scheduleId',
         data: data,
