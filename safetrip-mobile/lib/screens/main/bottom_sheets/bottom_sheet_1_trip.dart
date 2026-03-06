@@ -1,14 +1,21 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../features/schedule/providers/schedule_provider.dart';
 import '../../../features/trip/providers/trip_provider.dart';
+import '../../../services/api_service.dart';
 import '../../../widgets/schedule/date_timeline_bar.dart';
 import '../../../widgets/schedule/schedule_card.dart';
+import '../../../widgets/schedule/share_timeline_bar.dart';
 import '../../../models/schedule.dart';
 import 'modals/add_schedule_modal.dart';
+import 'modals/ai_schedule_modal.dart';
 
 /// 일정 탭 바텀시트 콘텐츠 (화면구성원칙 $4 탭 1)
 ///
@@ -108,8 +115,11 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
               onDateSelected: (date) =>
                   ref.read(scheduleProvider.notifier).selectDate(date),
             ),
-          // Region C: Share timeline placeholder (P2)
-          if (scheduleState.showShareTimeline) _buildShareTimelinePlaceholder(),
+          // Region C: Share timeline (privacy_first only)
+          if (scheduleState.showShareTimeline)
+            ShareTimelineBar(
+              segments: scheduleState.shareTimelineSegments,
+            ),
           // Region D: Schedule card list
           Expanded(child: _buildScheduleCardList(scheduleState)),
           // Region E: Add schedule button (captain/crew_chief only)
@@ -130,18 +140,51 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(AppSpacing.radius12),
-        ),
-        child: Row(
-          children: [
-            _buildTabItem(0, '일정', Icons.calendar_today),
-            _buildTabItem(1, '장소', Icons.location_on),
-          ],
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radius12),
+              ),
+              child: Row(
+                children: [
+                  _buildTabItem(0, '일정', Icons.calendar_today),
+                  _buildTabItem(1, '장소', Icons.location_on),
+                ],
+              ),
+            ),
+          ),
+          // 더보기 메뉴 (AI 추천, 내보내기)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, size: 20, color: AppColors.textTertiary),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: AppSpacing.minTouchTarget,
+              minHeight: AppSpacing.minTouchTarget,
+            ),
+            onSelected: (value) {
+              switch (value) {
+                case 'ai':
+                  _showAIModal();
+                  break;
+                case 'ics':
+                  _exportICS();
+                  break;
+                case 'text':
+                  _exportText();
+                  break;
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'ai', child: Text('AI 일정 추천')),
+              PopupMenuItem(value: 'ics', child: Text('iCal 내보내기')),
+              PopupMenuItem(value: 'text', child: Text('텍스트 내보내기')),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -218,32 +261,6 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────
-  // Region C: Share Timeline Placeholder (P2)
-  // ──────────────────────────────────────────────
-
-  Widget _buildShareTimelinePlaceholder() {
-    return Container(
-      height: 32,
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(AppSpacing.radius8),
-      ),
-      child: Center(
-        child: Text(
-          '공유 타임라인 (Phase 2)',
-          style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
       ),
     );
   }
@@ -443,6 +460,152 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
     if (result == true) {
       ref.read(scheduleProvider.notifier).fetchSchedules();
       ref.read(scheduleProvider.notifier).fetchScheduleDates();
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // AI 추천 & 내보내기
+  // ──────────────────────────────────────────────
+
+  /// AI 일정 추천 모달을 표시한다.
+  void _showAIModal() async {
+    final scheduleState = ref.read(scheduleProvider);
+    final tripId = scheduleState.tripId;
+    if (tripId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('여행이 선택되지 않았습니다'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AiScheduleModal(tripId: tripId),
+    );
+    if (result == true) {
+      ref.read(scheduleProvider.notifier).fetchSchedules();
+      ref.read(scheduleProvider.notifier).fetchScheduleDates();
+    }
+  }
+
+  /// iCal(.ics) 형식으로 일정을 내보낸다.
+  Future<void> _exportICS() async {
+    final scheduleState = ref.read(scheduleProvider);
+    final tripId = scheduleState.tripId;
+    if (tripId == null) return;
+
+    try {
+      final apiService = ApiService();
+      final result = await apiService.dio.get(
+        '/api/v1/trips/$tripId/schedules/export/ics',
+      );
+
+      if (result.data != null) {
+        // ICS 파일 내용을 임시 파일로 저장 후 공유
+        final icsContent = result.data is String
+            ? result.data as String
+            : (result.data['data'] ?? '').toString();
+
+        if (icsContent.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('내보낼 일정이 없습니다'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/safetrip_schedule.ics');
+        await file.writeAsString(icsContent);
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: 'SafeTrip 일정',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('iCal 내보내기에 실패했습니다'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 텍스트 형식으로 일정을 내보낸다.
+  Future<void> _exportText() async {
+    final scheduleState = ref.read(scheduleProvider);
+    final tripId = scheduleState.tripId;
+    if (tripId == null) return;
+
+    try {
+      final apiService = ApiService();
+      final result = await apiService.dio.get(
+        '/api/v1/trips/$tripId/schedules/export/pdf',
+      );
+
+      if (result.data != null) {
+        final textContent = result.data is String
+            ? result.data as String
+            : (result.data['data'] ?? '').toString();
+
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.description_outlined,
+                    size: 20, color: AppColors.primaryTeal),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  '일정 텍스트',
+                  style: AppTypography.titleMedium,
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  textContent.isEmpty ? '내보낼 일정이 없습니다' : textContent,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('닫기'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('텍스트 내보내기에 실패했습니다'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
