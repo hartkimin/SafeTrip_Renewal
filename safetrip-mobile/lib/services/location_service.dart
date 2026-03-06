@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geocoding/geocoding.dart';
 import 'api_service.dart';
+import 'battery_gps_manager.dart';
 import 'log_service.dart';
 import 'firebase_location_service.dart';
 import 'movement_detector.dart';
@@ -27,6 +28,12 @@ class LocationService {
   StreamController<void>? _heartbeatController;
   Stream<void>? get heartbeatStream => _heartbeatController?.stream;
 
+  // 배터리 레벨 스트림 (오프라인 원칙 §7.3 -- UI 배너 표시용)
+  final StreamController<int> _batteryLevelController =
+      StreamController<int>.broadcast();
+  Stream<int> get batteryLevelStream => _batteryLevelController.stream;
+  int? _lastBroadcastBatteryLevel;
+
   bool _isInitialized = false;
   bool _isTracking = false;
 
@@ -42,6 +49,9 @@ class LocationService {
   bg.Location? _lastLocation;
   final ApiService _apiService = ApiService();
   final DeviceStatusService _deviceStatusService = DeviceStatusService();
+
+  // 배터리 인식 GPS 주기 캐시 (변경 시에만 setConfig 호출, §7)
+  int? _lastGpsIntervalSeconds;
 
   // changePace 호출 중복 이벤트 방지 플래그 (static: 헤드리스/포어그라운드 인스턴스 간 공유)
   static bool _isChangePaceInProgress = false;
@@ -377,6 +387,9 @@ class LocationService {
         await _collectEvents(location);
       }
 
+      // 배터리 인식 GPS 주기 동적 조정 (§7)
+      await _updateGpsInterval(location);
+
       // 이전 위치 저장
       _lastLocation = location;
     } finally {
@@ -397,6 +410,12 @@ class LocationService {
       final batteryLevel = _getBatteryLevel(location);
       if (batteryLevel != null) {
         await _deviceStatusService.checkBatteryWarning(batteryLevel);
+
+        // §7.3: UI 배너 표시를 위해 배터리 레벨 브로드캐스트
+        if (batteryLevel != _lastBroadcastBatteryLevel) {
+          _lastBroadcastBatteryLevel = batteryLevel;
+          _batteryLevelController.add(batteryLevel);
+        }
       }
 
       // 이동 상태 이벤트 체크 (세션이 있을 때만)
@@ -1794,6 +1813,58 @@ class LocationService {
     return null;
   }
 
+  // ============================================================================
+  // 배터리 인식 GPS 주기 동적 조정 (DOC-T2-OFL-016 §7)
+  // ============================================================================
+  /// 현재 상태(프라이버시 등급, 네트워크, 배터리, SOS)에 따라 GPS 수집 주기를 동적으로 변경.
+  /// 이전 주기와 동일하면 setConfig 호출을 생략하여 성능 오버헤드를 최소화한다.
+  Future<void> _updateGpsInterval(bg.Location location) async {
+    try {
+      // 1. 프라이버시 등급 (SharedPreferences 캐시, 기본 'standard')
+      final prefs = await SharedPreferences.getInstance();
+      final privacyLevel = prefs.getString('privacy_level') ?? 'standard';
+
+      // 2. 오프라인 여부
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final isOffline = connectivityResult == ConnectivityResult.none;
+
+      // 3. 배터리 잔량 (0-100)
+      final batteryLevel = _getBatteryLevel(location) ?? 50;
+
+      // 4. SOS 활성 상태 (SharedPreferences 캐시, 기본 false)
+      final isSosActive = prefs.getBool('sos_active') ?? false;
+
+      // 주기 계산
+      final newIntervalSeconds = BatteryGpsManager.calculateInterval(
+        privacyLevel: privacyLevel,
+        isOffline: isOffline,
+        batteryLevel: batteryLevel,
+        isSosActive: isSosActive,
+      );
+
+      // 동일하면 스킵
+      if (newIntervalSeconds == _lastGpsIntervalSeconds) return;
+
+      final previousInterval = _lastGpsIntervalSeconds;
+      _lastGpsIntervalSeconds = newIntervalSeconds;
+
+      // BackgroundGeolocation 설정 업데이트 (밀리초 변환)
+      await bg.BackgroundGeolocation.setConfig(
+        bg.Config(
+          locationUpdateInterval: newIntervalSeconds * 1000,
+          fastestLocationUpdateInterval: newIntervalSeconds * 1000,
+        ),
+      );
+
+      debugPrint(
+        '[LocationService] GPS 주기 변경: ${previousInterval ?? 'initial'}s -> ${newIntervalSeconds}s '
+        '(privacy=$privacyLevel, offline=$isOffline, battery=$batteryLevel%, sos=$isSosActive)',
+      );
+    } catch (e) {
+      debugPrint('[LocationService] GPS 주기 업데이트 실패: $e');
+    }
+  }
+
   // 위치 재확인 (최대 3번 시도)
 
   // 위치 공유 상태 확인
@@ -1883,6 +1954,7 @@ class LocationService {
     await stopTracking();
     await _heartbeatController?.close();
     _heartbeatController = null;
+    await _batteryLevelController.close();
     _isInitialized = false;
 
     // updated_at 타이머 정리 (이중 방어)
