@@ -26,6 +26,12 @@ export {
 export { Schedule } from './schedule.entity';
 export { TravelSchedule } from './travel-schedule.entity';
 export { ScheduleHistory } from './schedule-history.entity';
+export { ScheduleComment } from './schedule-comment.entity';
+export { ScheduleReaction } from './schedule-reaction.entity';
+export { ScheduleVote } from './schedule-vote.entity';
+export { ScheduleVoteOption } from './schedule-vote-option.entity';
+export { ScheduleVoteResponse } from './schedule-vote-response.entity';
+export { ScheduleTemplate } from './schedule-template.entity';
 export { Geofence, GeofenceEvent, GeofencePenalty } from './geofence.entity';
 
 // Location Domain (E)

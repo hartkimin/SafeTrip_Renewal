@@ -15,6 +15,8 @@ import { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SchedulesService } from './schedules.service';
 import { AiSuggestService } from './ai-suggest.service';
+import { ScheduleSocialService } from './schedule-social.service';
+import { WeatherService } from './weather.service';
 
 @ApiTags('Schedules')
 @ApiBearerAuth('firebase-auth')
@@ -23,6 +25,8 @@ export class SchedulesController {
     constructor(
         private readonly schedulesService: SchedulesService,
         private readonly aiSuggestService: AiSuggestService,
+        private readonly socialService: ScheduleSocialService,
+        private readonly weatherService: WeatherService,
     ) {}
 
     @Get()
@@ -211,5 +215,84 @@ export class SchedulesController {
             data: { schedule_id: scheduleId },
             message: 'Schedule deleted successfully',
         };
+    }
+
+    // ── Comments ──────────────────────────────────────────────
+
+    @Get(':scheduleId/comments')
+    @ApiOperation({ summary: '일정 댓글 목록 조회' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiParam({ name: 'scheduleId', type: 'string' })
+    async getComments(@Param('scheduleId') scheduleId: string) {
+        const comments = await this.socialService.getComments(scheduleId);
+        return { success: true, data: { comments, total: comments.length } };
+    }
+
+    @Post(':scheduleId/comments')
+    @ApiOperation({ summary: '일정 댓글 작성' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiParam({ name: 'scheduleId', type: 'string' })
+    async addComment(
+        @Param('scheduleId') scheduleId: string,
+        @CurrentUser() userId: string,
+        @Body() body: { content: string },
+    ) {
+        if (!body.content) {
+            throw new BadRequestException('content is required');
+        }
+        const comment = await this.socialService.addComment(scheduleId, userId, body.content);
+        return { success: true, data: comment, message: 'Comment created successfully' };
+    }
+
+    @Delete(':scheduleId/comments/:commentId')
+    @ApiOperation({ summary: '일정 댓글 삭제 (soft delete, 작성자만 가능)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiParam({ name: 'scheduleId', type: 'string' })
+    @ApiParam({ name: 'commentId', type: 'string' })
+    async deleteComment(
+        @Param('commentId') commentId: string,
+        @CurrentUser() userId: string,
+    ) {
+        await this.socialService.deleteComment(commentId, userId);
+        return { success: true, data: { comment_id: commentId }, message: 'Comment deleted successfully' };
+    }
+
+    // ── Reactions ─────────────────────────────────────────────
+
+    @Get(':scheduleId/reactions')
+    @ApiOperation({ summary: '일정 리액션 조회 (이모지별 그룹)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiParam({ name: 'scheduleId', type: 'string' })
+    async getReactions(@Param('scheduleId') scheduleId: string) {
+        const reactions = await this.socialService.getReactions(scheduleId);
+        return { success: true, data: { reactions } };
+    }
+
+    @Post(':scheduleId/reactions')
+    @ApiOperation({ summary: '일정 리액션 토글 (추가/제거)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiParam({ name: 'scheduleId', type: 'string' })
+    async toggleReaction(
+        @Param('scheduleId') scheduleId: string,
+        @CurrentUser() userId: string,
+        @Body() body: { emoji: string },
+    ) {
+        if (!body.emoji) {
+            throw new BadRequestException('emoji is required');
+        }
+        const result = await this.socialService.toggleReaction(scheduleId, userId, body.emoji);
+        return { success: true, data: result };
+    }
+
+    // ── Weather (stub) ────────────────────────────────────────
+
+    @Get(':scheduleId/weather')
+    @ApiOperation({ summary: '일정 위치 날씨 조회 (stub)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    @ApiParam({ name: 'scheduleId', type: 'string' })
+    async getWeather(@Param('scheduleId') scheduleId: string) {
+        // Lookup schedule's lat/lng, then call weather service
+        const weather = await this.weatherService.getWeatherForSchedule(scheduleId);
+        return { success: true, data: weather };
     }
 }
