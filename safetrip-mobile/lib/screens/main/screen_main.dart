@@ -24,10 +24,17 @@ import '../../widgets/components/offline_banner.dart';
 import '../../widgets/components/privacy_banner.dart';
 import '../../widgets/components/sos_button.dart';
 import '../../widgets/components/sos_overlay.dart';
+import '../../features/main/providers/map_layer_provider.dart';
+import '../../managers/map_camera_transition_manager.dart';
+import '../../managers/schedule_marker_manager.dart';
+import '../../managers/event_marker_manager.dart';
+import '../../managers/safety_facility_manager.dart';
+import '../../widgets/map/member_mini_card.dart';
 import 'bottom_sheets/bottom_sheet_1_trip.dart';
 import 'bottom_sheets/bottom_sheet_2_member.dart';
 import 'bottom_sheets/bottom_sheet_3_chat.dart';
 import 'bottom_sheets/bottom_sheet_4_guide.dart';
+import 'bottom_sheets/bottom_sheet_layer_settings.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
 import 'navigation/bottom_navigation_bar.dart';
 import 'widgets/top_trip_info_card.dart';
@@ -54,6 +61,20 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   BottomTab _currentTab = BottomTab.trip;
   final ValueNotifier<List<Marker>> _userMarkersNotifier = ValueNotifier([]);
+
+  late final MapCameraTransitionManager _cameraTransitionManager;
+  late final ScheduleMarkerManager _scheduleMarkerManager;
+  late final EventMarkerManager _eventMarkerManager;
+  late final SafetyFacilityManager _safetyFacilityManager;
+
+  final ValueNotifier<List<Marker>> _scheduleMarkersNotifier = ValueNotifier([]);
+  final ValueNotifier<List<Polyline>> _scheduleLinesNotifier = ValueNotifier([]);
+  final ValueNotifier<List<Marker>> _eventMarkersNotifier = ValueNotifier([]);
+  final ValueNotifier<List<Marker>> _safetyMarkersNotifier = ValueNotifier([]);
+
+  /// 멤버 미니카드 표시 상태 (§5.4)
+  String? _selectedMarkerUserId;
+  Map<String, dynamic>? _selectedMarkerUserData;
 
   bool _isInitialLoading = true;
 
@@ -118,8 +139,41 @@ class _MainScreenState extends ConsumerState<MainScreen>
       calculateDistance: (p1, p2) =>
           const Distance().as(LengthUnit.Meter, p1, p2),
       onMarkerTap: (userId) {
-        debugPrint('[MainScreen] Marker tapped: $userId');
+        final users = _firebaseLocationManager.users;
+        final user = users.firstWhere(
+          (u) => (u['user_id'] as String?) == userId,
+          orElse: () => <String, dynamic>{},
+        );
+        if (user.isNotEmpty) {
+          setState(() {
+            _selectedMarkerUserId = userId;
+            _selectedMarkerUserData = user;
+          });
+        }
       },
+    );
+
+    _cameraTransitionManager = MapCameraTransitionManager(
+      getMapController: () => _mapController,
+    );
+
+    _scheduleMarkerManager = ScheduleMarkerManager(
+      onMarkersUpdated: (markers) => _scheduleMarkersNotifier.value = markers,
+      onPolylinesUpdated: (lines) => _scheduleLinesNotifier.value = lines,
+      onScheduleMarkerTap: (id) {
+        debugPrint('[MainScreen] Schedule marker tapped: $id');
+      },
+    );
+
+    _eventMarkerManager = EventMarkerManager(
+      onMarkersUpdated: (markers) => _eventMarkersNotifier.value = markers,
+      onEventMarkerTap: (id) {
+        debugPrint('[MainScreen] Event marker tapped: $id');
+      },
+    );
+
+    _safetyFacilityManager = SafetyFacilityManager(
+      onMarkersUpdated: (markers) => _safetyMarkersNotifier.value = markers,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -219,6 +273,14 @@ class _MainScreenState extends ConsumerState<MainScreen>
     WidgetsBinding.instance.removeObserver(this);
     _firebaseLocationManager.dispose();
     _userMarkersNotifier.dispose();
+    _cameraTransitionManager.dispose();
+    _scheduleMarkerManager.dispose();
+    _eventMarkerManager.dispose();
+    _safetyFacilityManager.dispose();
+    _scheduleMarkersNotifier.dispose();
+    _scheduleLinesNotifier.dispose();
+    _eventMarkersNotifier.dispose();
+    _safetyMarkersNotifier.dispose();
     _sheetController.dispose();
     super.dispose();
   }
@@ -307,8 +369,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
   @override
   Widget build(BuildContext context) {
     final tripState = ref.watch(tripProvider);
-    final isOffline = ref.watch(isOfflineProvider);
+    final networkStatus = ref.watch(networkStateProvider);
     final mainState = ref.watch(mainScreenProvider);
+    final layerState = ref.watch(mapLayerProvider);
 
     final tripStatus = tripState.currentTripStatus;
     final isCompleted = tripStatus == 'completed';
@@ -345,20 +408,54 @@ class _MainScreenState extends ConsumerState<MainScreen>
             // ── Layer 1: Base Map ──────────────────────────────
             ValueListenableBuilder<List<Marker>>(
               valueListenable: _userMarkersNotifier,
-              builder: (context, markers, _) {
+              builder: (context, userMarkers, _) {
                 return FlutterMap(
                   mapController: _mapController,
-                  options: const MapOptions(
-                    initialCenter: LatLng(37.5665, 126.9780),
+                  options: MapOptions(
+                    initialCenter: const LatLng(37.5665, 126.9780),
                     initialZoom: 13.0,
+                    onTap: (_, __) {
+                      // §5.4: 빈 영역 탭 → 미니카드 닫기
+                      setState(() {
+                        _selectedMarkerUserId = null;
+                        _selectedMarkerUserData = null;
+                      });
+                    },
                   ),
                   children: [
+                    // Layer 0: 지도 타일
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.urock.safe.trip',
                     ),
-                    MarkerLayer(markers: markers),
+                    // Layer 1: 안전시설 마커
+                    if (layerState.layer1SafetyFacilities)
+                      ValueListenableBuilder<List<Marker>>(
+                        valueListenable: _safetyMarkersNotifier,
+                        builder: (_, markers, __) => MarkerLayer(markers: markers),
+                      ),
+                    // Layer 2: 멤버 위치 마커
+                    if (layerState.layer2MemberMarkers)
+                      MarkerLayer(markers: userMarkers),
+                    // Layer 3: 일정 폴리라인
+                    if (layerState.layer3SchedulePlaces)
+                      ValueListenableBuilder<List<Polyline>>(
+                        valueListenable: _scheduleLinesNotifier,
+                        builder: (_, lines, __) => PolylineLayer(polylines: lines),
+                      ),
+                    // Layer 3: 일정 장소 마커
+                    if (layerState.layer3SchedulePlaces)
+                      ValueListenableBuilder<List<Marker>>(
+                        valueListenable: _scheduleMarkersNotifier,
+                        builder: (_, markers, __) => MarkerLayer(markers: markers),
+                      ),
+                    // Layer 4: 이벤트/알림 마커
+                    if (layerState.layer4EventAlerts)
+                      ValueListenableBuilder<List<Marker>>(
+                        valueListenable: _eventMarkersNotifier,
+                        builder: (_, markers, __) => MarkerLayer(markers: markers),
+                      ),
                   ],
                 );
               },
@@ -376,6 +473,18 @@ class _MainScreenState extends ConsumerState<MainScreen>
               left: AppSpacing.md,
               right: AppSpacing.md,
               child: const TopTripInfoCard(),
+            ),
+
+            // ── Layer Settings Button (우측 상단) ─────────
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 70,
+              right: AppSpacing.md,
+              child: FloatingActionButton.small(
+                heroTag: 'layer_settings',
+                onPressed: () => showLayerSettingsSheet(context),
+                backgroundColor: Colors.white,
+                child: const Icon(Icons.layers, color: AppColors.textSecondary),
+              ),
             ),
 
             // ── Layer 3: Snapping Bottom Sheet ────────────────
@@ -451,20 +560,37 @@ class _MainScreenState extends ConsumerState<MainScreen>
                 ),
               ),
 
-            // ── Layer 7: Offline Banner ───────────────────────
-            if (isOffline)
+            // ── Member Mini Card (§5.4) ───────────────────
+            if (_selectedMarkerUserId != null && _selectedMarkerUserData != null)
+              Positioned(
+                bottom: AppSpacing.navigationBarHeight + 80,
+                left: AppSpacing.md,
+                right: AppSpacing.md + 72,
+                child: MemberMiniCard(
+                  userName: _selectedMarkerUserData!['user_name'] as String? ?? '',
+                  role: _selectedMarkerUserData!['role'] as String? ?? 'crew',
+                  batteryLevel: _selectedMarkerUserData!['battery'] as int?,
+                  onClose: () => setState(() {
+                    _selectedMarkerUserId = null;
+                    _selectedMarkerUserData = null;
+                  }),
+                ),
+              ),
+
+            // ── Layer 7: Offline / Degraded Banner (§8.1) ─────
+            if (!networkStatus.isOnline)
               Positioned(
                 top: MediaQuery.of(context).padding.top,
                 left: 0,
                 right: 0,
-                child: const OfflineBanner(),
+                child: OfflineBanner(status: networkStatus),
               ),
 
             // ── Privacy Banner (active 상태에서만) ────────────
             if (isActive)
               Positioned(
                 top: MediaQuery.of(context).padding.top +
-                    (isOffline ? 32 : 0),
+                    (!networkStatus.isOnline ? 32 : 0),
                 left: 0,
                 right: 0,
                 child: PrivacyBanner(privacyLevel: privacyLevel),
@@ -557,7 +683,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.luggage_outlined,
               size: 48,
               color: AppColors.textTertiary,
@@ -598,8 +724,14 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // §10.1: SOS 오버레이에 표시할 발신자 이름 저장
     setState(() => _sosUserName = userName);
 
-    // §10.1: 지도 자동 센터링 (SOS 발신자 현재 위치)
-    _centerMapOnCurrentLocation();
+    // §4 P0: 카메라 자동 전환 매니저로 SOS 발동 처리
+    _locationService.getCurrentPosition().then((location) {
+      if (location != null && mounted) {
+        _cameraTransitionManager.onSosActivated(
+          LatLng(location.coords.latitude, location.coords.longitude),
+        );
+      }
+    });
 
     if (_sosService != null && userId != null) {
       final success = await _sosService!.sendSOS(
@@ -625,25 +757,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
     // §10.3: 잠금 해제 + peek 복원
     notifier.deactivateSos();
+    _cameraTransitionManager.onSosDeactivated();
     _animateSheetTo(BottomSheetLevel.peek,
         duration: const Duration(milliseconds: 250));
 
     setState(() => _sosUserName = null);
-  }
-
-  /// §10.1: 지도를 SOS 발신자 현재 위치로 센터링
-  Future<void> _centerMapOnCurrentLocation() async {
-    try {
-      final location = await _locationService.getCurrentPosition();
-      if (location != null && mounted) {
-        _mapController.move(
-          LatLng(location.coords.latitude, location.coords.longitude),
-          16.0,
-        );
-      }
-    } catch (e) {
-      debugPrint('[MainScreen] SOS 지도 센터링 실패: $e');
-    }
   }
 
   Future<void> _showExitDialog() async {
