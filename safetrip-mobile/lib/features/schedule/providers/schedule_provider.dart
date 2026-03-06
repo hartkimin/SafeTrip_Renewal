@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/schedule.dart';
 import '../../../services/api_service.dart';
+import '../../../widgets/schedule/share_timeline_bar.dart';
 
 class ScheduleState {
   const ScheduleState({
@@ -15,6 +16,7 @@ class ScheduleState {
     this.userRole = 'crew',
     this.tripStatus = 'active',
     this.tripId,
+    this.shareTimelineSegments = const [],
   });
 
   final bool isLoading;
@@ -28,6 +30,7 @@ class ScheduleState {
   final String userRole;
   final String tripStatus;
   final String? tripId;
+  final List<TimelineSegment> shareTimelineSegments;
 
   bool get canEdit =>
       (userRole == 'captain' || userRole == 'crew_chief') &&
@@ -59,6 +62,7 @@ class ScheduleState {
     String? userRole,
     String? tripStatus,
     String? tripId,
+    List<TimelineSegment>? shareTimelineSegments,
   }) {
     return ScheduleState(
       isLoading: isLoading ?? this.isLoading,
@@ -72,6 +76,8 @@ class ScheduleState {
       userRole: userRole ?? this.userRole,
       tripStatus: tripStatus ?? this.tripStatus,
       tripId: tripId ?? this.tripId,
+      shareTimelineSegments:
+          shareTimelineSegments ?? this.shareTimelineSegments,
     );
   }
 }
@@ -107,12 +113,41 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
     );
     fetchScheduleDates();
     fetchSchedules();
+    fetchShareTimeline();
   }
 
   void selectDate(DateTime date) {
     state = state.copyWith(
         selectedDate: DateTime(date.year, date.month, date.day));
     fetchSchedules();
+    fetchShareTimeline();
+  }
+
+  /// privacy_first 모드일 때 공유 타임라인 세그먼트를 서버에서 가져온다.
+  Future<void> fetchShareTimeline() async {
+    if (state.tripId == null || state.selectedDate == null) return;
+    if (state.privacyLevel != 'privacy_first') return;
+    try {
+      final d = state.selectedDate!;
+      final dateStr =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      final result = await _apiService.dio.get(
+        '/api/v1/trips/${state.tripId}/schedules/share-timeline',
+        queryParameters: {'date': dateStr},
+      );
+      if (result.data?['success'] == true) {
+        final data = result.data['data'];
+        final segmentsList =
+            data is Map ? (data['segments'] ?? []) : [];
+        final segments = (segmentsList as List)
+            .map((e) =>
+                TimelineSegment.fromJson(e as Map<String, dynamic>))
+            .toList();
+        state = state.copyWith(shareTimelineSegments: segments);
+      }
+    } catch (_) {
+      // 타임라인 로드 실패 시 빈 목록 유지
+    }
   }
 
   Future<void> fetchScheduleDates() async {

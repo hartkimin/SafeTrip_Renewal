@@ -469,4 +469,151 @@ export class SchedulesService {
 
         return qb.getMany();
     }
+
+    /**
+     * Export all schedules for a trip as an .ics (iCalendar) string.
+     */
+    async exportICS(tripId: string): Promise<string> {
+        const trip = await this.tripRepo.findOne({ where: { tripId } });
+        if (!trip) {
+            throw new NotFoundException('Trip not found');
+        }
+
+        const schedules = await this.scheduleRepo.find({
+            where: { tripId },
+            order: { scheduleDate: 'ASC', startTime: 'ASC' },
+        });
+
+        const lines: string[] = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//SafeTrip//Schedule//EN',
+            `X-WR-CALNAME:${this.escapeICS(trip.tripName || 'SafeTrip')}`,
+        ];
+
+        for (const s of schedules) {
+            if (s.deletedAt) continue;
+
+            lines.push('BEGIN:VEVENT');
+            lines.push(`UID:${s.travelScheduleId}@safetrip`);
+
+            if (s.allDay && s.scheduleDate) {
+                // All-day event: VALUE=DATE format (YYYYMMDD)
+                const dateStr = this.formatICSDate(new Date(s.scheduleDate));
+                lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
+                lines.push(`DTEND;VALUE=DATE:${dateStr}`);
+            } else if (s.startTime && s.endTime) {
+                lines.push(`DTSTART:${this.formatICSDateTime(new Date(s.startTime))}`);
+                lines.push(`DTEND:${this.formatICSDateTime(new Date(s.endTime))}`);
+            } else if (s.scheduleDate) {
+                const dateStr = this.formatICSDate(new Date(s.scheduleDate));
+                lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
+                lines.push(`DTEND;VALUE=DATE:${dateStr}`);
+            }
+
+            lines.push(`SUMMARY:${this.escapeICS(s.title || 'Untitled')}`);
+
+            if (s.description) {
+                lines.push(`DESCRIPTION:${this.escapeICS(s.description)}`);
+            }
+            if (s.locationName || s.location) {
+                lines.push(`LOCATION:${this.escapeICS(s.locationName || s.location || '')}`);
+            }
+
+            lines.push('END:VEVENT');
+        }
+
+        lines.push('END:VCALENDAR');
+        return lines.join('\r\n');
+    }
+
+    /**
+     * Export all schedules for a trip as structured text (PDF stub).
+     * Returns human-readable text representation of the itinerary.
+     */
+    async exportText(tripId: string): Promise<string> {
+        const trip = await this.tripRepo.findOne({ where: { tripId } });
+        if (!trip) {
+            throw new NotFoundException('Trip not found');
+        }
+
+        const schedules = await this.scheduleRepo.find({
+            where: { tripId },
+            order: { scheduleDate: 'ASC', startTime: 'ASC' },
+        });
+
+        const activeSchedules = schedules.filter((s) => !s.deletedAt);
+
+        const lines: string[] = [
+            `=== SafeTrip Itinerary ===`,
+            `Trip: ${trip.tripName || 'Untitled Trip'}`,
+            `Destination: ${trip.destinationCity || trip.countryName || trip.destination || 'N/A'}`,
+            `Period: ${trip.startDate} ~ ${trip.endDate}`,
+            `Total schedules: ${activeSchedules.length}`,
+            ``,
+        ];
+
+        // Group schedules by date
+        const byDate = new Map<string, TravelSchedule[]>();
+        for (const s of activeSchedules) {
+            const dateKey = s.scheduleDate
+                ? new Date(s.scheduleDate).toISOString().split('T')[0]
+                : 'No Date';
+            if (!byDate.has(dateKey)) {
+                byDate.set(dateKey, []);
+            }
+            byDate.get(dateKey)!.push(s);
+        }
+
+        for (const [date, items] of byDate) {
+            lines.push(`--- ${date} ---`);
+            for (const s of items) {
+                const timeRange = s.startTime && s.endTime
+                    ? `${this.formatTime(new Date(s.startTime))} - ${this.formatTime(new Date(s.endTime))}`
+                    : s.allDay
+                        ? 'All day'
+                        : 'Time TBD';
+
+                lines.push(`  [${timeRange}] ${s.title || 'Untitled'}`);
+                if (s.locationName || s.location) {
+                    lines.push(`    Location: ${s.locationName || s.location}`);
+                }
+                if (s.description) {
+                    lines.push(`    Note: ${s.description}`);
+                }
+            }
+            lines.push('');
+        }
+
+        lines.push(`=== End of Itinerary ===`);
+        return lines.join('\n');
+    }
+
+    // -- ICS helper methods --
+
+    private formatICSDateTime(d: Date): string {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return (
+            `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+            `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+        );
+    }
+
+    private formatICSDate(d: Date): string {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
+    }
+
+    private escapeICS(text: string): string {
+        return text
+            .replace(/\\/g, '\\\\')
+            .replace(/;/g, '\\;')
+            .replace(/,/g, '\\,')
+            .replace(/\n/g, '\\n');
+    }
+
+    private formatTime(d: Date): string {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
 }

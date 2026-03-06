@@ -7,9 +7,11 @@ import {
     Param,
     Body,
     Query,
+    Res,
     BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SchedulesService } from './schedules.service';
 import { AiSuggestService } from './ai-suggest.service';
@@ -93,6 +95,27 @@ export class SchedulesController {
         }
         const timeline = await this.schedulesService.getShareTimeline(tripId, date);
         return { success: true, data: timeline };
+    }
+
+    @Get('export/ics')
+    @ApiOperation({ summary: '일정 내보내기 (.ics)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    async exportIcs(
+        @Param('tripId') tripId: string,
+        @Res() res: Response,
+    ) {
+        const ics = await this.schedulesService.exportICS(tripId);
+        res.setHeader('Content-Type', 'text/calendar');
+        res.setHeader('Content-Disposition', 'attachment; filename="schedule.ics"');
+        res.send(ics);
+    }
+
+    @Get('export/pdf')
+    @ApiOperation({ summary: '일정 내보내기 (PDF stub - 텍스트 반환)' })
+    @ApiParam({ name: 'tripId', type: 'string' })
+    async exportPdf(@Param('tripId') tripId: string) {
+        const text = await this.schedulesService.exportText(tripId);
+        return { success: true, data: { content: text, format: 'text' } };
     }
 
     @Post()
