@@ -82,18 +82,20 @@ class _ScheduleCommentsState extends ConsumerState<ScheduleComments> {
         final comments = commentsList.map((c) {
           final map = c as Map<String, dynamic>;
           return _CommentData(
-            commentId: map['comment_id']?.toString() ??
+            commentId: map['id']?.toString() ??
+                map['comment_id']?.toString() ??
                 map['schedule_comment_id']?.toString() ??
                 '',
-            userId: map['user_id']?.toString() ?? '',
-            userName: map['user_name'] as String? ??
+            userId: map['userId']?.toString() ??
+                map['user_id']?.toString() ??
+                '',
+            userName: map['userName'] as String? ??
+                map['user_name'] as String? ??
+                map['displayName'] as String? ??
                 map['display_name'] as String? ??
                 '알 수 없는 사용자',
             content: map['content'] as String? ?? '',
-            createdAt: map['created_at'] != null
-                ? DateTime.tryParse(map['created_at'].toString()) ??
-                    DateTime.now()
-                : DateTime.now(),
+            createdAt: _parseDateTime(map['createdAt'] ?? map['created_at']),
           );
         }).toList();
 
@@ -420,6 +422,12 @@ class _ScheduleCommentsState extends ConsumerState<ScheduleComments> {
         ],
       ),
     );
+  }
+
+  DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value.toString()) ?? DateTime.now();
   }
 
   /// 댓글 시간을 상대 형식으로 포맷한다.

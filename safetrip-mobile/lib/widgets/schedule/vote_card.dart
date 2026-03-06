@@ -21,13 +21,16 @@ class VoteOption {
 
   factory VoteOption.fromJson(Map<String, dynamic> json) {
     return VoteOption(
-      optionId: json['option_id']?.toString() ??
+      optionId: json['id']?.toString() ??
+          json['option_id']?.toString() ??
           json['vote_option_id']?.toString() ??
           '',
       label: json['label'] as String? ??
           json['option_text'] as String? ??
           '',
-      voteCount: (json['vote_count'] as num?)?.toInt() ?? 0,
+      voteCount: (json['responseCount'] as num?)?.toInt() ??
+          (json['vote_count'] as num?)?.toInt() ??
+          0,
     );
   }
 }
@@ -165,7 +168,7 @@ class _VoteCardState extends ConsumerState<VoteCard> {
     try {
       final result = await _apiService.dio.post(
         '/api/v1/trips/${widget.tripId}/votes/${widget.voteId}/respond',
-        data: {'option_id': optionId},
+        data: {'optionId': optionId},
       );
       if (result.data?['success'] == true && mounted) {
         setState(() {

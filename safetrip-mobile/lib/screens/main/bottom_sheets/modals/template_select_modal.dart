@@ -24,12 +24,14 @@ class _TemplateItem {
     required this.title,
     required this.description,
     required this.itemCount,
+    this.items,
   });
 
   final String templateId;
   final String title;
   final String description;
   final int itemCount;
+  final List<dynamic>? items;
 }
 
 /// 템플릿 상세 아이템 데이터
@@ -113,7 +115,7 @@ class _TemplateSelectModalState extends State<TemplateSelectModal> {
 
     try {
       final result = await _apiService.dio.get(
-        '/api/v1/templates',
+        '/api/v1/schedule-templates',
         queryParameters: {'category': categoryId},
       );
       if (result.data?['success'] == true && mounted) {
@@ -125,11 +127,19 @@ class _TemplateSelectModalState extends State<TemplateSelectModal> {
         setState(() {
           _templates = list.map((t) {
             final map = t as Map<String, dynamic>;
+            final itemsList = map['items'] is List ? map['items'] as List : [];
             return _TemplateItem(
-              templateId: map['template_id']?.toString() ?? '',
-              title: map['title'] as String? ?? '',
-              description: map['description'] as String? ?? '',
-              itemCount: (map['item_count'] as num?)?.toInt() ?? 0,
+              templateId: map['id']?.toString() ??
+                  map['template_id']?.toString() ??
+                  '',
+              title: map['name'] as String? ??
+                  map['title'] as String? ??
+                  '',
+              description: map['description'] as String? ??
+                  map['category'] as String? ??
+                  '',
+              itemCount: itemsList.length,
+              items: itemsList,
             );
           }).toList();
           _isLoading = false;
@@ -146,56 +156,41 @@ class _TemplateSelectModalState extends State<TemplateSelectModal> {
     }
   }
 
-  Future<void> _fetchTemplateDetail(String templateId) async {
+  /// Parse template items from the already-fetched template data.
+  /// No separate API call needed — items are included in the list response.
+  void _loadTemplateDetails(List<dynamic> items) {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      _templateDetails = items.map((item) {
+        final map = item is Map<String, dynamic>
+            ? item
+            : <String, dynamic>{};
+        return _TemplateDetail(
+          title: map['title'] as String? ?? '',
+          scheduleType:
+              map['schedule_type'] as String? ?? 'other',
+          locationName: map['location_name'] as String?,
+          duration: map['duration'] as String?,
+        );
+      }).toList();
     });
-
-    try {
-      final result = await _apiService.dio.get(
-        '/api/v1/templates/$templateId',
-      );
-      if (result.data?['success'] == true && mounted) {
-        final data = result.data['data'];
-        final items = data is Map
-            ? (data['items'] ?? data['schedules'] ?? []) as List
-            : (data is List ? data : []);
-
-        setState(() {
-          _templateDetails = items.map((item) {
-            final map = item as Map<String, dynamic>;
-            return _TemplateDetail(
-              title: map['title'] as String? ?? '',
-              scheduleType:
-                  map['schedule_type'] as String? ?? 'other',
-              locationName: map['location_name'] as String?,
-              duration: map['duration'] as String?,
-            );
-          }).toList();
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _error =
-              '\uD15C\uD50C\uB9BF \uC0C1\uC138 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4'; // 템플릿 상세 정보를 불러올 수 없습니다
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   Future<void> _applyTemplate() async {
     if (_selectedTemplate == null || _isApplying) return;
+
+    // 시작 날짜 선택
+    final startDate = await _pickStartDate();
+    if (startDate == null) return;
 
     setState(() => _isApplying = true);
 
     try {
       final result = await _apiService.dio.post(
         '/api/v1/trips/${widget.tripId}/schedules/from-template',
-        data: {'template_id': _selectedTemplate!.templateId},
+        data: {
+          'templateId': _selectedTemplate!.templateId,
+          'startDate': startDate,
+        },
       );
       if (result.data?['success'] == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -236,7 +231,20 @@ class _TemplateSelectModalState extends State<TemplateSelectModal> {
       _selectedTemplate = template;
       _step = 2;
     });
-    _fetchTemplateDetail(template.templateId);
+    _loadTemplateDetails(template.items ?? []);
+  }
+
+  Future<String?> _pickStartDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: '\uD15C\uD50C\uB9BF \uC2DC\uC791 \uB0A0\uC9DC', // 템플릿 시작 날짜
+    );
+    if (picked == null) return null;
+    return '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
   }
 
   void _goBack() {

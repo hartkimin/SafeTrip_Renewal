@@ -38,15 +38,25 @@ export class ScheduleSocialService {
 
     /**
      * GET comments for a schedule with user info, ordered by created_at ASC.
-     * Excludes soft-deleted comments.
+     * Excludes soft-deleted comments. JOINs tb_user for display_name.
      */
-    async getComments(scheduleId: string): Promise<ScheduleComment[]> {
-        return this.commentRepo
+    async getComments(scheduleId: string): Promise<any[]> {
+        const rows = await this.commentRepo
             .createQueryBuilder('c')
+            .leftJoin('tb_user', 'u', 'u.user_id = c.user_id')
+            .select([
+                'c.id AS "id"',
+                'c.schedule_id AS "scheduleId"',
+                'c.user_id AS "userId"',
+                'u.display_name AS "userName"',
+                'c.content AS "content"',
+                'c.created_at AS "createdAt"',
+            ])
             .where('c.schedule_id = :scheduleId', { scheduleId })
             .andWhere('c.deleted_at IS NULL')
             .orderBy('c.created_at', 'ASC')
-            .getMany();
+            .getRawMany();
+        return rows;
     }
 
     /**

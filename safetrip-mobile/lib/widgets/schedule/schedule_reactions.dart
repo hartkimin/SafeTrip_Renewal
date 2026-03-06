@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -58,12 +59,19 @@ class _ScheduleReactionsState extends ConsumerState<ScheduleReactions> {
         final counts = <String, int>{};
         final mine = <String>{};
 
-        // 서버 응답 형식: { reactions: [ { emoji, count, is_mine } ] }
+        // 서버 응답 형식: { reactions: [ { emoji, count, users: [...] } ] }
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
         final reactionsList = reactionsData['reactions'] as List? ?? [];
         for (final r in reactionsList) {
           final emoji = r['emoji'] as String? ?? '';
           final count = (r['count'] as num?)?.toInt() ?? 0;
-          final isMine = r['is_mine'] as bool? ?? false;
+          // Check is_mine/isMine field or users array
+          bool isMine = r['is_mine'] as bool? ??
+              r['isMine'] as bool? ??
+              false;
+          if (!isMine && currentUserId != null && r['users'] is List) {
+            isMine = (r['users'] as List).contains(currentUserId);
+          }
           if (emoji.isNotEmpty) {
             counts[emoji] = count;
             if (isMine) mine.add(emoji);
