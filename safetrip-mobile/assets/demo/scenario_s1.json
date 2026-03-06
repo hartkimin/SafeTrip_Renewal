@@ -1,0 +1,142 @@
+{
+  "scenario_id": "s1",
+  "title": "학생 단체 여행",
+  "subtitle": "제주도 3일간 수학여행 · 안전최우선 모드",
+  "privacy_grade": "safety_first",
+  "duration_days": 3,
+  "destination": {
+    "name": "제주도",
+    "country_code": "KR",
+    "country_name": "대한민국",
+    "lat": 33.4996,
+    "lng": 126.5312,
+    "timezone": "Asia/Seoul"
+  },
+  "members": [
+    {"id": "m_captain", "name": "김선생", "role": "captain"},
+    {"id": "m_chief1", "name": "이반장", "role": "crew_chief"},
+    {"id": "m_chief2", "name": "박반장", "role": "crew_chief"},
+    {"id": "m_crew01", "name": "정민수", "role": "crew"},
+    {"id": "m_crew02", "name": "한서연", "role": "crew"},
+    {"id": "m_crew03", "name": "최지호", "role": "crew"},
+    {"id": "m_crew04", "name": "윤하은", "role": "crew"},
+    {"id": "m_crew05", "name": "장우진", "role": "crew"},
+    {"id": "m_crew06", "name": "송예린", "role": "crew"},
+    {"id": "m_crew07", "name": "임도현", "role": "crew"},
+    {"id": "m_crew08", "name": "오수빈", "role": "crew"},
+    {"id": "m_crew09", "name": "배진우", "role": "crew"},
+    {"id": "m_crew10", "name": "류하영", "role": "crew"},
+    {"id": "m_crew11", "name": "권성민", "role": "crew"},
+    {"id": "m_crew12", "name": "홍지아", "role": "crew"},
+    {"id": "m_crew13", "name": "나윤서", "role": "crew"},
+    {"id": "m_crew14", "name": "문재현", "role": "crew"},
+    {"id": "m_crew15", "name": "서가은", "role": "crew"},
+    {"id": "m_crew16", "name": "조민재", "role": "crew"},
+    {"id": "m_crew17", "name": "유서준", "role": "crew"},
+    {"id": "m_crew18", "name": "신예지", "role": "crew"},
+    {"id": "m_crew19", "name": "황도윤", "role": "crew"},
+    {"id": "m_crew20", "name": "안시우", "role": "crew"},
+    {"id": "g_guard01", "name": "정민수 어머니", "role": "guardian"},
+    {"id": "g_guard02", "name": "한서연 아버지", "role": "guardian"},
+    {"id": "g_guard03", "name": "최지호 어머니", "role": "guardian"},
+    {"id": "g_guard04", "name": "윤하은 아버지", "role": "guardian"},
+    {"id": "g_guard05", "name": "장우진 어머니", "role": "guardian"},
+    {"id": "g_guard06", "name": "송예린 아버지", "role": "guardian"},
+    {"id": "g_guard07", "name": "임도현 어머니", "role": "guardian"},
+    {"id": "g_guard08", "name": "오수빈 아버지", "role": "guardian"},
+    {"id": "g_guard09", "name": "배진우 어머니", "role": "guardian"},
+    {"id": "g_guard10", "name": "류하영 아버지", "role": "guardian"}
+  ],
+  "guardian_links": [
+    {"member_id": "m_crew01", "guardian_id": "g_guard01", "is_paid": false},
+    {"member_id": "m_crew02", "guardian_id": "g_guard02", "is_paid": false},
+    {"member_id": "m_crew03", "guardian_id": "g_guard03", "is_paid": true},
+    {"member_id": "m_crew04", "guardian_id": "g_guard04", "is_paid": true},
+    {"member_id": "m_crew05", "guardian_id": "g_guard05", "is_paid": true},
+    {"member_id": "m_crew06", "guardian_id": "g_guard06", "is_paid": true},
+    {"member_id": "m_crew07", "guardian_id": "g_guard07", "is_paid": true},
+    {"member_id": "m_crew08", "guardian_id": "g_guard08", "is_paid": true},
+    {"member_id": "m_crew09", "guardian_id": "g_guard09", "is_paid": true},
+    {"member_id": "m_crew10", "guardian_id": "g_guard10", "is_paid": true}
+  ],
+  "schedules": [
+    {
+      "day": 1,
+      "title": "제주 동쪽 탐방",
+      "items": [
+        {"time": "08:00", "title": "제주공항 도착", "lat": 33.5104, "lng": 126.4914},
+        {"time": "09:30", "title": "성산일출봉", "lat": 33.4621, "lng": 126.9407},
+        {"time": "12:00", "title": "점심 (해산물)", "lat": 33.4580, "lng": 126.9300},
+        {"time": "14:00", "title": "만장굴", "lat": 33.5283, "lng": 126.7717},
+        {"time": "16:30", "title": "숙소 체크인", "lat": 33.4996, "lng": 126.5312}
+      ]
+    },
+    {
+      "day": 2,
+      "title": "제주 서쪽 탐방",
+      "items": [
+        {"time": "09:00", "title": "한림공원", "lat": 33.3884, "lng": 126.2392},
+        {"time": "11:30", "title": "오설록 티뮤지엄", "lat": 33.3056, "lng": 126.2892},
+        {"time": "13:00", "title": "점심 (흑돼지)", "lat": 33.2500, "lng": 126.2500},
+        {"time": "15:00", "title": "중문관광단지", "lat": 33.2481, "lng": 126.4119},
+        {"time": "17:00", "title": "숙소 복귀", "lat": 33.4996, "lng": 126.5312}
+      ]
+    },
+    {
+      "day": 3,
+      "title": "시내 자유시간 & 귀환",
+      "items": [
+        {"time": "09:00", "title": "동문시장 탐방", "lat": 33.5125, "lng": 126.5264},
+        {"time": "11:00", "title": "용두암", "lat": 33.5168, "lng": 126.5109},
+        {"time": "12:30", "title": "점심", "lat": 33.5100, "lng": 126.5200},
+        {"time": "14:00", "title": "제주공항 출발", "lat": 33.5104, "lng": 126.4914}
+      ]
+    }
+  ],
+  "simulation_events": [
+    {"time_offset_minutes": 0, "type": "trip_start", "description": "여행이 시작되었습니다"},
+    {"time_offset_minutes": 30, "type": "geofence_in", "description": "성산일출봉 일정 구역에 도착했습니다", "member_id": "m_captain"},
+    {"time_offset_minutes": 60, "type": "all_arrived", "description": "전원 성산일출봉 도착 확인"},
+    {"time_offset_minutes": 120, "type": "geofence_out", "description": "정민수 학생이 일정 구역을 벗어났습니다", "member_id": "m_crew01"},
+    {"time_offset_minutes": 125, "type": "notification", "description": "가디언 알림: 정민수 학생 이탈 감지"},
+    {"time_offset_minutes": 130, "type": "geofence_in", "description": "정민수 학생이 구역으로 복귀했습니다", "member_id": "m_crew01"},
+    {"time_offset_minutes": 240, "type": "sos_drill", "description": "SOS 모의 훈련 시작", "member_id": "m_chief1"},
+    {"time_offset_minutes": 245, "type": "sos_resolved", "description": "SOS 모의 훈련 종료"},
+    {"time_offset_minutes": 480, "type": "daily_summary", "description": "1일차 요약: 전원 안전, 이탈 1건 복귀 완료"},
+    {"time_offset_minutes": 960, "type": "daily_summary", "description": "2일차 요약: 전원 안전, 이상 없음"},
+    {"time_offset_minutes": 1440, "type": "trip_end", "description": "여행이 종료되었습니다. 전원 안전 귀환!"}
+  ],
+  "location_tracks": {
+    "m_captain": [
+      {"t": 0, "lat": 33.5104, "lng": 126.4914},
+      {"t": 10, "lat": 33.5080, "lng": 126.5000},
+      {"t": 30, "lat": 33.4621, "lng": 126.9407},
+      {"t": 60, "lat": 33.4621, "lng": 126.9407},
+      {"t": 90, "lat": 33.4580, "lng": 126.9300},
+      {"t": 120, "lat": 33.5283, "lng": 126.7717},
+      {"t": 150, "lat": 33.5283, "lng": 126.7717},
+      {"t": 180, "lat": 33.4996, "lng": 126.5312}
+    ],
+    "m_crew01": [
+      {"t": 0, "lat": 33.5104, "lng": 126.4914},
+      {"t": 10, "lat": 33.5080, "lng": 126.5010},
+      {"t": 30, "lat": 33.4625, "lng": 126.9410},
+      {"t": 60, "lat": 33.4625, "lng": 126.9410},
+      {"t": 90, "lat": 33.4585, "lng": 126.9305},
+      {"t": 120, "lat": 33.4700, "lng": 126.9500},
+      {"t": 130, "lat": 33.4625, "lng": 126.9410},
+      {"t": 150, "lat": 33.5280, "lng": 126.7720},
+      {"t": 180, "lat": 33.4996, "lng": 126.5315}
+    ],
+    "m_chief1": [
+      {"t": 0, "lat": 33.5104, "lng": 126.4914},
+      {"t": 10, "lat": 33.5082, "lng": 126.4998},
+      {"t": 30, "lat": 33.4623, "lng": 126.9405},
+      {"t": 60, "lat": 33.4623, "lng": 126.9405},
+      {"t": 90, "lat": 33.4582, "lng": 126.9302},
+      {"t": 120, "lat": 33.5285, "lng": 126.7715},
+      {"t": 150, "lat": 33.5285, "lng": 126.7715},
+      {"t": 180, "lat": 33.4998, "lng": 126.5310}
+    ]
+  }
+}

@@ -212,9 +212,22 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Future<void> _initializeServices() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final isDemoMode = prefs.getBool('is_demo_mode') ?? false;
       final userId = prefs.getString('user_id');
       final groupId = prefs.getString('group_id');
       final userRole = prefs.getString('user_role') ?? 'crew';
+
+      // Demo mode: skip Firebase/location services, use pre-seeded tripProvider
+      if (isDemoMode) {
+        if (mounted) {
+          final notifier = ref.read(mainScreenProvider.notifier);
+          notifier.setSheetLevel(BottomSheetLevel.half);
+          notifier.setNoTrip(false);
+          _animateSheetTo(BottomSheetLevel.half);
+          setState(() => _isInitialLoading = false);
+        }
+        return;
+      }
 
       if (userId != null && groupId != null) {
         await _locationService.initialize(userId: userId);

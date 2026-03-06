@@ -18,6 +18,9 @@ import '../screens/trip/screen_trip_create.dart';
 import '../screens/trip/screen_trip_join_code.dart';
 import '../screens/trip/screen_trip_demo.dart';
 import '../screens/trip/screen_trip_privacy.dart';
+import '../features/demo/presentation/screens/screen_demo_scenario_select.dart';
+import '../features/demo/presentation/screens/screen_demo_complete.dart';
+import '../features/demo/presentation/widgets/demo_mode_wrapper.dart';
 import '../screens/trip/screen_guardian_management.dart';
 import '../screens/ai/screen_ai_briefing.dart';
 import '../screens/main/screen_main_guardian.dart';
@@ -144,6 +147,22 @@ class AppRouter {
         path: RoutePaths.mainGuardian,
         builder: (context, state) => const MainGuardianScreen(),
       ),
+      // Demo routes
+      GoRoute(
+        path: RoutePaths.demoScenarioSelect,
+        builder: (context, state) =>
+            ScreenDemoScenarioSelect(authNotifier: authNotifier),
+      ),
+      GoRoute(
+        path: RoutePaths.demoMain,
+        builder: (context, state) => DemoModeWrapper(
+          child: MainScreen(authNotifier: authNotifier),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.demoComplete,
+        builder: (context, state) => const ScreenDemoComplete(),
+      ),
       // 딥링크 동적 라우트 (화면구성원칙 §9.2)
       GoRoute(
         path: RoutePaths.tripDetail,
@@ -171,6 +190,9 @@ class AppRouter {
     final path = state.uri.path;
     final isLoading = authNotifier.isLoading;
     final isAuth = authNotifier.isAuthenticated;
+
+    // Demo routes don't need auth
+    if (path.startsWith('/demo/')) return null;
 
     // Still loading → stay on splash
     if (isLoading) return path == RoutePaths.splash ? null : RoutePaths.splash;

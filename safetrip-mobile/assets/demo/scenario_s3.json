@@ -1,0 +1,133 @@
+{
+  "scenario_id": "s3",
+  "title": "해외 출장/패키지 투어",
+  "subtitle": "방콕 5일간 패키지 투어 · 프라이버시우선 모드",
+  "privacy_grade": "privacy_first",
+  "duration_days": 5,
+  "destination": {
+    "name": "방콕",
+    "country_code": "TH",
+    "country_name": "태국",
+    "lat": 13.7563,
+    "lng": 100.5018,
+    "timezone": "Asia/Bangkok"
+  },
+  "members": [
+    {"id": "m_captain", "name": "박팀장", "role": "captain"},
+    {"id": "m_crew01", "name": "김대리", "role": "crew"},
+    {"id": "m_crew02", "name": "이과장", "role": "crew"},
+    {"id": "m_crew03", "name": "정사원", "role": "crew"},
+    {"id": "m_crew04", "name": "최대리", "role": "crew"},
+    {"id": "m_crew05", "name": "한과장", "role": "crew"},
+    {"id": "m_crew06", "name": "윤사원", "role": "crew"},
+    {"id": "m_crew07", "name": "장대리", "role": "crew"},
+    {"id": "m_crew08", "name": "송과장", "role": "crew"},
+    {"id": "m_crew09", "name": "임사원", "role": "crew"},
+    {"id": "m_crew10", "name": "오대리", "role": "crew"},
+    {"id": "m_crew11", "name": "배과장", "role": "crew"},
+    {"id": "m_crew12", "name": "류사원", "role": "crew"},
+    {"id": "m_crew13", "name": "권대리", "role": "crew"},
+    {"id": "m_crew14", "name": "홍과장", "role": "crew"},
+    {"id": "m_crew15", "name": "나사원", "role": "crew"},
+    {"id": "g_guard01", "name": "박팀장 배우자", "role": "guardian"},
+    {"id": "g_guard02", "name": "김대리 부모님", "role": "guardian"}
+  ],
+  "guardian_links": [
+    {"member_id": "m_captain", "guardian_id": "g_guard01", "is_paid": false},
+    {"member_id": "m_crew01", "guardian_id": "g_guard02", "is_paid": false}
+  ],
+  "schedules": [
+    {
+      "day": 1,
+      "title": "방콕 도착 & 호텔",
+      "items": [
+        {"time": "11:00", "title": "수완나품 공항 도착", "lat": 13.6900, "lng": 100.7501},
+        {"time": "13:30", "title": "호텔 체크인 (실롬)", "lat": 13.7262, "lng": 100.5237},
+        {"time": "15:00", "title": "팀 미팅", "lat": 13.7262, "lng": 100.5237},
+        {"time": "18:00", "title": "저녁 (리버사이드)", "lat": 13.7400, "lng": 100.5100}
+      ]
+    },
+    {
+      "day": 2,
+      "title": "왕궁 & 사원 투어",
+      "items": [
+        {"time": "08:30", "title": "왕궁(Grand Palace)", "lat": 13.7500, "lng": 100.4913},
+        {"time": "11:00", "title": "왓포(Wat Pho)", "lat": 13.7466, "lng": 100.4929},
+        {"time": "13:00", "title": "점심 (타이 요리)", "lat": 13.7450, "lng": 100.4950},
+        {"time": "15:00", "title": "왓아룬(Wat Arun)", "lat": 13.7437, "lng": 100.4888},
+        {"time": "17:30", "title": "카오산 로드", "lat": 13.7589, "lng": 100.4974}
+      ]
+    },
+    {
+      "day": 3,
+      "title": "담넌사두억 수상시장",
+      "items": [
+        {"time": "06:30", "title": "호텔 출발", "lat": 13.7262, "lng": 100.5237},
+        {"time": "09:00", "title": "담넌사두억 수상시장", "lat": 13.5242, "lng": 99.9578},
+        {"time": "12:00", "title": "점심", "lat": 13.5250, "lng": 99.9580},
+        {"time": "15:00", "title": "호텔 복귀 & 자유시간", "lat": 13.7262, "lng": 100.5237}
+      ]
+    },
+    {
+      "day": 4,
+      "title": "아유타야 당일치기",
+      "items": [
+        {"time": "07:00", "title": "호텔 출발", "lat": 13.7262, "lng": 100.5237},
+        {"time": "09:30", "title": "왓마하탓", "lat": 14.3567, "lng": 100.5689},
+        {"time": "11:30", "title": "왓프라시산펫", "lat": 14.3539, "lng": 100.5584},
+        {"time": "13:00", "title": "점심", "lat": 14.3500, "lng": 100.5600},
+        {"time": "15:00", "title": "방파인 궁전", "lat": 14.2333, "lng": 100.5833},
+        {"time": "18:00", "title": "방콕 복귀", "lat": 13.7262, "lng": 100.5237}
+      ]
+    },
+    {
+      "day": 5,
+      "title": "쇼핑 & 귀국",
+      "items": [
+        {"time": "09:00", "title": "짜뚜짝 주말시장", "lat": 13.7999, "lng": 100.5507},
+        {"time": "12:00", "title": "점심 & 마지막 쇼핑", "lat": 13.7460, "lng": 100.5347},
+        {"time": "15:00", "title": "수완나품 공항 출발", "lat": 13.6900, "lng": 100.7501}
+      ]
+    }
+  ],
+  "simulation_events": [
+    {"time_offset_minutes": 0, "type": "trip_start", "description": "방콕 출장이 시작되었습니다"},
+    {"time_offset_minutes": 60, "type": "geofence_in", "description": "호텔 도착 확인", "member_id": "m_captain"},
+    {"time_offset_minutes": 120, "type": "all_arrived", "description": "전원 호텔 도착 확인"},
+    {"time_offset_minutes": 480, "type": "geofence_out", "description": "정사원님이 자유시간 중 이동", "member_id": "m_crew03"},
+    {"time_offset_minutes": 720, "type": "daily_summary", "description": "1일차 완료: 전원 안전"},
+    {"time_offset_minutes": 1440, "type": "geofence_out", "description": "권대리님이 왓포에서 이탈", "member_id": "m_crew13"},
+    {"time_offset_minutes": 1450, "type": "geofence_in", "description": "권대리님 복귀", "member_id": "m_crew13"},
+    {"time_offset_minutes": 1920, "type": "daily_summary", "description": "2일차 완료: 전원 안전"},
+    {"time_offset_minutes": 2880, "type": "sos_drill", "description": "SOS 연습 발동 (김대리)", "member_id": "m_crew01"},
+    {"time_offset_minutes": 2885, "type": "sos_resolved", "description": "SOS 연습 종료"},
+    {"time_offset_minutes": 4320, "type": "daily_summary", "description": "4일차 완료: 전원 안전"},
+    {"time_offset_minutes": 7200, "type": "trip_end", "description": "방콕 출장 종료! 전원 안전 귀국"}
+  ],
+  "location_tracks": {
+    "m_captain": [
+      {"t": 0, "lat": 13.6900, "lng": 100.7501},
+      {"t": 30, "lat": 13.7100, "lng": 100.6300},
+      {"t": 60, "lat": 13.7262, "lng": 100.5237},
+      {"t": 90, "lat": 13.7262, "lng": 100.5237},
+      {"t": 120, "lat": 13.7400, "lng": 100.5100},
+      {"t": 150, "lat": 13.7262, "lng": 100.5237}
+    ],
+    "m_crew01": [
+      {"t": 0, "lat": 13.6900, "lng": 100.7501},
+      {"t": 30, "lat": 13.7105, "lng": 100.6310},
+      {"t": 60, "lat": 13.7265, "lng": 100.5240},
+      {"t": 90, "lat": 13.7265, "lng": 100.5240},
+      {"t": 120, "lat": 13.7405, "lng": 100.5105},
+      {"t": 150, "lat": 13.7265, "lng": 100.5240}
+    ],
+    "m_crew03": [
+      {"t": 0, "lat": 13.6900, "lng": 100.7501},
+      {"t": 30, "lat": 13.7098, "lng": 100.6295},
+      {"t": 60, "lat": 13.7260, "lng": 100.5235},
+      {"t": 90, "lat": 13.7260, "lng": 100.5235},
+      {"t": 120, "lat": 13.7395, "lng": 100.5095},
+      {"t": 150, "lat": 13.7260, "lng": 100.5235}
+    ]
+  }
+}
