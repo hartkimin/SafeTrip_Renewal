@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsIn } from 'class-validator';
 import { Expose } from 'class-transformer';
 
 export class UpdateProfileDto {
@@ -21,4 +21,14 @@ export class UpdateProfileDto {
     @IsString()
     @IsOptional()
     locationSharingMode?: string;
+
+    @Expose({ name: 'avatar_id' })
+    @IsString()
+    @IsOptional()
+    avatarId?: string;
+
+    @Expose({ name: 'privacy_level' })
+    @IsIn(['safety_first', 'standard', 'privacy_first'])
+    @IsOptional()
+    privacyLevel?: string;
 }

@@ -8,6 +8,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../services/api_service.dart';
 import '../../utils/app_cache.dart';
+import '../../core/constants/avatar_constants.dart';
+import '../../widgets/avatar_selector.dart';
+import '../../widgets/guardian_badge.dart';
 
 /// 프로필 편집 화면
 ///
@@ -35,6 +38,13 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
   String? _phoneNumber;
   String? _profileImageUrl;
   File? _selectedImageFile;
+
+  String? _avatarId;
+  String? _privacyLevel;
+  String? _minorStatus;
+  bool _isGuardian = false;
+  bool _isPaidGuardian = false;
+  List<Map<String, dynamic>> _emergencyContacts = [];
 
   @override
   void initState() {
@@ -76,10 +86,21 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
               userData['profile_image_url'] as String? ?? _profileImageUrl;
           _phoneNumber =
               userData['phone_number'] as String? ?? _phoneNumber;
+          _avatarId = userData['avatar_id'] as String?;
+          _privacyLevel = userData['privacy_level'] as String? ?? 'standard';
+          _minorStatus = userData['minor_status'] as String?;
+          _isGuardian = userData['user_role'] == 'guardian';
         }
       }
     } catch (e) {
       debugPrint('[ScreenProfileEdit] _loadUserData Error: $e');
+    }
+
+    // Load emergency contacts
+    try {
+      _emergencyContacts = await ApiService().getMyEmergencyContacts();
+    } catch (e) {
+      debugPrint('[ScreenProfileEdit] Emergency contacts load error: $e');
     }
 
     if (mounted) {
@@ -124,8 +145,18 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
       );
 
       if (pickedFile != null && mounted) {
+        final file = File(pickedFile.path);
+        final fileSize = await file.length();
+        if (fileSize > 5 * 1024 * 1024) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('5MB 이하의 이미지를 선택해 주세요')),
+            );
+          }
+          return;
+        }
         setState(() {
-          _selectedImageFile = File(pickedFile.path);
+          _selectedImageFile = file;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -163,7 +194,11 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
     setState(() => _isSaving = true);
 
     try {
-      await ApiService().updateUserProfile(_userId, name);
+      await ApiService().updateUserProfile(
+        _userId,
+        name,
+        avatarId: _avatarId,
+      );
 
       // Update SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -254,6 +289,138 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
                     // ── Language Setting (P2 placeholder) ────────────
                     _buildSectionLabel('언어'),
                     _buildLanguageTile(),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // ── Guardian Badge (if applicable) ───────────
+                    if (_isGuardian) ...[
+                      _buildSectionLabel('역할'),
+                      Container(
+                        color: AppColors.surface,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.screenPaddingH,
+                          vertical: AppSpacing.inputPaddingV,
+                        ),
+                        child: Row(
+                          children: [
+                            GuardianBadge(isPaid: _isPaidGuardian),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
+                    // ── Avatar Selector ──────────────────────────
+                    _buildSectionLabel('아바타'),
+                    Container(
+                      color: AppColors.surface,
+                      padding: const EdgeInsets.all(AppSpacing.screenPaddingH),
+                      child: AvatarSelector(
+                        selectedAvatarId: _avatarId,
+                        onSelected: (id) {
+                          setState(() => _avatarId = id);
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // ── Emergency Contacts ───────────────────────
+                    _buildSectionLabel('긴급 연락처'),
+                    ..._emergencyContacts.map((contact) => Container(
+                      color: AppColors.surface,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenPaddingH,
+                        vertical: AppSpacing.inputPaddingV,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  contact['contact_name'] ?? '',
+                                  style: AppTypography.bodyLarge,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  contact['phone_number'] ?? '',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            color: AppColors.textTertiary,
+                            onPressed: () async {
+                              final contactId = contact['contact_id'];
+                              if (contactId != null) {
+                                try {
+                                  await ApiService().deleteEmergencyContact(contactId);
+                                  setState(() {
+                                    _emergencyContacts.removeWhere((c) => c['contact_id'] == contactId);
+                                  });
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('긴급 연락처 삭제에 실패했습니다.')),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    )),
+                    if (_emergencyContacts.length < 2)
+                      Container(
+                        color: AppColors.surface,
+                        child: ListTile(
+                          leading: const Icon(Icons.add_circle_outline, color: AppColors.primaryTeal),
+                          title: Text(
+                            '긴급 연락처 추가',
+                            style: AppTypography.bodyMedium.copyWith(color: AppColors.primaryTeal),
+                          ),
+                          onTap: () {
+                            // TODO: show add emergency contact dialog
+                          },
+                        ),
+                      ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // ── Privacy Level (read-only) ────────────────
+                    _buildSectionLabel('프라이버시 등급'),
+                    Container(
+                      color: AppColors.surface,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenPaddingH,
+                        vertical: AppSpacing.inputPaddingV,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _privacyLevel == 'safety_first' ? '안전최우선'
+                                  : _privacyLevel == 'privacy_first' ? '프라이버시우선'
+                                  : '표준',
+                              style: AppTypography.bodyLarge,
+                            ),
+                          ),
+                          Text(
+                            '설정에서 변경',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                     const SizedBox(height: AppSpacing.xxl),
                   ],
@@ -356,7 +523,16 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return '이름을 입력해주세요.';
+            return '닉네임을 입력해주세요.';
+          }
+          if (value.trim().length < 2) {
+            return '닉네임은 2자 이상 입력해 주세요';
+          }
+          if (value.trim().length > 20) {
+            return '닉네임은 20자 이하로 입력해 주세요';
+          }
+          if (!RegExp(r'^[\w가-힣ㄱ-ㅎㅏ-ㅣ.]+$').hasMatch(value.trim())) {
+            return '특수문자는 사용할 수 없습니다 (밑줄·점 제외)';
           }
           return null;
         },

@@ -36,7 +36,34 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
 
   File? _selectedImage;
   bool _isLoading = false;
-  String _privacyLevel = 'friends_only'; // §7.1 default: friends-only
+  String _privacyLevel = 'standard'; // §7.1 default: standard
+  String? _birthDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBirthDate();
+  }
+
+  Future<void> _loadBirthDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bd = prefs.getString('date_of_birth');
+    if (bd != null && mounted) {
+      setState(() => _birthDate = bd);
+    }
+  }
+
+  bool _isMinor() {
+    if (_birthDate == null) return false;
+    final now = DateTime.now();
+    final birth = DateTime.parse(_birthDate!);
+    int age = now.year - birth.year;
+    if (now.month < birth.month ||
+        (now.month == birth.month && now.day < birth.day)) {
+      age--;
+    }
+    return age < 18;
+  }
 
   Future<void> _pickImage() async {
     final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
@@ -47,6 +74,14 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
 
   Future<void> _submit({bool skipProfile = false}) async {
     if (!skipProfile && !_formKey.currentState!.validate()) return;
+
+    // Minor must provide emergency contact (DOC-T3-PRF-027 §3.3)
+    if (!skipProfile && _isMinor() && _emergencyContactController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('미성년자는 긴급 연락처 등록이 필요합니다')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -191,9 +226,9 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
                       // §7.1 Privacy level selection
                       Text('위치 공개 범위', style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: AppSpacing.sm),
-                      _buildPrivacyOption('public', '공개', '모든 사용자에게 위치 공유'),
-                      _buildPrivacyOption('friends_only', '친구만', '같은 여행 멤버에게만 공유'),
-                      _buildPrivacyOption('private', '비공개', '위치를 공유하지 않음'),
+                      _buildPrivacyOption('safety_first', '안전최우선', '캡틴·가디언·크루장에게 실시간 위치 공유'),
+                      _buildPrivacyOption('standard', '표준', '일정 공유 시간대만 위치 공유 (기본값)'),
+                      _buildPrivacyOption('privacy_first', '프라이버시우선', '위치를 공유하지 않음'),
                     ],
                   ),
                 ),
@@ -211,7 +246,8 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
                       child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('완료'),
                     ),
                   ),
-                  TextButton(onPressed: () => _submit(skipProfile: true), child: const Text('나중에 설정')),
+                  if (!_isMinor())
+                    TextButton(onPressed: () => _submit(skipProfile: true), child: const Text('나중에 설정')),
                 ],
               ),
             ),

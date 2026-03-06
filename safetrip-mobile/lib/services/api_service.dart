@@ -105,6 +105,7 @@ class ApiService {
     String? profilePhotoUrl,
     String? emergencyContact,
     String? privacyLevel,
+    String? avatarId,
   }) async {
     try {
       final data = <String, dynamic>{'display_name': displayName};
@@ -114,6 +115,7 @@ class ApiService {
         data['emergency_contact'] = emergencyContact;
       }
       if (privacyLevel != null) data['privacy_level'] = privacyLevel;
+      if (avatarId != null) data['avatar_id'] = avatarId;
 
       final response = await _dio.put('/api/v1/users/$userId', data: data);
       return response.data['data'];
@@ -121,6 +123,65 @@ class ApiService {
       debugPrint('[ApiService] updateUserProfile Error: $e');
       rethrow;
     }
+  }
+
+  /// 내 긴급연락처 목록 조회
+  Future<List<Map<String, dynamic>>> getMyEmergencyContacts() async {
+    try {
+      final response = await _dio.get('/api/v1/users/me/emergency-contacts');
+      final data = response.data['data'] as List? ?? [];
+      return data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('[ApiService] getMyEmergencyContacts error: $e');
+      return [];
+    }
+  }
+
+  /// 긴급연락처 추가
+  Future<Map<String, dynamic>?> createEmergencyContact({
+    required String contactName,
+    required String phoneNumber,
+    String? relationship,
+    int? contactOrder,
+  }) async {
+    final response = await _dio.post('/api/v1/users/me/emergency-contacts', data: {
+      'contact_name': contactName,
+      'phone_number': phoneNumber,
+      if (relationship != null) 'relationship': relationship,
+      if (contactOrder != null) 'contact_order': contactOrder,
+    });
+    return response.data['data'];
+  }
+
+  /// 긴급연락처 삭제
+  Future<void> deleteEmergencyContact(String contactId) async {
+    await _dio.delete('/api/v1/users/me/emergency-contacts/$contactId');
+  }
+
+  /// 닉네임 중복 검사
+  Future<bool> checkNicknameAvailable(String nickname) async {
+    try {
+      final response = await _dio.get('/api/v1/users/check-nickname',
+          queryParameters: {'nickname': nickname});
+      return response.data['data']?['available'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 타인 프로필 조회 (역할별 필터링)
+  Future<Map<String, dynamic>?> getFilteredUserProfile(
+    String userId, {
+    String? tripId,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    if (tripId != null) queryParams['trip_id'] = tripId;
+
+    final response = await _dio.get(
+      '/api/v1/users/$userId/profile',
+      queryParameters: queryParams,
+    );
+    return response.data['data'];
   }
 
   // 약관 동의 저장
@@ -1326,13 +1387,10 @@ class ApiService {
     }
   }
 
-  /// PATCH /api/v1/users/me — 계정 삭제 요청 취소
+  /// POST /api/v1/auth/cancel-deletion — 계정 삭제 요청 취소
   Future<bool> cancelAccountDeletion() async {
     try {
-      final response = await _dio.patch(
-        '/api/v1/users/me',
-        data: {'deletionRequestedAt': null},
-      );
+      final response = await _dio.post('/api/v1/auth/cancel-deletion');
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] cancelAccountDeletion Error: $e');
