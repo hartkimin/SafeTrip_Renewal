@@ -17,9 +17,14 @@ export class CountriesController {
             country_code: c.countryCode,
             country_name_ko: c.countryNameKo,
             country_name_en: c.countryNameEn,
-            country_name_local: c.countryNameLocal,
-            flag_emoji: c.flagEmoji,
-            iso_alpha2: c.isoAlpha2,
+            flag_emoji: c.countryFlagEmoji,
+            phone_code: c.phoneCode,
+            region: c.region,
+            mofa_travel_alert: c.mofaTravelAlert,
+            mofa_alert_updated_at: c.mofaAlertUpdatedAt,
+            is_popular: c.isPopular,
+            sort_order: c.sortOrder,
+            updated_at: c.updatedAt,
         }));
     }
 }

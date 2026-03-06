@@ -134,6 +134,20 @@ export class TripsController {
         return this.tripsService.getGuardianApprovalStatus(userId);
     }
 
+    // ── Admin Endpoints (반드시 :tripId 파라미터 라우트 앞에 위치) ──
+
+    @Get('admin/list')
+    @ApiOperation({ summary: '[Admin] 전체 여행 목록 (페이지네이션)' })
+    async listAllTrips(@Query() query: { page?: string; limit?: string }) {
+        return this.tripsService.listAllTrips(query);
+    }
+
+    @Get('admin/stats')
+    @ApiOperation({ summary: '[Admin] 여행 통계' })
+    async getTripStats() {
+        return this.tripsService.getTripStats();
+    }
+
     // ── 파라미터 라우트 (반드시 정적 라우트 뒤에 위치) ──
     @Public()
     @Get(':tripId')

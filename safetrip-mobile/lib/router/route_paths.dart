@@ -30,6 +30,11 @@ class RoutePaths {
   static const settingsMain = '/settings';
   static const privacySettings = '/settings/privacy';
   static const guardianManagement = '/settings/guardians';
+  static const profileEdit = '/settings/profile';
+  static const devicePermissions = '/settings/permissions';
+  static const notificationSettings = '/settings/notifications';
+  static const privacyManagement = '/settings/privacy-management';
+  static const accountDelete = '/settings/account-delete';
 
   // Other
   static const permission = '/permission';

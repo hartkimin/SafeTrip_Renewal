@@ -13,6 +13,11 @@ import '../features/onboarding/presentation/screens/screen_profile_setup.dart';
 import '../screens/main/screen_main.dart';
 import '../screens/main/screen_notification_list.dart';
 import '../screens/settings/screen_settings_main.dart';
+import '../screens/settings/screen_device_permissions.dart';
+import '../screens/settings/screen_notification_settings.dart';
+import '../screens/settings/screen_privacy_management.dart';
+import '../screens/settings/screen_account_delete.dart';
+import '../screens/settings/screen_profile_edit.dart';
 import '../screens/trip/screen_no_trip_home.dart';
 import '../screens/trip/screen_trip_create.dart';
 import '../screens/trip/screen_trip_join_code.dart';
@@ -121,6 +126,26 @@ class AppRouter {
       GoRoute(
         path: RoutePaths.guardianManagement,
         builder: (context, state) => const ScreenGuardianManagement(),
+      ),
+      GoRoute(
+        path: RoutePaths.profileEdit,
+        builder: (context, state) => const ScreenProfileEdit(),
+      ),
+      GoRoute(
+        path: RoutePaths.devicePermissions,
+        builder: (context, state) => const ScreenDevicePermissions(),
+      ),
+      GoRoute(
+        path: RoutePaths.notificationSettings,
+        builder: (context, state) => const ScreenNotificationSettings(),
+      ),
+      GoRoute(
+        path: RoutePaths.privacyManagement,
+        builder: (context, state) => const ScreenPrivacyManagement(),
+      ),
+      GoRoute(
+        path: RoutePaths.accountDelete,
+        builder: (context, state) => const ScreenAccountDelete(),
       ),
       GoRoute(
         path: RoutePaths.noTripHome,

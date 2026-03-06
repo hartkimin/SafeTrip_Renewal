@@ -11,18 +11,23 @@ export class CountriesService {
 
     async findAll() {
         return this.countryRepo.find({
-            where: { isActive: true },
             order: {
-                countryNameKo: 'ASC', // NULLS LAST logic needed ideally, but basic ASC first
+                countryNameKo: 'ASC',
                 countryNameEn: 'ASC'
             },
             select: [
+                'countryId',
                 'countryCode',
                 'countryNameKo',
                 'countryNameEn',
-                'countryNameLocal',
-                'flagEmoji',
-                'isoAlpha2'
+                'countryFlagEmoji',
+                'phoneCode',
+                'region',
+                'mofaTravelAlert',
+                'mofaAlertUpdatedAt',
+                'isPopular',
+                'sortOrder',
+                'updatedAt'
             ]
         });
     }

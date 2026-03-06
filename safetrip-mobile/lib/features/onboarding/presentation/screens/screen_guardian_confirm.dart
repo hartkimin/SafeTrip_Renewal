@@ -62,7 +62,7 @@ class _ScreenGuardianConfirmState extends State<ScreenGuardianConfirm> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_role', 'guardian');
         await prefs.remove('pending_guardian_code');
-        context.go(RoutePaths.mainGuardian);
+        if (mounted) context.go(RoutePaths.mainGuardian);
       }
     } catch (e) {
       if (mounted) {

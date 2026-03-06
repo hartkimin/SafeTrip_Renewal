@@ -71,6 +71,7 @@ class _InitialScreenState extends State<InitialScreen>
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[SplashScreen] build called');
     return Scaffold(
       backgroundColor: AppColors.primaryTeal,
       body: Stack(

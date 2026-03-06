@@ -165,9 +165,9 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
       builder: (context) => AlertDialog(
         title: const Text('여행 기간은 최대 15일입니다'),
         content: Text(
-          '${days}일 여행을 계획 중이신가요?\n\n'
+          '$days일 여행을 계획 중이신가요?\n\n'
           '두 개의 여행으로 나누어 생성하세요.\n'
-          '예: 1차 여행 (1~15일) + 2차 (16~${days}일)',
+          '예: 1차 여행 (1~15일) + 2차 (16~$days일)',
         ),
         actions: [
           TextButton(

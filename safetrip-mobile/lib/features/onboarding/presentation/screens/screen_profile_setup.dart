@@ -118,7 +118,7 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         decoration: BoxDecoration(
-          border: Border.all(color: isSelected ? AppColors.primaryTeal : AppColors.border),
+          border: Border.all(color: isSelected ? AppColors.primaryTeal : AppColors.outline),
           borderRadius: BorderRadius.circular(AppSpacing.radius12),
           color: isSelected ? AppColors.primaryTeal.withValues(alpha: 0.06) : null,
         ),

@@ -89,7 +89,7 @@ export class EmergenciesService {
                 select: ['guardianId']
             });
             const guardianIds = links.map(l => l.guardianId).filter(id => id !== null);
-            
+
             let guardianUserIds: string[] = [];
             if (guardianIds.length > 0) {
                 const guardians = await this.guardianRepo.find({
@@ -116,6 +116,33 @@ export class EmergenciesService {
             }
         } catch (error) {
             console.error('Failed to send SOS notification:', error);
+        }
+    }
+
+    async getAllEmergencies(query: { status?: string; limit?: string; offset?: string }) {
+        try {
+            const qb = this.emergencyRepo.createQueryBuilder('e');
+            if (query.status) qb.andWhere('e.status = :status', { status: query.status });
+            qb.orderBy('e.createdAt', 'DESC');
+            qb.skip(parseInt(query.offset || '0', 10)).take(parseInt(query.limit || '50', 10));
+            const [data, total] = await qb.getManyAndCount();
+            return { success: true, data, total };
+        } catch (error) {
+            console.error('getAllEmergencies error:', error.message);
+            return { success: true, data: [], total: 0 };
+        }
+    }
+
+    async getStats() {
+        try {
+            const total = await this.emergencyRepo.count();
+            const active = await this.emergencyRepo.count({ where: { status: 'active' } });
+            const resolved = await this.emergencyRepo.count({ where: { status: 'resolved' } });
+            const falseAlarm = await this.emergencyRepo.count({ where: { status: 'false_alarm' } });
+            return { success: true, data: { total, active, resolved, falseAlarm } };
+        } catch (error) {
+            console.error('getStats error:', error.message);
+            return { success: true, data: { total: 0, active: 0, resolved: 0, falseAlarm: 0 } };
         }
     }
 

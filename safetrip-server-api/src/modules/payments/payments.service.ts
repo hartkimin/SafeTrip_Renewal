@@ -66,13 +66,13 @@ export class PaymentsService {
             if (storeType === 'ios') {
                 // Apple App Store 영수증 검증
                 // 실제 운영 환경에서는 프로덕션 URL (https://buy.itunes.apple.com/verifyReceipt) 사용
-                const verifyUrl = process.env.NODE_ENV === 'production' 
-                    ? 'https://buy.itunes.apple.com/verifyReceipt' 
+                const verifyUrl = process.env.NODE_ENV === 'production'
+                    ? 'https://buy.itunes.apple.com/verifyReceipt'
                     : 'https://sandbox.itunes.apple.com/verifyReceipt';
-                    
+
                 // (환경 변수 등에 비밀번호 설정 필요)
                 const payload = { 'receipt-data': receipt, 'password': process.env.APPLE_SHARED_SECRET || 'MOCK_SECRET' };
-                
+
                 // MOCK 동작 모드 지원 (테스트용)
                 if (receipt === 'mock_valid_receipt') return true;
 
@@ -147,8 +147,8 @@ export class PaymentsService {
 
     async getActiveSubscription(userId: string) {
         return this.subRepo.findOne({
-            where: { 
-                userId, 
+            where: {
+                userId,
                 status: 'active',
                 expiresAt: MoreThan(new Date())
             },
@@ -178,5 +178,49 @@ export class PaymentsService {
         } catch (error) {
             this.logger.error('Failed to update expired subscriptions', error.stack);
         }
+    }
+
+    // ── Admin Methods ──
+
+    /** [Admin] GET /payments/admin/transactions — 전체 결제 이력 (페이지네이션) */
+    async getAllTransactions(query: { page?: string; limit?: string; status?: string }) {
+        const page = parseInt(query.page || '1', 10);
+        const limit = parseInt(query.limit || '20', 10);
+        const skip = (page - 1) * limit;
+
+        const qb = this.paymentRepo.createQueryBuilder('p');
+        if (query.status) qb.andWhere('p.status = :status', { status: query.status });
+        qb.orderBy('p.createdAt', 'DESC');
+        qb.skip(skip).take(limit);
+
+        const [data, total] = await qb.getManyAndCount();
+        return {
+            success: true,
+            data,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
+    }
+
+    /** [Admin] GET /payments/admin/stats — 결제 통계 */
+    async getPaymentStats() {
+        const total = await this.paymentRepo.count();
+        const completed = await this.paymentRepo.count({ where: { status: 'completed' } });
+        const pending = await this.paymentRepo.count({ where: { status: 'pending' } });
+        const totalRevenue = await this.paymentRepo.createQueryBuilder('p')
+            .select('COALESCE(SUM(p.amount), 0)', 'total')
+            .where('p.status = :status', { status: 'completed' })
+            .getRawOne();
+        return {
+            success: true,
+            data: {
+                total,
+                completed,
+                pending,
+                totalRevenue: Number(totalRevenue?.total || 0),
+            },
+        };
     }
 }

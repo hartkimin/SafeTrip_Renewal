@@ -3,14 +3,17 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 
+/// 일정 탭 바텀시트 콘텐츠 (화면구성원칙 §4 탭 1)
+///
+/// 부모 [SnappingBottomSheet]로부터 [ScrollController]를 수신하여
+/// 스크롤과 드래그 제스처가 연동된다.
 class BottomSheetTrip extends StatefulWidget {
   const BottomSheetTrip({
     super.key,
-    required this.initialHeight,
-    this.onHeightChanged,
+    required this.scrollController,
   });
-  final double initialHeight;
-  final Function(double)? onHeightChanged;
+
+  final ScrollController scrollController;
 
   @override
   State<BottomSheetTrip> createState() => _BottomSheetTripState();
@@ -18,64 +21,27 @@ class BottomSheetTrip extends StatefulWidget {
 
 class _BottomSheetTripState extends State<BottomSheetTrip> {
   int _selectedTab = 0; // 0: 일정, 1: 장소
-  late double _currentHeight;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentHeight = widget.initialHeight;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radius24)),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
-      ),
-      child: Column(
-        children: [
-          _buildHandle(),
-          _buildTabs(),
-          Expanded(
-            child: _selectedTab == 0 ? _buildScheduleList() : _buildPlaceList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHandle() {
-    return GestureDetector(
-      onVerticalDragUpdate: (details) {
-        final screenHeight = MediaQuery.of(context).size.height;
-        setState(() {
-          _currentHeight -= details.delta.dy / screenHeight;
-          _currentHeight = _currentHeight.clamp(0.1, 1.0);
-          widget.onHeightChanged?.call(_currentHeight);
-        });
-      },
-      child: Container(
-        height: 32,
-        width: double.infinity,
-        color: Colors.transparent,
-        alignment: Alignment.center,
-        child: Container(
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.outline,
-            borderRadius: BorderRadius.circular(2),
-          ),
+    return Column(
+      children: [
+        _buildTabs(),
+        Expanded(
+          child: _selectedTab == 0
+              ? _buildScheduleList()
+              : _buildPlaceList(),
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildTabs() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -102,17 +68,27 @@ class _BottomSheetTripState extends State<BottomSheetTrip> {
           decoration: BoxDecoration(
             color: isSelected ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(AppSpacing.radius8),
-            boxShadow: isSelected ? [const BoxShadow(color: Colors.black12, blurRadius: 4)] : null,
+            boxShadow: isSelected
+                ? [const BoxShadow(color: Colors.black12, blurRadius: 4)]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: isSelected ? AppColors.primaryTeal : AppColors.textTertiary),
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? AppColors.primaryTeal
+                    : AppColors.textTertiary,
+              ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: AppTypography.labelMedium.copyWith(
-                  color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
+                  color: isSelected
+                      ? AppColors.textPrimary
+                      : AppColors.textTertiary,
                 ),
               ),
             ],
@@ -124,6 +100,7 @@ class _BottomSheetTripState extends State<BottomSheetTrip> {
 
   Widget _buildScheduleList() {
     return ListView.builder(
+      controller: widget.scrollController,
       padding: const EdgeInsets.all(AppSpacing.lg),
       itemCount: 3,
       itemBuilder: (context, index) => _buildScheduleItem(index),
@@ -150,8 +127,10 @@ class _BottomSheetTripState extends State<BottomSheetTrip> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('일정 제목 ${index + 1}', style: AppTypography.titleMedium),
-                    const Text('장소 정보가 표시됩니다', style: AppTypography.bodySmall),
+                    Text('일정 제목 ${index + 1}',
+                        style: AppTypography.titleMedium),
+                    const Text('장소 정보가 표시됩니다',
+                        style: AppTypography.bodySmall),
                   ],
                 ),
               ),
@@ -163,6 +142,16 @@ class _BottomSheetTripState extends State<BottomSheetTrip> {
   }
 
   Widget _buildPlaceList() {
-    return const Center(child: Text('등록된 장소가 없습니다.'));
+    return ListView(
+      controller: widget.scrollController,
+      children: const [
+        Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.xl),
+            child: Text('등록된 장소가 없습니다.'),
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { EmergenciesService } from './emergencies.service';
@@ -8,6 +8,18 @@ import { EmergenciesService } from './emergencies.service';
 @Controller('emergencies')
 export class EmergenciesController {
     constructor(private readonly emergenciesService: EmergenciesService) { }
+
+    @Get()
+    @ApiOperation({ summary: '[Admin] 전체 긴급 상황 목록 조회' })
+    getAllEmergencies(@Query() query: { status?: string; limit?: string; offset?: string }) {
+        return this.emergenciesService.getAllEmergencies(query);
+    }
+
+    @Get('stats')
+    @ApiOperation({ summary: '[Admin] 긴급 상황 통계' })
+    getEmergencyStats() {
+        return this.emergenciesService.getStats();
+    }
 
     @Post()
     @ApiOperation({ summary: '긴급 상황 생성 (SOS 포함, 5분 쿨다운)' })

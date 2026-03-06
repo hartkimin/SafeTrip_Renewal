@@ -312,10 +312,10 @@ class _ScreenPrivacyManagementState extends State<ScreenPrivacyManagement> {
     return Container(
       color: AppColors.surface,
       child: SwitchListTile(
-        title: Text('마케팅 정보 수신', style: AppTypography.bodyLarge),
+        title: const Text('마케팅 정보 수신', style: AppTypography.bodyLarge),
         value: _marketingEnabled,
         onChanged: _onMarketingToggle,
-        activeColor: AppColors.primaryTeal,
+        activeTrackColor: AppColors.primaryTeal,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.xs,

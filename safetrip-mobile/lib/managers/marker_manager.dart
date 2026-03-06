@@ -36,6 +36,8 @@ class MarkerManager {
     this.getMarkerCurrentPosition,
     this.onMarkerPositionUpdated,
     this.isBeforeTripStart,
+    this.currentPrivacyLevel,
+    this.getScheduleTimeActive,
   }) : getSelectedUserIdsForFilter =
            getSelectedUserIdsForFilter ?? (() => <String>{});
 
@@ -81,6 +83,8 @@ class MarkerManager {
   final void Function(String, LatLng)?
   onMarkerPositionUpdated; // 마커 위치 업데이트 콜백 (Phase 3)
   final bool Function()? isBeforeTripStart; // 여행 시작일 전 여부
+  final String Function()? currentPrivacyLevel;
+  final bool Function(String userId)? getScheduleTimeActive;
 
   // 외부 데이터 (읽기 전용)
   final List<Map<String, dynamic>> Function() getUsers;
@@ -612,6 +616,21 @@ class MarkerManager {
         }
       }
     }
+
+    // §6: 프라이버시 등급별 마커 필터링
+    final privacyLevel = currentPrivacyLevel?.call() ?? 'standard';
+    if (privacyLevel == 'privacy_first' && getScheduleTimeActive != null) {
+      // privacy_first: 일정 활성 시간대의 멤버만 표시 (본인은 항상 표시)
+      filteredPositions.removeWhere((userId, _) {
+        if (userId == currentUserId) return false;
+        return !getScheduleTimeActive!(userId);
+      });
+      debugPrint(
+        '[MarkerManager] §6 privacy_first 필터 적용: ${filteredPositions.length}명 표시',
+      );
+    }
+    // safety_first: 모든 멤버 항상 표시 (추가 필터링 없음)
+    // standard: 위치 공유 ON인 멤버만 표시 (위의 locationSharingEnabled 필터가 이미 적용됨)
 
     // 필터링된 위치로 개별 마커 생성
     final userLocations = getUserLocations();

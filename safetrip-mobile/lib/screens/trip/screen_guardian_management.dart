@@ -88,6 +88,7 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
             onPressed: () async {
               final phone = phoneController.text.trim();
               if (phone.isEmpty) return;
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
               setState(() => _isLoading = true);
               try {
@@ -96,7 +97,7 @@ class _ScreenGuardianManagementState extends State<ScreenGuardianManagement> {
                   await _loadGuardians();
                 } else {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(content: Text('가디언 추가에 실패했습니다.')),
                     );
                   }

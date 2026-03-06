@@ -250,7 +250,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.flight_takeoff,
                 size: 16,
                 color: AppColors.primaryTeal,

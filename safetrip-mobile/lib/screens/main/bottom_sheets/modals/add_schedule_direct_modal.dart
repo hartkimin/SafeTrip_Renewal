@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -6,6 +9,7 @@ import '../../../../constants/app_tokens.dart';
 import '../../../../utils/app_cache.dart';
 import '../../../../services/api_service.dart';
 import '../../../../services/location_service.dart';
+import '../../../../services/offline_sync_service.dart';
 import '../../../../models/geofence.dart';
 import '../../../../models/schedule.dart';
 import 'package:geocoding/geocoding.dart';
@@ -1829,15 +1833,9 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
         return;
       }
 
-      // 그룹의 country_code 조회
-      final countries = await _apiService.getCountryCodesByGroupId(groupId);
-      if (countries.isEmpty) {
-        _showError('여행 국가 정보를 찾을 수 없습니다.');
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
+      // §5.4 오프라인 감지 — 네트워크 없으면 로컬 드래프트로 저장
+      final connectivity = await Connectivity().checkConnectivity();
+      final isOffline = connectivity == ConnectivityResult.none;
 
       // 타임존 사용 (선택된 타임존 또는 기본값)
       final timezone = _selectedTimezone ?? 'UTC';
@@ -1848,8 +1846,67 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
 
       // 장소 좌표 수집 (장소명이 있지만 좌표가 없는 경우)
       if (_locationController.text.isNotEmpty &&
-          (_locationLatitude == null || _locationLongitude == null)) {
+          (_locationLatitude == null || _locationLongitude == null) &&
+          !isOffline) {
         await _searchLocation(_locationController.text);
+      }
+
+      if (isOffline) {
+        // §5.4 오프라인 모드: 일정을 로컬 SQLite 드래프트에 저장
+        final action = widget.schedule != null ? 'update' : 'create';
+        final payload = jsonEncode({
+          if (widget.schedule != null)
+            'schedule_id': widget.schedule!.scheduleId,
+          'group_id': groupId,
+          'user_id': userId,
+          'title': _titleController.text.trim(),
+          'description': _memoController.text.trim().isEmpty
+              ? null
+              : _memoController.text.trim(),
+          'schedule_type': _selectedScheduleType,
+          'start_time': startTimeUTC.toIso8601String(),
+          'end_time': endTimeUTC.toIso8601String(),
+          'location_name': _placeNameController.text.trim().isEmpty
+              ? null
+              : _placeNameController.text.trim(),
+          'location_address': _locationController.text.trim().isEmpty
+              ? null
+              : _locationController.text.trim(),
+          'location_coords':
+              (_locationLatitude != null && _locationLongitude != null)
+                  ? {'latitude': _locationLatitude!, 'longitude': _locationLongitude!}
+                  : null,
+          'reminder_enabled': _notificationEnabled,
+          'timezone': timezone,
+        });
+
+        await OfflineSyncService().pushScheduleDraft(
+          scheduleId: widget.schedule?.scheduleId,
+          tripId: groupId,
+          action: action,
+          payload: payload,
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('오프라인 — 연결 복구 시 일정이 자동 동기화됩니다'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 그룹의 country_code 조회
+      final countries = await _apiService.getCountryCodesByGroupId(groupId);
+      if (countries.isEmpty) {
+        _showError('여행 국가 정보를 찾을 수 없습니다.');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
       }
 
       if (widget.schedule != null) {

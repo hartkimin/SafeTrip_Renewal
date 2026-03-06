@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -256,7 +257,9 @@ class OfflineSyncService {
       totalSynced += sosResult.synced;
       totalFailed += sosResult.failed;
 
-      // Priority 2: Guardian alerts (현재 별도 큐 없음 — 건너뜀)
+      // Priority 2: Guardian alerts — FCM이 오프라인 전달을 네이티브로 처리.
+      // Firebase Cloud Messaging은 디바이스가 오프라인일 때 메시지를 자체 큐에
+      // 보관했다가 연결 복구 시 자동 전달하므로 별도 로컬 큐 불필요. (§4)
 
       // Priority 3: Location batch (100건씩, newest first)
       final locResult = await _syncLocations(apiService);
@@ -359,16 +362,68 @@ class OfflineSyncService {
         // 충돌 상태인 항목은 건너뜀 — 수동 해결 필요
         if (draft['conflict_status'] == 'conflict') continue;
         try {
-          // TODO: 서버 엔드포인트 준비 시 실제 충돌 감지 구현
-          final db = await database;
-          await db.update(
-            _tableScheduleDraft,
-            {'is_synced': 1, 'conflict_status': 'resolved'},
-            where: 'id = ?',
-            whereArgs: [draft['id']],
-          );
-          synced++;
+          final action = draft['action'] as String;
+          final payload = jsonDecode(draft['payload'] as String)
+              as Map<String, dynamic>;
+          bool success = false;
+
+          switch (action) {
+            case 'create':
+              final result = await apiService.createSchedule(
+                groupId: payload['group_id'] as String?,
+                userId: payload['user_id'] as String?,
+                title: payload['title'] as String,
+                description: payload['description'] as String?,
+                scheduleType: payload['schedule_type'] as String?,
+                startTime: payload['start_time'],
+                endTime: payload['end_time'],
+                locationName: payload['location_name'] as String?,
+                locationAddress: payload['location_address'] as String?,
+                locationCoords: payload['location_coords'] as Map<String, dynamic>?,
+                reminderEnabled: payload['reminder_enabled'] as bool?,
+                timezone: payload['timezone'] as String?,
+              );
+              success = result != null;
+              break;
+            case 'update':
+              final scheduleId = payload['schedule_id'] as String?;
+              if (scheduleId == null) break;
+              final result = await apiService.updateSchedule(
+                scheduleId: scheduleId,
+                groupId: payload['group_id'] as String?,
+                userId: payload['user_id'] as String?,
+                title: payload['title'] as String?,
+                description: payload['description'] as String?,
+                scheduleType: payload['schedule_type'] as String?,
+                startTime: payload['start_time'] as String?,
+                endTime: payload['end_time'] as String?,
+                locationName: payload['location_name'] as String?,
+                locationAddress: payload['location_address'] as String?,
+                locationCoords: payload['location_coords'] as Map<String, dynamic>?,
+                reminderEnabled: payload['reminder_enabled'] as bool?,
+                timezone: payload['timezone'] as String?,
+              );
+              success = result != null;
+              break;
+            case 'delete':
+              final scheduleId = payload['schedule_id'] as String?;
+              if (scheduleId == null) break;
+              success = await apiService.deleteSchedule(
+                scheduleId: scheduleId,
+              );
+              break;
+          }
+
+          if (success) {
+            await markScheduleSynced(draft['id'] as int, 'resolved');
+            synced++;
+          } else {
+            // API 실패 시 충돌로 마킹 — UI에서 수동 해결 필요
+            await resolveConflict(draft['id'] as int, 'conflict');
+            failed++;
+          }
         } catch (e) {
+          debugPrint('[OfflineSync] 일정 드래프트 개별 동기화 에러: $e');
           failed++;
         }
       }

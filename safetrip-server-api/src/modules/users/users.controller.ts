@@ -159,6 +159,29 @@ export class UsersController {
         };
     }
 
+    // ── Admin Endpoints (반드시 :userId 파라미터 라우트 앞에 위치) ──
+
+    @Get('admin/list')
+    @ApiOperation({ summary: '[Admin] 전체 사용자 목록 (페이지네이션)' })
+    async listAllUsers(@Query() query: { page?: string; limit?: string; status?: string }) {
+        return this.usersService.listAllUsers(query);
+    }
+
+    @Get('admin/stats')
+    @ApiOperation({ summary: '[Admin] 사용자 통계' })
+    async getUserStats() {
+        return this.usersService.getUserStats();
+    }
+
+    @Post(':userId/ban')
+    @ApiOperation({ summary: '[Admin] 사용자 차단/해제' })
+    async banUser(
+        @Param('userId') userId: string,
+        @Body() body: { reason?: string; isBanned: boolean },
+    ) {
+        return this.usersService.banUser(userId, body);
+    }
+
     @Public()
     @Get(':userId')
     @ApiOperation({ summary: '특정 사용자 조회 (userId)' })

@@ -21,7 +21,7 @@ export class GuidesService {
             country_code: country.countryCode,
             country_name_ko: country.countryNameKo,
             country_name_en: country.countryNameEn,
-            flag_emoji: country.flagEmoji,
+            flag_emoji: country.countryFlagEmoji,
             last_updated: country.updatedAt
         };
     }
@@ -40,7 +40,7 @@ export class GuidesService {
     }
 
     async search(query: string, countryCode?: string) {
-        const where: any = { isActive: true };
+        const where: any = {};
 
         if (countryCode) {
             where.countryCode = countryCode;
@@ -58,7 +58,7 @@ export class GuidesService {
             country_code: c.countryCode,
             country_name_ko: c.countryNameKo,
             country_name_en: c.countryNameEn,
-            flag_emoji: c.flagEmoji,
+            flag_emoji: c.countryFlagEmoji,
         }));
     }
 }

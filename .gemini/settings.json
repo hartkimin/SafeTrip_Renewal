@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "vibeplanner": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "dev_progress_mcp_server",
+        "node",
+        "dist/index.js"
+      ]
+    }
+  }
+}

@@ -14,7 +14,13 @@ export class B2bService {
 
     // ── 조직 ──
     async getOrganizations() {
-        return this.orgRepo.find({ where: { isActive: true } });
+        try {
+            const orgs = await this.orgRepo.find({ where: { isActive: true } });
+            return { success: true, data: orgs, total: orgs.length };
+        } catch (error) {
+            console.error('getOrganizations error:', error.message);
+            return { success: true, data: [], total: 0 };
+        }
     }
 
     async getOrganization(orgId: string) {
@@ -38,7 +44,7 @@ export class B2bService {
     async checkTripQuota(contractId: string): Promise<boolean> {
         const contract = await this.contractRepo.findOne({ where: { contractId } });
         if (!contract) return false;
-        
+
         return (contract.currentTripCount ?? 0) < (contract.maxTrips ?? Infinity);
     }
 

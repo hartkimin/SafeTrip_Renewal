@@ -44,6 +44,15 @@ abstract class AppColors {
   static const Color crew = AppTokens.basic08; // 크루 — Basic Gray
   static const Color guardian = AppTokens.semanticSuccess; // 가디언
 
+  // ─ 지도 마커 역할별 컬러 (지도 원칙 §5.3) ──────────────────────
+  static const Color mapMarkerCaptain = Color(0xFFFFD700);
+  static const Color mapMarkerCrewLeader = Color(0xFFFF8C00);
+  static const Color mapMarkerCrew = Color(0xFF2196F3);
+  static const Color mapMarkerMyLocation = Color(0xFF4CAF50);
+  static const Color mapMarkerGuardian = Color(0xFF9C27B0);
+  static const Color mapMarkerOffline = Color(0xFF9E9E9E);
+  static const Color mapMarkerHidden = Color(0xFFBDBDBD);
+
   /// 역할 enum -> 색상 매핑
   static Color roleColor(String role) {
     switch (role.toLowerCase()) {

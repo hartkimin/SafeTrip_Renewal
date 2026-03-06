@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaymentsService } from './payments.service';
@@ -37,5 +37,19 @@ export class PaymentsController {
     @ApiOperation({ summary: '구독 생성' })
     createSubscription(@CurrentUser() userId: string, @Body() body: any) {
         return this.paymentsService.createSubscription(userId, body);
+    }
+
+    // ── Admin Endpoints ──
+
+    @Get('admin/transactions')
+    @ApiOperation({ summary: '[Admin] 전체 결제 이력 조회 (페이지네이션)' })
+    async getAllTransactions(@Query() query: { page?: string; limit?: string; status?: string }) {
+        return this.paymentsService.getAllTransactions(query);
+    }
+
+    @Get('admin/stats')
+    @ApiOperation({ summary: '[Admin] 결제 통계' })
+    async getPaymentStats() {
+        return this.paymentsService.getPaymentStats();
     }
 }

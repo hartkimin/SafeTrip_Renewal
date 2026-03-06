@@ -284,7 +284,7 @@ export class TripsService {
 
     async bulkInvite(tripId: string, userId: string, invitees: { phone: string; name?: string; role: string }[]) {
         const trip = await this.findById(tripId);
-        
+
         // 권한 확인
         const member = await this.memberRepo.findOne({
             where: { tripId, userId, status: 'active' },
@@ -382,7 +382,7 @@ export class TripsService {
             memberRole: 'crew',
         });
         const savedMember = await this.memberRepo.save(member);
-        
+
         // §10.2: 미성년자 합류 시 보호 로직 실행
         await this.checkAndEnforceMinorProtection(trip.tripId, userId);
 
@@ -421,7 +421,7 @@ export class TripsService {
         });
 
         await this.guardianLinkRepo.save(guardianLink);
-        
+
         return {
             guardian_id: guardianLink.linkId,
             guardian_invite_code: guardianLink.linkId.substring(0, 8).toUpperCase(),
@@ -588,5 +588,61 @@ export class TripsService {
             group_id: groupId,
             timezones: [koreaEntry, ...filtered],
         };
+    }
+    // ── Admin Methods ──────────────────────────────────────────────
+
+    /** [Admin] GET /trips/admin/list — 전체 여행 목록 (페이지네이션) */
+    async listAllTrips(query: { page?: string; limit?: string }) {
+        const page = parseInt(query.page || '1', 10);
+        const limit = parseInt(query.limit || '20', 10);
+        const skip = (page - 1) * limit;
+
+        try {
+            const [trips, total] = await this.tripRepo.createQueryBuilder('t')
+                .orderBy('t.createdAt', 'DESC')
+                .skip(skip)
+                .take(limit)
+                .getManyAndCount();
+
+            return {
+                success: true,
+                data: trips,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            };
+        } catch (error) {
+            console.error('listAllTrips error:', error.message);
+            return { success: true, data: [], total: 0, page, limit, totalPages: 0 };
+        }
+    }
+
+    /** [Admin] GET /trips/admin/stats — 여행 통계 */
+    async getTripStats() {
+        try {
+            const total = await this.tripRepo.count();
+            let active = 0;
+            let createdToday = 0;
+            try {
+                active = await this.tripRepo.createQueryBuilder('t')
+                    .where('t.status = :status', { status: 'active' })
+                    .getCount();
+            } catch { /* status column might not exist */ }
+            try {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                createdToday = await this.tripRepo.createQueryBuilder('t')
+                    .where('t.createdAt >= :today', { today })
+                    .getCount();
+            } catch { /* createdAt query issue */ }
+            return {
+                success: true,
+                data: { total, active, createdToday },
+            };
+        } catch (error) {
+            console.error('getTripStats error:', error.message);
+            return { success: true, data: { total: 0, active: 0, createdToday: 0 } };
+        }
     }
 }

@@ -407,7 +407,7 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.screenPaddingH,
         ),
-        title: Text(
+        title: const Text(
           '시스템 설정 따름',
           style: AppTypography.bodyLarge,
         ),

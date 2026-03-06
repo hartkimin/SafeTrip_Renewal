@@ -201,29 +201,32 @@ class _ScreenTripPrivacyState extends State<ScreenTripPrivacy> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildPrivacyRadio(
-                selected,
-                'safety_first',
-                '안전 최우선',
-                '긴급 시 즉시 위치 공유, 가디언 실시간 보호',
-                setDialogState,
-                (v) => selected = v!,
-              ),
-              _buildPrivacyRadio(
-                selected,
-                'standard',
-                '표준',
-                '정상 시 실시간, 정지 시 저빈도 위치 공유',
-                setDialogState,
-                (v) => selected = v!,
-              ),
-              _buildPrivacyRadio(
-                selected,
-                'privacy_first',
-                '프라이버시 우선',
-                '스케줄 외 시간 위치 비공개, 최소 정보 공유',
-                setDialogState,
-                (v) => selected = v!,
+              RadioGroup<String>(
+                groupValue: selected,
+                onChanged: (v) {
+                  selected = v!;
+                  setDialogState(() {});
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildPrivacyRadio(
+                      'safety_first',
+                      '안전 최우선',
+                      '긴급 시 즉시 위치 공유, 가디언 실시간 보호',
+                    ),
+                    _buildPrivacyRadio(
+                      'standard',
+                      '표준',
+                      '정상 시 실시간, 정지 시 저빈도 위치 공유',
+                    ),
+                    _buildPrivacyRadio(
+                      'privacy_first',
+                      '프라이버시 우선',
+                      '스케줄 외 시간 위치 비공개, 최소 정보 공유',
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -274,26 +277,20 @@ class _ScreenTripPrivacyState extends State<ScreenTripPrivacy> {
   }
 
   Widget _buildPrivacyRadio(
-    String groupValue,
     String value,
     String label,
     String desc,
-    void Function(void Function()) setDialogState,
-    void Function(String?) onChanged,
   ) {
-    return RadioListTile<String>(
-      value: value,
-      groupValue: groupValue,
-      onChanged: (v) {
-        onChanged(v);
-        setDialogState(() {});
-      },
+    return ListTile(
+      leading: Radio<String>(
+        value: value,
+        activeColor: AppColors.primaryTeal,
+      ),
       title: Text(
         label,
         style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(desc, style: AppTypography.bodySmall),
-      activeColor: AppColors.primaryTeal,
       contentPadding: EdgeInsets.zero,
       dense: true,
     );
@@ -638,7 +635,7 @@ class _ScreenTripPrivacyState extends State<ScreenTripPrivacy> {
               spacing: AppSpacing.sm,
               children: _getPauseOptions(maxPauseMinutes).map((minutes) {
                 return ActionChip(
-                  label: Text('${minutes}분'),
+                  label: Text('$minutes분'),
                   onPressed: () => _pauseLocation(minutes),
                 );
               }).toList(),

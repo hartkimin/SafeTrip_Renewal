@@ -20,12 +20,15 @@ import '../../router/auth_notifier.dart';
 import '../../services/api_service.dart';
 import '../../services/device_status_service.dart';
 import '../../services/location_service.dart';
+import '../../services/emergency_cache_service.dart';
 import '../../services/offline_sync_service.dart';
 import '../../services/sos_service.dart';
+import '../../widgets/components/battery_warning_banner.dart';
 import '../../widgets/components/offline_banner.dart';
 import '../../widgets/components/privacy_banner.dart';
 import '../../widgets/components/sos_button.dart';
 import '../../widgets/components/sos_overlay.dart';
+import '../../features/main/providers/battery_provider.dart';
 import '../../features/main/providers/map_layer_provider.dart';
 import '../../managers/map_camera_transition_manager.dart';
 import '../../managers/schedule_marker_manager.dart';
@@ -79,6 +82,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Map<String, dynamic>? _selectedMarkerUserData;
 
   bool _isInitialLoading = true;
+
+  /// §3.1: 긴급 데이터 캐싱 완료 플래그 (세션 1회)
+  bool _emergencyCached = false;
 
   /// 키보드 감지용 (§6)
   bool _isKeyboardVisible = false;
@@ -264,6 +270,21 @@ class _MainScreenState extends ConsumerState<MainScreen>
         _animateSheetTo(initialLevel);
 
         setState(() => _isInitialLoading = false);
+
+        // §3.1: 여행 활성 + 온라인 시 긴급 데이터 캐싱 (세션 1회, fire-and-forget)
+        if (!_emergencyCached && tripStatus == 'active' && groupId != null) {
+          final networkStatus = ref.read(networkStateProvider);
+          if (networkStatus.isOnline) {
+            _emergencyCached = true;
+            final countryCode =
+                ref.read(tripProvider).countryCode ?? 'KR';
+            final emergencyCache = EmergencyCacheService(
+              apiService: ApiService(),
+              offlineSyncService: OfflineSyncService(),
+            );
+            emergencyCache.cacheForTrip(groupId, countryCode);
+          }
+        }
       }
     } catch (e) {
       debugPrint('[MainScreen] Initialization failed: $e');
@@ -423,6 +444,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // SOS는 active 상태 + 비가디언일 때만 표시
     final showSos = isActive && tripState.currentUserRole != 'guardian';
     final isNoTrip = tripStatus == 'none';
+
+    // §7.3: 배터리 레벨 (위치 업데이트에서 수신)
+    final batteryAsync = ref.watch(batteryLevelProvider);
+    final batteryLevel = batteryAsync.valueOrNull;
+    final showBatteryWarning = batteryLevel != null && batteryLevel < 20;
 
     return PopScope(
       canPop: false,
@@ -628,11 +654,22 @@ class _MainScreenState extends ConsumerState<MainScreen>
                 child: OfflineBanner(status: networkStatus),
               ),
 
+            // ── Layer 7b: Battery Warning Banner (§7.3) ──────
+            if (showBatteryWarning)
+              Positioned(
+                top: MediaQuery.of(context).padding.top +
+                    (!networkStatus.isOnline ? 32 : 0),
+                left: 0,
+                right: 0,
+                child: BatteryWarningBanner(batteryLevel: batteryLevel!),
+              ),
+
             // ── Privacy Banner (active 상태에서만) ────────────
             if (isActive)
               Positioned(
                 top: MediaQuery.of(context).padding.top +
-                    (!networkStatus.isOnline ? 32 : 0),
+                    (!networkStatus.isOnline ? 32 : 0) +
+                    (showBatteryWarning ? 32 : 0),
                 left: 0,
                 right: 0,
                 child: PrivacyBanner(privacyLevel: privacyLevel),

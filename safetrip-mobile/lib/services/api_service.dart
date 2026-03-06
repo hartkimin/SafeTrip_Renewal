@@ -1263,15 +1263,14 @@ class ApiService {
 
   // ===== 긴급 연락처 / 안전가이드 (Emergency / Safety Guide, §3.1) =====
 
-  /// GET /api/v1/trips/:tripId/emergency-contacts — 긴급 연락처 조회
-  /// TODO: 백엔드 엔드포인트 구현 후 실제 API 경로로 교체
+  /// GET /api/v1/emergencies/contacts — 현재 사용자의 비상 연락처 목록
   Future<Map<String, dynamic>?> getEmergencyContacts(String tripId) async {
     try {
-      final response = await _dio.get(
-        '/api/v1/trips/$tripId/emergency-contacts',
-      );
-      if (response.data['success'] == true && response.data['data'] != null) {
-        return response.data['data'] as Map<String, dynamic>;
+      final response = await _dio.get('/api/v1/emergencies/contacts');
+      if (response.data != null) {
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : {'contacts': response.data};
       }
       return null;
     } catch (e) {
@@ -1280,15 +1279,34 @@ class ApiService {
     }
   }
 
-  /// GET /api/v1/countries/:countryCode/safety-guide — 국가별 안전가이드 조회
-  /// TODO: 백엔드 엔드포인트 구현 후 실제 API 경로로 교체
-  Future<Map<String, dynamic>?> getSafetyGuide(String countryCode) async {
+  /// GET /api/v1/guides/:countryCode/emergency — 국가별 긴급 연락처 조회
+  Future<Map<String, dynamic>?> getEmergencyContactsByCountry(
+    String countryCode,
+  ) async {
     try {
       final response = await _dio.get(
-        '/api/v1/countries/$countryCode/safety-guide',
+        '/api/v1/guides/$countryCode/emergency',
       );
-      if (response.data['success'] == true && response.data['data'] != null) {
-        return response.data['data'] as Map<String, dynamic>;
+      if (response.data != null) {
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : {'contacts': response.data};
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getEmergencyContactsByCountry Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode — 국가별 안전가이드 조회
+  Future<Map<String, dynamic>?> getSafetyGuide(String countryCode) async {
+    try {
+      final response = await _dio.get('/api/v1/guides/$countryCode');
+      if (response.data != null) {
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : {'guide': response.data};
       }
       return null;
     } catch (e) {

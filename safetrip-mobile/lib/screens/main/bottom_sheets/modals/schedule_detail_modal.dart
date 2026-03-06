@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../constants/app_tokens.dart';
 import '../../../../models/schedule.dart';
 import '../../../../services/api_service.dart';
+import '../../../../services/offline_sync_service.dart';
 import '../../../../utils/app_cache.dart';
 import 'add_schedule_direct_modal.dart';
 
@@ -451,6 +455,35 @@ class _ScheduleDetailModalState extends State<ScheduleDetailModal> {
     try {
       final groupId = AppCache.groupIdSync;
       if (groupId == null) throw Exception('group_id not found');
+
+      // §5.4 오프라인 감지
+      final connectivity = await Connectivity().checkConnectivity();
+      final isOffline = connectivity == ConnectivityResult.none;
+
+      if (isOffline) {
+        // 오프라인: 삭제 요청을 로컬 드래프트에 큐잉
+        await OfflineSyncService().pushScheduleDraft(
+          scheduleId: _schedule.scheduleId,
+          tripId: groupId,
+          action: 'delete',
+          payload: jsonEncode({
+            'schedule_id': _schedule.scheduleId,
+            'title': _schedule.title,
+          }),
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('오프라인 — 연결 복구 시 삭제가 동기화됩니다'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          widget.onScheduleUpdated?.call();
+        }
+        return;
+      }
 
       await _apiService.deleteSchedule(
         groupId: groupId,

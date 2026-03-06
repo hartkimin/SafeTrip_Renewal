@@ -59,7 +59,7 @@ class _ScreenInviteConfirmState extends State<ScreenInviteConfirm> {
           await prefs.setString('group_id', groupId);
         }
         await prefs.remove('pending_invite_code');
-        context.go(RoutePaths.main);
+        if (mounted) context.go(RoutePaths.main);
       }
     } catch (e) {
       if (mounted) {
