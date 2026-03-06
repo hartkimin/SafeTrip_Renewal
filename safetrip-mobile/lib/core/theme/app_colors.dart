@@ -82,6 +82,30 @@ abstract class AppColors {
   static const Color sosBackground = AppTokens.sosDanger; // SOS 오버레이 배경
   static const Color sosText = AppTokens.text01; // SOS 텍스트
 
+  // ─ 시간대별 감성 색상 (DOC-T3-WLC-029 §3.2.1) ────────────────
+  /// Morning (07:00~12:00): 밝은 하늘색, 상쾌함·설렘
+  static const Color timeOfDayMorning = Color(0xFF87CEEB);
+  /// Afternoon (12:00~18:00): 따뜻한 노랑, 활기·에너지
+  static const Color timeOfDayAfternoon = Color(0xFFFFC947);
+  /// Night (18:00~07:00): 딥 네이비, 안정감·신뢰
+  static const Color timeOfDayNight = Color(0xFF0D1B2A);
+
+  /// Get time-of-day overlay color based on local device time
+  static Color timeOfDayOverlay() {
+    final hour = DateTime.now().hour;
+    if (hour >= 7 && hour < 12) return timeOfDayMorning;
+    if (hour >= 12 && hour < 18) return timeOfDayAfternoon;
+    return timeOfDayNight;
+  }
+
+  /// Get time-of-day name for analytics
+  static String timeOfDayName() {
+    final hour = DateTime.now().hour;
+    if (hour >= 7 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 18) return 'afternoon';
+    return 'night';
+  }
+
   // ─ 여행 상태별 컬러 ──────────────────────────────────────────────
   static const Color tripPlanning = AppTokens.secondaryAmber; // planning
   static const Color tripActive = AppTokens.semanticSuccess; // active
