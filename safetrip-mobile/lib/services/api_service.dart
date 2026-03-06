@@ -1220,6 +1220,19 @@ class ApiService {
     }
   }
 
+  /// GET /health — 서버 상태 확인 (오프라인 감지용, §2.2)
+  Future<bool> healthCheck() async {
+    try {
+      final response = await _dio.get(
+        '/health',
+        options: Options(receiveTimeout: const Duration(seconds: 5)),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// PATCH /api/v1/users/me — 계정 삭제 요청 취소
   Future<bool> cancelAccountDeletion() async {
     try {
