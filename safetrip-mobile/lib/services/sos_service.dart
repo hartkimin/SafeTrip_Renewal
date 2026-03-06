@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../constants/event_types.dart';
@@ -46,7 +50,24 @@ class SOSService {
       final isOffline = connectivityResult == ConnectivityResult.none;
 
       if (isOffline) {
-        debugPrint('[SOS] 네트워크 오프라인 - 로컬 큐에 저장');
+        debugPrint('[SOS] 네트워크 오프라인 — SMS 폴백 시작');
+
+        // 1순위: SMS 발송
+        final emergencyPhones = await _getEmergencyPhones();
+        if (emergencyPhones.isNotEmpty) {
+          await _sendSOSSms(
+            userName: userName,
+            latitude: latitude,
+            longitude: longitude,
+            tripName: tripId,
+            phoneNumbers: emergencyPhones,
+          );
+        }
+
+        // 2순위: 로컬 알람
+        await _playLocalAlarm();
+
+        // 3순위: SQLite 큐잉 (기존)
         await offlineSyncService.pushSOS(
           sosId: sosId,
           userId: userId,
@@ -57,7 +78,9 @@ class SOSService {
           message: message,
           timestamp: timestamp,
         );
-        return true; // 오프라인 저장은 성공으로 간주 (나중에 동기화)
+
+        // 4순위: 화면 표시는 caller(SOS overlay)에서 처리
+        return true;
       }
 
       // 3. SOS 데이터 준비
@@ -153,6 +176,83 @@ class SOSService {
       return null;
     }
     return null;
+  }
+
+  /// 오프라인 SMS 폴백: 긴급 연락처 + 가디언 전화번호로 SOS 메시지 발송
+  Future<void> _sendSOSSms({
+    required String userName,
+    required double latitude,
+    required double longitude,
+    required String tripName,
+    required List<String> phoneNumbers,
+  }) async {
+    final message = '[SafeTrip SOS] $userName님이 긴급 도움을 요청합니다. '
+        '위치: $latitude,$longitude | 여행: $tripName';
+    for (final phone in phoneNumbers) {
+      try {
+        final uri = Uri(
+          scheme: 'sms',
+          path: phone,
+          queryParameters: {'body': message},
+        );
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+          debugPrint('[SOS] SMS 발송 요청: $phone');
+        }
+      } catch (e) {
+        debugPrint('[SOS] SMS 발송 실패 ($phone): $e');
+      }
+    }
+  }
+
+  /// 로컬 알람: 최대 볼륨 알림으로 주변에 SOS 상황 알림
+  Future<void> _playLocalAlarm() async {
+    try {
+      final flnp = FlutterLocalNotificationsPlugin();
+      const androidDetails = AndroidNotificationDetails(
+        'sos_alarm_channel',
+        'SOS 알람',
+        channelDescription: 'SOS 긴급 알람 채널',
+        importance: Importance.max,
+        priority: Priority.max,
+        playSound: true,
+        ongoing: true,
+        autoCancel: false,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await flnp.show(
+        9999,
+        'SOS 긴급 알람',
+        '긴급 도움 요청이 활성화되었습니다',
+        details,
+      );
+      debugPrint('[SOS] 로컬 알람 활성화');
+    } catch (e) {
+      debugPrint('[SOS] 로컬 알람 실패: $e');
+    }
+  }
+
+  /// 로컬 캐시에서 긴급 연락처 전화번호 목록 조회
+  Future<List<String>> _getEmergencyPhones() async {
+    try {
+      final meta =
+          await offlineSyncService.getCacheMeta('emergency_contacts_$tripId');
+      if (meta == null) return [];
+      final data = jsonDecode(meta['data'] as String);
+      final phones = <String>[];
+      if (data is Map) {
+        if (data['phones'] != null) {
+          phones.addAll(List<String>.from(data['phones']));
+        }
+        if (data['guardian_phones'] != null) {
+          phones.addAll(List<String>.from(data['guardian_phones']));
+        }
+      }
+      return phones;
+    } catch (e) {
+      debugPrint('[SOS] 긴급 연락처 로드 실패: $e');
+      return [];
+    }
   }
 
   // 2차 SOS 전송 (그룹 전체)
