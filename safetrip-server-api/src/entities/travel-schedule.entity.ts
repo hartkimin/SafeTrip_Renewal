@@ -63,19 +63,19 @@ export class TravelSchedule {
     @Column({ name: 'end_time', type: 'timestamptz', nullable: true })
     endTime: Date | null;
 
-    @Column({ name: 'all_day', type: 'boolean', default: false, select: false })
+    @Column({ name: 'all_day', type: 'boolean', default: false })
     allDay: boolean;
 
-    @Column({ name: 'location_name', type: 'varchar', length: 300, nullable: true, select: false })
+    @Column({ name: 'location_name', type: 'varchar', length: 300, nullable: true })
     locationName: string | null;
 
     @Column({ name: 'location_address', type: 'text', nullable: true, select: false })
     locationAddress: string | null;
 
-    @Column({ name: 'location_lat', type: 'double precision', nullable: true, select: false })
+    @Column({ name: 'location_lat', type: 'double precision', nullable: true })
     locationLat: number | null;
 
-    @Column({ name: 'location_lng', type: 'double precision', nullable: true, select: false })
+    @Column({ name: 'location_lng', type: 'double precision', nullable: true })
     locationLng: number | null;
 
     @Column({ name: 'participants', type: 'jsonb', nullable: true, select: false })
@@ -99,13 +99,13 @@ export class TravelSchedule {
     @Column({ name: 'attachments', type: 'jsonb', nullable: true, select: false })
     attachments: any;
 
-    @Column({ name: 'is_completed', type: 'boolean', default: false, select: false })
+    @Column({ name: 'is_completed', type: 'boolean', default: false })
     isCompleted: boolean;
 
     @Column({ name: 'completed_at', type: 'timestamptz', nullable: true, select: false })
     completedAt: Date | null;
 
-    @Column({ name: 'timezone', type: 'varchar', length: 50, nullable: true, select: false })
+    @Column({ name: 'timezone', type: 'varchar', length: 50, nullable: true })
     timezone: string | null;
 
     @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
