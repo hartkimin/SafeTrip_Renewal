@@ -496,6 +496,7 @@ export class SchedulesService {
 
             lines.push('BEGIN:VEVENT');
             lines.push(`UID:${s.travelScheduleId}@safetrip`);
+            lines.push(`DTSTAMP:${this.formatICSDateTime(new Date(s.updatedAt || s.createdAt || new Date()))}`);
 
             if (s.allDay && s.scheduleDate) {
                 // All-day event: VALUE=DATE format (YYYYMMDD)

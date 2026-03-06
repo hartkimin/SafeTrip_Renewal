@@ -460,6 +460,7 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
     if (result == true) {
       ref.read(scheduleProvider.notifier).fetchSchedules();
       ref.read(scheduleProvider.notifier).fetchScheduleDates();
+      ref.read(scheduleProvider.notifier).fetchShareTimeline();
     }
   }
 
@@ -490,6 +491,7 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
     if (result == true) {
       ref.read(scheduleProvider.notifier).fetchSchedules();
       ref.read(scheduleProvider.notifier).fetchScheduleDates();
+      ref.read(scheduleProvider.notifier).fetchShareTimeline();
     }
   }
 
@@ -557,9 +559,10 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
       );
 
       if (result.data != null) {
-        final textContent = result.data is String
-            ? result.data as String
-            : (result.data['data'] ?? '').toString();
+        final rawData = result.data['data'];
+        final textContent = rawData is Map
+            ? (rawData['content'] ?? '').toString()
+            : (rawData ?? '').toString();
 
         if (!mounted) return;
 

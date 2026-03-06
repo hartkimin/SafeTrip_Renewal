@@ -204,6 +204,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
       if (result.data?['success'] == true) {
         await fetchSchedules();
         await fetchScheduleDates();
+        await fetchShareTimeline();
         return true;
       }
     } catch (_) {}

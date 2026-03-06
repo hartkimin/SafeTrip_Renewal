@@ -23,10 +23,19 @@ class TimelineSegment {
 
   factory TimelineSegment.fromJson(Map<String, dynamic> json) {
     return TimelineSegment(
-      start: json['start'] as String,
-      end: json['end'] as String,
+      start: _extractHHmm(json['start'] as String),
+      end: _extractHHmm(json['end'] as String),
       type: json['type'] as String,
     );
+  }
+
+  /// ISO datetime 또는 HH:mm 문자열에서 HH:mm 부분을 추출한다.
+  static String _extractHHmm(String value) {
+    if (value.contains('T')) {
+      final dt = DateTime.parse(value);
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    return value;
   }
 
   /// HH:mm 문자열을 분(minutes) 단위로 변환한다.
