@@ -34,8 +34,12 @@ import '../../features/main/providers/map_layer_provider.dart';
 import '../../managers/map_camera_transition_manager.dart';
 import '../../managers/schedule_marker_manager.dart';
 import '../../managers/event_marker_manager.dart';
+import '../../managers/geofence_map_renderer.dart';
 import '../../managers/safety_facility_manager.dart';
+import '../../models/geofence.dart';
 import '../../widgets/map/member_mini_card.dart';
+import 'bottom_sheets/modals/event_detail_modal.dart';
+import 'bottom_sheets/modals/geofence_info_modal.dart';
 import 'bottom_sheets/bottom_sheet_1_trip.dart';
 import 'bottom_sheets/bottom_sheet_2_member.dart';
 import 'bottom_sheets/bottom_sheet_3_chat.dart';
@@ -72,11 +76,14 @@ class _MainScreenState extends ConsumerState<MainScreen>
   late final ScheduleMarkerManager _scheduleMarkerManager;
   late final EventMarkerManager _eventMarkerManager;
   late final SafetyFacilityManager _safetyFacilityManager;
+  late final GeofenceMapRenderer _geofenceMapRenderer;
 
   final ValueNotifier<List<Marker>> _scheduleMarkersNotifier = ValueNotifier([]);
   final ValueNotifier<List<Polyline>> _scheduleLinesNotifier = ValueNotifier([]);
   final ValueNotifier<List<Marker>> _eventMarkersNotifier = ValueNotifier([]);
   final ValueNotifier<List<Marker>> _safetyMarkersNotifier = ValueNotifier([]);
+  final ValueNotifier<List<CircleMarker>> _geofenceCirclesNotifier = ValueNotifier([]);
+  final ValueNotifier<List<Marker>> _geofenceTapMarkersNotifier = ValueNotifier([]);
 
   /// 멤버 미니카드 표시 상태 (§5.4)
   String? _selectedMarkerUserId;
@@ -125,8 +132,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
         );
       } else if (result.hasFailures) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('일부 데이터 동기화 실패. 재시도 중...'),
+          const SnackBar(
+            content: Text('일부 데이터 동기화 실패. 재시도 중...'),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
           ),
@@ -209,13 +216,46 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
     _eventMarkerManager = EventMarkerManager(
       onMarkersUpdated: (markers) => _eventMarkersNotifier.value = markers,
-      onEventMarkerTap: (id) {
-        debugPrint('[MainScreen] Event marker tapped: $id');
+      onEventMarkerTap: (eventId) {
+        final data = _eventMarkerManager.getEventData(eventId);
+        if (data != null && mounted) {
+          showModalBottomSheet(
+            context: context,
+            builder: (_) => EventDetailModal(
+              eventType: data['eventType'] as String,
+              memberName: data['memberName'] as String,
+              description: '${data['memberName']} ${data['geofenceName'] ?? '지오펜스'} 이탈',
+              timestamp: data['timestamp'] as DateTime,
+              latitude: (data['position'] as LatLng?)?.latitude,
+              longitude: (data['position'] as LatLng?)?.longitude,
+              geofenceName: data['geofenceName'] as String?,
+            ),
+          );
+        }
       },
     );
 
     _safetyFacilityManager = SafetyFacilityManager(
       onMarkersUpdated: (markers) => _safetyMarkersNotifier.value = markers,
+    );
+
+    _geofenceMapRenderer = GeofenceMapRenderer(
+      onGeofencesUpdated: (circles) => _geofenceCirclesNotifier.value = circles,
+      onMarkersUpdated: (markers) => _geofenceTapMarkersNotifier.value = markers,
+      isMounted: () => mounted,
+      onGeofenceTap: (geofence) async {
+        if (!mounted) return;
+        final prefs = await SharedPreferences.getInstance();
+        final userRole = prefs.getString('user_role') ?? 'crew';
+        if (!mounted) return;
+        showModalBottomSheet(
+          context: context,
+          builder: (_) => GeofenceInfoModal(
+            geofence: geofence,
+            userRole: userRole,
+          ),
+        );
+      },
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -398,10 +438,13 @@ class _MainScreenState extends ConsumerState<MainScreen>
     _scheduleMarkerManager.dispose();
     _eventMarkerManager.dispose();
     _safetyFacilityManager.dispose();
+    _geofenceMapRenderer.dispose();
     _scheduleMarkersNotifier.dispose();
     _scheduleLinesNotifier.dispose();
     _eventMarkersNotifier.dispose();
     _safetyMarkersNotifier.dispose();
+    _geofenceCirclesNotifier.dispose();
+    _geofenceTapMarkersNotifier.dispose();
     _sheetController.dispose();
     super.dispose();
   }
@@ -576,6 +619,18 @@ class _MainScreenState extends ConsumerState<MainScreen>
                         valueListenable: _scheduleMarkersNotifier,
                         builder: (_, markers, __) => MarkerLayer(markers: markers),
                       ),
+                    // Layer 4: 지오펜스 영역 (CircleLayer)
+                    if (layerState.layer4EventAlerts)
+                      ValueListenableBuilder<List<CircleMarker>>(
+                        valueListenable: _geofenceCirclesNotifier,
+                        builder: (_, circles, __) => CircleLayer(circles: circles),
+                      ),
+                    // Layer 4: 지오펜스 탭 감지 마커
+                    if (layerState.layer4EventAlerts)
+                      ValueListenableBuilder<List<Marker>>(
+                        valueListenable: _geofenceTapMarkersNotifier,
+                        builder: (_, markers, __) => MarkerLayer(markers: markers),
+                      ),
                     // Layer 4: 이벤트/알림 마커
                     if (layerState.layer4EventAlerts)
                       ValueListenableBuilder<List<Marker>>(
@@ -719,7 +774,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     (!networkStatus.isOnline ? 32 : 0),
                 left: 0,
                 right: 0,
-                child: BatteryWarningBanner(batteryLevel: batteryLevel!),
+                child: BatteryWarningBanner(batteryLevel: batteryLevel),
               ),
 
             // ── Privacy Banner (active 상태에서만) ────────────

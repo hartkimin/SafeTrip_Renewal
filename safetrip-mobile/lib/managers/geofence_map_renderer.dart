@@ -12,6 +12,7 @@ class GeofenceMapRenderer {
     required this.onGeofencesUpdated,
     required this.onMarkersUpdated,
     required this.isMounted,
+    this.onGeofenceTap,
   });
   // 상태
   List<CircleMarker> _geofenceCircles = [];
@@ -20,6 +21,7 @@ class GeofenceMapRenderer {
   final Function(List<CircleMarker>) onGeofencesUpdated;
   final Function(List<Marker>) onMarkersUpdated;
   final bool Function() isMounted;
+  final void Function(GeofenceData geofence)? onGeofenceTap;
 
   // Getters
   List<CircleMarker> get geofenceCircles => List.from(_geofenceCircles);
@@ -101,10 +103,24 @@ class GeofenceMapRenderer {
         );
         onGeofencesUpdated(circles);
 
-        // 지오펜스 마커 제거를 위한 콜백 호출
-        // (실제 마커 제거는 MarkerManager에서 처리)
-        onMarkersUpdated([]);
-        debugPrint('[GeofenceMapRenderer] 콜백 호출 완료');
+        // 지오펜스 탭 감지용 투명 마커 생성
+        final tapMarkers = <Marker>[];
+        for (final geofence in geofences) {
+          if (!geofence.isActive) continue;
+          if (geofence.centerLatitude == null || geofence.centerLongitude == null) continue;
+          tapMarkers.add(Marker(
+            key: ValueKey('geofence_tap_${geofence.geofenceId}'),
+            point: LatLng(geofence.centerLatitude!, geofence.centerLongitude!),
+            width: 40,
+            height: 40,
+            child: GestureDetector(
+              onTap: () => onGeofenceTap?.call(geofence),
+              child: Container(color: Colors.transparent),
+            ),
+          ));
+        }
+        onMarkersUpdated(tapMarkers);
+        debugPrint('[GeofenceMapRenderer] 콜백 호출 완료 (탭 마커: ${tapMarkers.length}개)');
       } else {
         debugPrint('[GeofenceMapRenderer] 위젯이 마운트되지 않아 업데이트 스킵');
       }
