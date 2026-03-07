@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, HttpCode, HttpStatus, UseGuards, UseInterceptors, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { LocationsService } from './locations.service';
+import { MovementHistoryAccessGuard } from './guards/movement-history-access.guard';
+import { PrivacyMaskingInterceptor } from './interceptors/privacy-masking.interceptor';
 
 @ApiTags('Locations')
 @ApiBearerAuth('firebase-auth')
@@ -237,5 +239,77 @@ export class LocationsController {
     ) {
         const result = await this.locationsService.getMovementSessionEvents(userId, sessionId);
         return { success: true, data: result };
+    }
+
+    // ── 멤버별 이동기록 API (§7~§9 접근 제어 적용) ──
+
+    @Get('trips/:tripId/members/:targetUserId/movement-history')
+    @ApiOperation({ summary: '멤버 이동기록 조회 (역할 검증 + 마스킹)' })
+    @UseGuards(MovementHistoryAccessGuard)
+    @UseInterceptors(PrivacyMaskingInterceptor)
+    async getMemberMovementHistory(
+        @Param('tripId') tripId: string,
+        @Param('targetUserId') targetUserId: string,
+        @Query('date') date: string,
+        @Req() request: any,
+    ) {
+        return this.locationsService.getMemberMovementHistory(
+            tripId, targetUserId, date,
+            request.movementHistoryAccess,
+        );
+    }
+
+    @Get('trips/:tripId/members/:targetUserId/movement-history/timeline')
+    @ApiOperation({ summary: '멤버 이동기록 타임라인 데이터 조회' })
+    @UseGuards(MovementHistoryAccessGuard)
+    @UseInterceptors(PrivacyMaskingInterceptor)
+    async getMemberTimeline(
+        @Param('tripId') tripId: string,
+        @Param('targetUserId') targetUserId: string,
+        @Query('date') date: string,
+        @Req() request: any,
+    ) {
+        return this.locationsService.getMemberTimeline(
+            tripId, targetUserId, date,
+            request.movementHistoryAccess,
+        );
+    }
+
+    @Get('trips/:tripId/members/:targetUserId/stay-points')
+    @ApiOperation({ summary: '멤버 체류 지점 조회' })
+    @UseGuards(MovementHistoryAccessGuard)
+    async getMemberStayPoints(
+        @Param('tripId') tripId: string,
+        @Param('targetUserId') targetUserId: string,
+    ) {
+        return this.locationsService.getStayPoints(tripId, targetUserId);
+    }
+
+    @Get('trips/:tripId/members/:targetUserId/movement-sessions/:sessionId/stats')
+    @ApiOperation({ summary: '이동 세션 통계 조회' })
+    @UseGuards(MovementHistoryAccessGuard)
+    async getMemberSessionStats(
+        @Param('tripId') tripId: string,
+        @Param('targetUserId') targetUserId: string,
+        @Param('sessionId') sessionId: string,
+    ) {
+        return this.locationsService.getMovementSessionStats(targetUserId, sessionId);
+    }
+
+    @Get('trips/:tripId/members/:targetUserId/insights')
+    @ApiOperation({ summary: '멤버 이동기록 인사이트 (P3)' })
+    @UseGuards(MovementHistoryAccessGuard)
+    async getMemberInsights(
+        @Param('tripId') tripId: string,
+        @Param('targetUserId') targetUserId: string,
+        @Query('date') date: string,
+    ) {
+        return this.locationsService.getMemberInsights(tripId, targetUserId, date);
+    }
+
+    @Get('trips/:tripId/insights/group')
+    @ApiOperation({ summary: '그룹 인사이트 (캡틴/크루장용, P3)' })
+    async getGroupInsights(@Param('tripId') tripId: string) {
+        return this.locationsService.getGroupInsights(tripId);
     }
 }

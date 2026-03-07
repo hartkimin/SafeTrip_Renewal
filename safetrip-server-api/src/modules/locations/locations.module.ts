@@ -9,14 +9,18 @@ import {
 } from '../../entities/location.entity';
 import { PlannedRoute } from '../../entities/planned-route.entity';
 import { RouteDeviation } from '../../entities/route-deviation.entity';
+import { GroupMember } from '../../entities/group-member.entity';
+import { GuardianLink } from '../../entities/guardian.entity';
+import { MovementHistoryAccessGuard } from './guards/movement-history-access.guard';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
         Location, LocationSharing, LocationSchedule,
         StayPoint, SessionMapImage, PlannedRoute, RouteDeviation, MovementSession,
+        GroupMember, GuardianLink,
     ])],
     controllers: [LocationsController],
-    providers: [LocationsService, LocationsGateway],
+    providers: [LocationsService, LocationsGateway, MovementHistoryAccessGuard],
     exports: [LocationsService, LocationsGateway],
 })
 export class LocationsModule { }

@@ -31,6 +31,7 @@ import '../screens/ai/screen_ai_briefing.dart';
 import '../screens/main/screen_main_guardian.dart';
 import '../features/onboarding/presentation/screens/screen_invite_confirm.dart';
 import '../features/onboarding/presentation/screens/screen_guardian_confirm.dart';
+import '../features/movement_history/presentation/screens/screen_movement_history.dart';
 
 class AppRouter {
   AppRouter(this.authNotifier);
@@ -207,6 +208,14 @@ class AppRouter {
         builder: (context, state) {
           return MainScreen(authNotifier: authNotifier);
         },
+      ),
+      GoRoute(
+        path: RoutePaths.movementHistory,
+        builder: (context, state) => MovementHistoryScreen(
+          tripId: state.pathParameters['tripId'] ?? '',
+          targetUserId: state.pathParameters['userId'] ?? '',
+          memberName: state.uri.queryParameters['name'] ?? '',
+        ),
       ),
     ],
   );
