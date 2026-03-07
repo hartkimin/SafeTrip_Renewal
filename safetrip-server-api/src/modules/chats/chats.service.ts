@@ -34,16 +34,45 @@ export class ChatsService {
     }
 
     async sendMessage(roomId: string, senderId: string, data: {
-        messageType?: string; content?: string; mediaUrl?: string;
-        latitude?: number; longitude?: number;
+        messageType?: string;
+        content?: string;
+        mediaUrls?: any;           // JSONB — [{url, type, size, thumbnail}]
+        locationData?: any;        // JSONB — {lat, lng, address, place_name}
+        cardData?: any;            // rich card data, stored in metadata
+        replyToId?: string;
+        // legacy single-field support
+        mediaUrl?: string;
+        latitude?: number;
+        longitude?: number;
     }) {
         const room = await this.roomRepo.findOne({ where: { roomId } });
         if (!room) throw new NotFoundException('Chat room not found');
 
+        // Build media URLs — accept new array format or legacy single URL
+        let mediaUrls = data.mediaUrls || null;
+        if (!mediaUrls && data.mediaUrl) {
+            mediaUrls = [{ url: data.mediaUrl, type: 'image' }];
+        }
+
+        // Build location data — accept new object or legacy lat/lng fields
+        let locationData = data.locationData || null;
+        if (!locationData && data.latitude != null && data.longitude != null) {
+            locationData = { lat: data.latitude, lng: data.longitude };
+        }
+
+        // Build metadata — store cardData if provided
+        const metadata = data.cardData ? { cardData: data.cardData } : null;
+
         const message = this.messageRepo.create({
-            roomId, senderId,
+            roomId,
+            tripId: room.tripId,
+            senderId,
             messageType: data.messageType || 'text',
-            content: data.content,
+            content: data.content || null,
+            mediaUrls,
+            locationData,
+            replyToId: data.replyToId || null,
+            metadata,
         } as Partial<ChatMessage>);
         const saved = await this.messageRepo.save(message);
 

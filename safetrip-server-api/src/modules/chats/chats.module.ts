@@ -3,18 +3,23 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatsController } from './chats.controller';
 import { ChatsService } from './chats.service';
 import { ChatsGateway } from './chats.gateway';
-import { ChatRoom, ChatMessage, ChatReadStatus } from '../../entities/chat.entity';
+import { SystemMessageService } from './system-message.service';
+import { ChatRoom, ChatMessage, ChatReadStatus, ChatPoll, ChatPollVote } from '../../entities/chat.entity';
 import { GroupMember } from '../../entities/group-member.entity';
 import { User } from '../../entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([ChatRoom, ChatMessage, ChatReadStatus, GroupMember, User]),
-        NotificationsModule
+        TypeOrmModule.forFeature([
+            ChatRoom, ChatMessage, ChatReadStatus,
+            ChatPoll, ChatPollVote,
+            GroupMember, User,
+        ]),
+        NotificationsModule,
     ],
     controllers: [ChatsController],
-    providers: [ChatsService, ChatsGateway],
-    exports: [ChatsService, ChatsGateway],
+    providers: [ChatsService, ChatsGateway, SystemMessageService],
+    exports: [ChatsService, ChatsGateway, SystemMessageService],
 })
 export class ChatsModule { }
