@@ -26,7 +26,7 @@ export class GuardiansService {
     ) { }
 
     // [POST] /api/v1/trips/:tripId/guardians
-    async createLink(tripId: string, memberId: string, guardianPhone: string) {
+    async createLink(tripId: string, memberId: string, guardianPhone: string, guardianType: 'personal' | 'group' = 'personal') {
         const targetUser = await this.userRepo.findOne({ where: { phoneNumber: guardianPhone } });
         if (!targetUser) {
             throw new NotFoundException('해당 전화번호로 가입된 사용자를 찾을 수 없습니다');
@@ -36,24 +36,49 @@ export class GuardiansService {
             throw new BadRequestException('본인을 가디언으로 추가할 수 없습니다');
         }
 
-        // §05.4 쿼터 확인
-        const { maxGuardians } = await this.paymentsService.checkGuardianQuota(memberId, tripId);
-        
-        const currentLinks = await this.linkRepo.count({
-            where: [
-                { memberId, tripId, status: 'pending' },
-                { memberId, tripId, status: 'accepted' },
-            ]
+        // §17#4: 멤버+가디언 겸직 방지 — 같은 여행의 멤버가 가디언이 될 수 없음
+        const existingMember = await this.groupMemberRepo.findOne({
+            where: { tripId, userId: targetUser.userId, status: 'active' },
         });
-
-        if (currentLinks >= maxGuardians) {
-            throw new BadRequestException(`가디언 등록 제한을 초과했습니다. (현재 플랜 제한: ${maxGuardians}명)`);
+        if (existingMember && ['captain', 'crew_chief', 'crew'].includes(existingMember.memberRole)) {
+            throw new BadRequestException(
+                '이 여행의 멤버로 참여 중인 사용자는 같은 여행의 가디언이 될 수 없습니다. (비즈니스 원칙 §01.2, §17#4)',
+            );
         }
 
+        if (guardianType === 'group') {
+            // §03.1, §17#7: 전체 가디언 여행당 2명 상한
+            const currentGroupLinks = await this.linkRepo.count({
+                where: [
+                    { tripId, guardianType: 'group', status: 'pending' },
+                    { tripId, guardianType: 'group', status: 'accepted' },
+                ]
+            });
+            if (currentGroupLinks >= 2) {
+                throw new BadRequestException(
+                    '전체 가디언은 여행당 최대 2명까지 등록할 수 있습니다. (비즈니스 원칙 §03.1, §17#7)',
+                );
+            }
+        } else {
+            // §03.1, §17#6: 개인 가디언 쿼터 체크 (guardian_type 분리)
+            const { maxGuardians } = await this.paymentsService.checkGuardianQuota(memberId, tripId);
+            const currentPersonalLinks = await this.linkRepo.count({
+                where: [
+                    { memberId, tripId, guardianType: 'personal', status: 'pending' },
+                    { memberId, tripId, guardianType: 'personal', status: 'accepted' },
+                ]
+            });
+            if (currentPersonalLinks >= maxGuardians) {
+                throw new BadRequestException(
+                    `개인 가디언 등록 제한을 초과했습니다. (현재 플랜 제한: ${maxGuardians}명, 비즈니스 원칙 §03.1)`,
+                );
+            }
+        }
+
+        // 중복 체크
         const existingLink = await this.linkRepo.findOne({
             where: { tripId, memberId, guardianId: targetUser.userId }
         });
-
         if (existingLink) {
             throw new ConflictException('이미 요청한 가디언입니다');
         }
@@ -63,6 +88,7 @@ export class GuardiansService {
             memberId,
             guardianId: targetUser.userId,
             guardianPhone,
+            guardianType,
             status: 'pending'
         });
 
