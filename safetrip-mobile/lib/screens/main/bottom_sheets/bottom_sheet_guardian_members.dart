@@ -47,6 +47,12 @@ class _BottomSheetGuardianMembersState
   String? _error;
   bool _isPaidGuardian = false;
 
+  /// Map from member userId to their guardian link_id (for API calls).
+  final Map<String, String> _memberLinkIds = {};
+
+  /// Schedule data per linkId, fetched from the guardian schedule summary API.
+  final Map<String, List<Map<String, dynamic>>> _schedulesByMember = {};
+
   /// Emergency location request timestamps per member (memberId -> timestamps).
   /// Used for rate limiting: max 3 requests per hour per member.
   final Map<String, List<DateTime>> _locationRequestHistory = {};
@@ -100,8 +106,15 @@ class _BottomSheetGuardianMembersState
       // Each item in data represents a guardian link containing the linked member info.
       final List<TripMember> members = [];
       bool paidFlag = false;
+      final Map<String, String> linkIds = {};
+      final List<String> paidLinkIds = [];
 
       for (final item in data) {
+        // Extract link_id for this guardian link
+        final linkId = item['link_id'] as String? ??
+            item['linkId'] as String? ??
+            '';
+
         // Determine if this guardian link is paid
         final isPaid = item['is_paid'] as bool? ??
             item['isPaid'] as bool? ??
@@ -113,6 +126,12 @@ class _BottomSheetGuardianMembersState
         try {
           final member = TripMember.fromJson(memberData);
           members.add(member);
+          if (linkId.isNotEmpty) {
+            linkIds[member.userId] = linkId;
+            if (isPaid) {
+              paidLinkIds.add(linkId);
+            }
+          }
         } catch (e) {
           debugPrint('[GuardianMembers] Failed to parse member: $e');
         }
@@ -121,8 +140,18 @@ class _BottomSheetGuardianMembersState
       setState(() {
         _linkedMembers = members;
         _isPaidGuardian = paidFlag;
+        _memberLinkIds
+          ..clear()
+          ..addAll(linkIds);
         _isLoading = false;
       });
+
+      // Fetch schedule summaries for paid guardian links
+      if (paidFlag && tripId.isNotEmpty) {
+        for (final linkId in paidLinkIds) {
+          _fetchSchedule(tripId, linkId);
+        }
+      }
     } catch (e) {
       debugPrint('[GuardianMembers] _loadLinkedMembers Error: $e');
       if (!mounted) return;
@@ -131,6 +160,35 @@ class _BottomSheetGuardianMembersState
         _error = e.toString();
       });
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Schedule Fetch (SS9.3 — Paid Guardian)
+  // ---------------------------------------------------------------------------
+
+  /// Fetches today's schedule summary for a specific guardian link.
+  Future<void> _fetchSchedule(String tripId, String linkId) async {
+    try {
+      final schedules =
+          await ApiService().getGuardianScheduleSummary(tripId, linkId);
+      if (mounted) {
+        setState(() {
+          _schedulesByMember[linkId] = schedules;
+        });
+      }
+    } catch (e) {
+      debugPrint('[GuardianMembers] Schedule fetch failed: $e');
+    }
+  }
+
+  /// Formats a date value (String or DateTime) into HH:mm time string.
+  String _formatScheduleTime(dynamic dateValue) {
+    if (dateValue == null) return '';
+    final dt = dateValue is DateTime
+        ? dateValue
+        : DateTime.tryParse(dateValue.toString());
+    if (dt == null) return '';
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   // ---------------------------------------------------------------------------
@@ -649,6 +707,10 @@ class _BottomSheetGuardianMembersState
   // ---------------------------------------------------------------------------
 
   Widget _buildScheduleSummary(TripMember member) {
+    final linkId = _memberLinkIds[member.userId];
+    final schedules =
+        linkId != null ? _schedulesByMember[linkId] : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -661,7 +723,7 @@ class _BottomSheetGuardianMembersState
             ),
             const SizedBox(width: AppSpacing.xs),
             Text(
-              '연결 멤버 일정 요약',
+              '오늘의 일정',
               style: AppTypography.labelMedium.copyWith(
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -671,13 +733,48 @@ class _BottomSheetGuardianMembersState
         ),
         const SizedBox(height: AppSpacing.sm),
 
-        // Placeholder schedule items
-        // TODO: Replace with actual schedule data from API
-        _buildScheduleItem(
-          time: '오늘 15:00',
-          description: '일정 정보를 불러오는 중...',
-          icon: Icons.place_outlined,
-        ),
+        // Schedule data from API
+        if (schedules == null) ...[
+          // Still loading
+          _buildScheduleItem(
+            time: '',
+            description: '일정 정보를 불러오는 중...',
+            icon: Icons.hourglass_empty_outlined,
+          ),
+        ] else if (schedules.isEmpty) ...[
+          // No schedule for today
+          _buildScheduleItem(
+            time: '',
+            description: '오늘 등록된 일정이 없습니다',
+            icon: Icons.event_busy_outlined,
+          ),
+        ] else ...[
+          // Render actual schedule items
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(AppSpacing.radius8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: schedules.map((s) {
+                final time = _formatScheduleTime(
+                  s['start_time'] ?? s['startTime'],
+                );
+                final title =
+                    s['title'] as String? ?? '';
+                final timePrefix =
+                    time.isNotEmpty ? '$time  ' : '';
+                return _buildScheduleItem(
+                  time: timePrefix,
+                  description: title,
+                  icon: Icons.place_outlined,
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ],
     );
   }

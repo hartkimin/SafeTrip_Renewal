@@ -13,6 +13,7 @@ import '../../../features/trip/providers/attendance_provider.dart';
 import '../../../models/attendance.dart';
 import '../../../models/trip_member.dart';
 import '../../../models/user.dart';
+import '../../../services/api_service.dart';
 import '../../../widgets/member_card.dart';
 import '../../../widgets/avatar_widget.dart';
 import 'modals/add_member_modal.dart';
@@ -79,9 +80,8 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
       return;
     }
 
-    // B2B, 유료 여행 여부 판단 (tripProvider의 상태 값에서 추론)
-    // Trip 모델에는 tripType이 없으므로 currentTripStatus 기반으로 판단
-    const isB2b = false; // TODO: B2B 여부는 별도 API 또는 그룹 속성에서 결정
+    // B2B, 유료 여행 여부 판단
+    final isB2b = tripState.currentTrip?.isB2b ?? false;
     final isPaid = tripState.totalMemberCount >= 6; // 유료 기준: 6인 이상
 
     await ref.read(memberTabProvider.notifier).initialize(
@@ -199,6 +199,9 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
               child: _AttendanceBanner(
                 check: attendState.currentCheck!,
                 totalMembers: memberState.totalMemberCount,
+                presentCount: attendState.presentCount,
+                absentCount: attendState.absentCount,
+                unknownCount: attendState.unknownCount,
               ),
             ),
 
@@ -277,6 +280,24 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
   // ---------------------------------------------------------------------------
 
   Widget _buildOfflineModeBanner() {
+    final memberState = ref.read(memberTabProvider);
+    final lastSync = memberState.lastSyncAt;
+
+    // 마지막 동기화 시간 텍스트 계산
+    String syncText = '알 수 없음';
+    if (lastSync != null) {
+      final diff = DateTime.now().difference(lastSync);
+      if (diff.inMinutes < 1) {
+        syncText = '방금';
+      } else if (diff.inMinutes < 60) {
+        syncText = '${diff.inMinutes}분 전';
+      } else if (diff.inHours < 24) {
+        syncText = '${diff.inHours}시간 전';
+      } else {
+        syncText = '${diff.inDays}일 전';
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.symmetric(
@@ -296,7 +317,7 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              '오프라인 모드 — 마지막 동기화 데이터를 표시 중입니다.',
+              '[오프라인 모드] 마지막 동기화: $syncText. 연결 후 자동 갱신됩니다.',
               style: AppTypography.bodySmall.copyWith(
                 color: AppColors.textWarning,
                 fontWeight: FontWeight.w500,
@@ -426,14 +447,23 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _GuardianManageSheet(
-        guardianSlots: state.guardianSlots,
-        isCaptain: state.isCaptain,
-        tripId: state.tripId ?? '',
-        onRefresh: () {
-          ref.read(memberTabProvider.notifier).fetchMembers();
-        },
-      ),
+      builder: (sheetContext) {
+        // 현재 사용자의 미성년자 여부 확인 (§10.2)
+        final currentMember = state.allMembers
+            .where((m) => m.userId == state.currentUserId)
+            .firstOrNull;
+        final isCurrentUserMinor = currentMember?.isMinor ?? false;
+
+        return _GuardianManageSheet(
+          guardianSlots: state.guardianSlots,
+          isCaptain: state.isCaptain,
+          isMinor: isCurrentUserMinor,
+          tripId: state.tripId ?? '',
+          onRefresh: () {
+            ref.read(memberTabProvider.notifier).fetchMembers();
+          },
+        );
+      },
     );
   }
 }
@@ -650,21 +680,28 @@ class _OfflineAlertBannerState extends State<_OfflineAlertBanner> {
 // _AttendanceBanner (SS8.3) — Teal attendance in-progress banner
 // =============================================================================
 
-class _AttendanceBanner extends StatefulWidget {
+class _AttendanceBanner extends ConsumerStatefulWidget {
   const _AttendanceBanner({
     required this.check,
     required this.totalMembers,
+    required this.presentCount,
+    required this.absentCount,
+    required this.unknownCount,
   });
 
   final AttendanceCheck check;
   final int totalMembers;
+  final int presentCount;
+  final int absentCount;
+  final int unknownCount;
 
   @override
-  State<_AttendanceBanner> createState() => _AttendanceBannerState();
+  ConsumerState<_AttendanceBanner> createState() => _AttendanceBannerState();
 }
 
-class _AttendanceBannerState extends State<_AttendanceBanner> {
+class _AttendanceBannerState extends ConsumerState<_AttendanceBanner> {
   Timer? _timer;
+  Timer? _responseTimer;
   Duration _remaining = Duration.zero;
 
   @override
@@ -674,11 +711,29 @@ class _AttendanceBannerState extends State<_AttendanceBanner> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _calculateRemaining();
     });
+
+    // 출석 응답 실시간 폴링 (5초 간격)
+    _fetchResponsesNow();
+    _responseTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _fetchResponsesNow();
+    });
+  }
+
+  void _fetchResponsesNow() {
+    if (!mounted) return;
+    final aState = ref.read(attendanceProvider);
+    if (aState.currentCheck != null) {
+      ref.read(attendanceProvider.notifier).fetchResponses(
+            aState.currentCheck!.tripId,
+            aState.currentCheck!.id,
+          );
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _responseTimer?.cancel();
     super.dispose();
   }
 
@@ -699,6 +754,13 @@ class _AttendanceBannerState extends State<_AttendanceBanner> {
     final minutes = _remaining.inMinutes;
     final seconds = _remaining.inSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  /// 미응답 수 = 전체 멤버 - 확인 - 부재
+  int get _pendingCount {
+    final responded = widget.presentCount + widget.absentCount;
+    final pending = widget.totalMembers - responded;
+    return pending < 0 ? 0 : pending;
   }
 
   @override
@@ -748,27 +810,26 @@ class _AttendanceBannerState extends State<_AttendanceBanner> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          // TODO: 실제 응답 데이터 연동 시 confirmed/pending/absent 수치 표시
           Row(
             children: [
-              const _AttendanceStat(
+              _AttendanceStat(
                 emoji: '\u2705',
                 label: '\uD655\uC778',
-                count: 0,
+                count: widget.presentCount,
                 color: AppColors.semanticSuccess,
               ),
               const SizedBox(width: AppSpacing.md),
               _AttendanceStat(
                 emoji: '\u23F3',
                 label: '\uBBF8\uC751\uB2F5',
-                count: widget.totalMembers,
+                count: _pendingCount,
                 color: AppColors.secondaryAmber,
               ),
               const SizedBox(width: AppSpacing.md),
-              const _AttendanceStat(
+              _AttendanceStat(
                 emoji: '\u274C',
                 label: '\uBD80\uC7AC',
-                count: 0,
+                count: widget.absentCount,
                 color: AppColors.semanticError,
               ),
             ],
@@ -1017,12 +1078,14 @@ class _GuardianManageSheet extends StatelessWidget {
   const _GuardianManageSheet({
     required this.guardianSlots,
     required this.isCaptain,
+    required this.isMinor,
     required this.tripId,
     this.onRefresh,
   });
 
   final List<GuardianSlot> guardianSlots;
   final bool isCaptain;
+  final bool isMinor;
   final String tripId;
   final VoidCallback? onRefresh;
 
@@ -1303,8 +1366,11 @@ class _GuardianManageSheet extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   void _showRemoveGuardianDialog(BuildContext context, GuardianSlot slot) {
-    // TODO: 미성년자 멤버 여부 체크 — 현재는 일반 해제 다이얼로그만 구현
-    // 미성년자의 경우 별도 캡틴 승인 요청 다이얼로그 표시 (SS12.2)
+    // §10.2: 미성년자 멤버는 캡틴 승인 요청으로 분기
+    if (isMinor) {
+      _showMinorReleaseRequestDialog(context, slot);
+      return;
+    }
 
     showDialog(
       context: context,
@@ -1335,10 +1401,14 @@ class _GuardianManageSheet extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              // TODO: 가디언 해제 API 호출
-              onRefresh?.call();
+              try {
+                await ApiService().removeGuardianLink(tripId, slot.linkId);
+                onRefresh?.call();
+              } catch (e) {
+                debugPrint('[GuardianManageSheet] Guardian removal failed: $e');
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.semanticError,
@@ -1348,6 +1418,70 @@ class _GuardianManageSheet extends StatelessWidget {
               ),
             ),
             child: const Text('\uD574\uC81C'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Minor Guardian Release Request Dialog (§10.2)
+  // ---------------------------------------------------------------------------
+
+  void _showMinorReleaseRequestDialog(BuildContext context, GuardianSlot slot) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radius16),
+        ),
+        title: Text(
+          '가디언 해제 요청',
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          '미성년자 멤버의 가디언 해제는 캡틴 승인이 필요합니다.\n'
+          '캡틴에게 ${slot.guardianName}님 가디언 해제 요청을 보내시겠습니까?',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '취소',
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ApiService().requestGuardianRelease(tripId, slot.linkId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('캡틴에게 가디언 해제 요청을 보냈습니다.'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('[GuardianManageSheet] Release request failed: $e');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryTeal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radius8),
+              ),
+            ),
+            child: const Text('요청 전송'),
           ),
         ],
       ),

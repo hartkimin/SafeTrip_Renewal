@@ -512,6 +512,22 @@ class ApiService {
     }
   }
 
+  /// 출석 체크 응답 목록 (GET /api/v1/trips/:tripId/attendances/:checkId/responses)
+  Future<List<Map<String, dynamic>>> getAttendanceResponses(
+      String tripId, String checkId) async {
+    try {
+      final response = await _dio
+          .get('/api/v1/trips/$tripId/attendances/$checkId/responses');
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getAttendanceResponses Error: $e');
+      return [];
+    }
+  }
+
   // ===== 그룹 (Group) =====
 
   Future<List<Map<String, dynamic>>> getGroups() async {
@@ -1271,6 +1287,66 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService] addGuardian Error: $e');
       return null;
+    }
+  }
+
+  /// POST /api/v1/trips/:tripId/guardians/release-requests — 미성년자 가디언 해제 요청
+  Future<Map<String, dynamic>?> requestGuardianRelease(
+    String tripId,
+    String linkId,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/trips/$tripId/guardians/release-requests',
+        data: {'link_id': linkId},
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] requestGuardianRelease Error: $e');
+      return null;
+    }
+  }
+
+  /// PATCH /api/v1/trips/:tripId/guardians/release-requests/:requestId — 가디언 해제 요청 승인/거부
+  Future<Map<String, dynamic>?> respondToGuardianRelease(
+    String tripId,
+    String requestId,
+    String action,
+  ) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/trips/$tripId/guardians/release-requests/$requestId',
+        data: {'action': action},
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] respondToGuardianRelease Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/trips/:tripId/guardians/:linkId/schedule-summary — 가디언 일정 요약
+  Future<List<Map<String, dynamic>>> getGuardianScheduleSummary(
+    String tripId,
+    String linkId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/trips/$tripId/guardians/$linkId/schedule-summary',
+      );
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getGuardianScheduleSummary Error: $e');
+      return [];
     }
   }
 

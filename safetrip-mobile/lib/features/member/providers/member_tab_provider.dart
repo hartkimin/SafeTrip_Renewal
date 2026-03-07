@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/trip_member.dart';
 import '../../../models/user.dart';
 import '../../../services/api_service.dart';
+import '../../../services/offline_cache_service.dart';
 
 // =============================================================================
 // MemberTabState
@@ -172,6 +173,7 @@ class MemberTabNotifier extends StateNotifier<MemberTabState> {
   MemberTabNotifier(this._apiService) : super(const MemberTabState());
 
   final ApiService _apiService;
+  final OfflineCacheService _cacheService = OfflineCacheService();
 
   // ---------------------------------------------------------------------------
   // Initialize
@@ -225,10 +227,34 @@ class MemberTabNotifier extends StateNotifier<MemberTabState> {
         guardianSlots: allGuardianSlots,
         totalMemberCount: members.length,
         lastSyncAt: DateTime.now(),
+        isOfflineMode: false,
       );
+
+      // 성공 시 오프라인 캐시에 저장
+      _cacheService.cacheMembers(members);
     } catch (e) {
       debugPrint('[MemberTabNotifier] fetchMembers Error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+
+      // API 실패 시 캐시에서 폴백 로드 시도
+      final cached = await _cacheService.loadCachedMembers();
+      if (cached != null && cached.isNotEmpty) {
+        final cachedGuardianSlots =
+            cached.expand((m) => m.guardianLinks).toList();
+        state = state.copyWith(
+          allMembers: cached,
+          guardianSlots: cachedGuardianSlots,
+          totalMemberCount: cached.length,
+          isOfflineMode: true,
+          lastSyncAt: await _cacheService.getLastSyncAt(),
+          isLoading: false,
+          clearError: true,
+        );
+        debugPrint(
+          '[MemberTabNotifier] 오프라인 캐시 폴백: ${cached.length}명 로드',
+        );
+      } else {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
     }
   }
 
@@ -257,6 +283,59 @@ class MemberTabNotifier extends StateNotifier<MemberTabState> {
     }).toList();
 
     state = state.copyWith(allMembers: updatedMembers);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Guardian Management
+  // ---------------------------------------------------------------------------
+
+  /// 가디언 해제
+  Future<void> removeGuardian(String linkId) async {
+    final tripId = state.tripId;
+    if (tripId == null) return;
+    try {
+      final success = await _apiService.removeGuardianLink(tripId, linkId);
+      if (success) {
+        await fetchMembers(); // 목록 갱신
+      }
+    } catch (e) {
+      debugPrint('[MemberTabNotifier] removeGuardian error: $e');
+    }
+  }
+
+  /// 미성년자 가디언 해제 요청
+  Future<Map<String, dynamic>?> requestGuardianRelease(String linkId) async {
+    final tripId = state.tripId;
+    if (tripId == null) return null;
+    try {
+      return await _apiService.requestGuardianRelease(tripId, linkId);
+    } catch (e) {
+      debugPrint('[MemberTabNotifier] requestGuardianRelease error: $e');
+      return null;
+    }
+  }
+
+  /// 가디언 해제 요청 승인/거부
+  Future<Map<String, dynamic>?> respondToGuardianRelease(
+    String requestId,
+    String action,
+  ) async {
+    final tripId = state.tripId;
+    if (tripId == null) return null;
+    try {
+      final result = await _apiService.respondToGuardianRelease(
+        tripId,
+        requestId,
+        action,
+      );
+      if (result != null) {
+        await fetchMembers(); // 목록 갱신
+      }
+      return result;
+    } catch (e) {
+      debugPrint('[MemberTabNotifier] respondToGuardianRelease error: $e');
+      return null;
+    }
   }
 
   // ---------------------------------------------------------------------------

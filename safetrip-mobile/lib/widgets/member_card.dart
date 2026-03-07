@@ -120,20 +120,23 @@ class MemberCard extends StatelessWidget {
           ),
         ),
 
-        // B2B 역할명 (SS6)
+        // B2B 역할명 (SS6) — 20자 초과 말줄임 + 롱탭 Tooltip (§6.2)
         if (isB2bTrip &&
             member.b2bRoleName != null &&
             member.b2bRoleName!.isNotEmpty) ...[
           const SizedBox(width: AppSpacing.xs),
           Flexible(
             flex: 0,
-            child: Text(
-              '(${member.b2bRoleName})',
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textTertiary,
+            child: Tooltip(
+              message: member.b2bRoleName!,
+              child: Text(
+                '(${member.b2bRoleName!.length > 20 ? '${member.b2bRoleName!.substring(0, 20)}...' : member.b2bRoleName!})',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
             ),
           ),
         ],

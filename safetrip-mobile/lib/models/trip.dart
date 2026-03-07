@@ -12,6 +12,7 @@ class Trip {
     this.sharingMode = 'voluntary',
     this.privacyLevel = 'standard',
     this.hasMinorMembers = false,
+    this.isB2b = false,
     required this.createdAt,
     this.updatedAt,
   });
@@ -29,6 +30,7 @@ class Trip {
       sharingMode: json['sharing_mode'] as String? ?? json['sharingMode'] as String? ?? 'voluntary',
       privacyLevel: json['privacy_level'] as String? ?? json['privacyLevel'] as String? ?? 'standard',
       hasMinorMembers: json['has_minor_members'] as bool? ?? json['hasMinorMembers'] as bool? ?? false,
+      isB2b: json['is_b2b'] as bool? ?? json['isB2b'] as bool? ?? false,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : (json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now()),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null),
     );
@@ -44,6 +46,7 @@ class Trip {
   final String sharingMode;
   final String privacyLevel;
   final bool hasMinorMembers;
+  final bool isB2b;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -60,6 +63,7 @@ class Trip {
       'sharing_mode': sharingMode,
       'privacy_level': privacyLevel,
       'has_minor_members': hasMinorMembers,
+      'is_b2b': isB2b,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -77,6 +81,7 @@ class Trip {
     String? sharingMode,
     String? privacyLevel,
     bool? hasMinorMembers,
+    bool? isB2b,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -92,6 +97,7 @@ class Trip {
       sharingMode: sharingMode ?? this.sharingMode,
       privacyLevel: privacyLevel ?? this.privacyLevel,
       hasMinorMembers: hasMinorMembers ?? this.hasMinorMembers,
+      isB2b: isB2b ?? this.isB2b,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
