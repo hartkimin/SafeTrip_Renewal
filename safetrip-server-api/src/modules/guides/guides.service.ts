@@ -6,8 +6,8 @@ import { SafetyGuideCache } from '../../entities/safety-guide-cache.entity';
 import { CountryEmergencyContact } from '../../entities/country-emergency-contact.entity';
 import { MofaService } from '../mofa/mofa.service';
 
-/** Default cache TTL: 6 hours */
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/** Default cache TTL: 24 hours (§3.4.2) */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export interface CacheMeta {
     country_code: string;
@@ -156,7 +156,7 @@ export class GuidesService {
                 country_name_ko: country?.countryNameKo ?? basicInfo.country_nm ?? null,
                 country_name_en: country?.countryNameEn ?? basicInfo.country_eng_nm ?? null,
                 flag_emoji: country?.countryFlagEmoji ?? null,
-                travel_alert_level: travelAlarm.alarm_lvl ?? country?.mofaTravelAlert ?? 'none',
+                travel_alert_level: parseInt(travelAlarm.alarm_lvl) || null,
                 capital: basicInfo.capital ?? null,
                 currency: basicInfo.currency ?? null,
                 language: basicInfo.language ?? null,
@@ -174,18 +174,18 @@ export class GuidesService {
             const securityEnv = mofaSafety.security_env?.items?.[0] || {};
 
             return {
-                travel_alert_level: securityEnv.alarm_lvl ?? null,
+                travel_alert_level: parseInt(securityEnv.alarm_lvl) || null,
                 travel_alert_description: securityEnv.txt_origin_cn ?? null,
                 security_status: securityEnv.security_remark ?? null,
                 recent_notices: safetyNotices.map((n: any) => ({
                     title: n.title ?? null,
                     content: n.txt_origin_cn ?? null,
-                    written_date: n.wrt_dt ?? null,
+                    published_at: n.wrt_dt ?? null,
                 })),
                 regional_alerts: mofaSafety.accidents?.items?.map((a: any) => ({
-                    title: a.title ?? null,
-                    content: a.txt_origin_cn ?? null,
-                    written_date: a.wrt_dt ?? null,
+                    region: a.title ?? null,
+                    alert_level: parseInt(a.alarm_lvl) || null,
+                    description: a.txt_origin_cn ?? null,
                 })) ?? [],
             };
         });
