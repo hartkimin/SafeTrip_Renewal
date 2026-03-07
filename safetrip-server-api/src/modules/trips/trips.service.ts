@@ -451,6 +451,192 @@ export class TripsService {
         };
     }
 
+    // ── 여행정보카드 (DOC-T3-TIC-024 §11.3) ──────────────────────────
+
+    /**
+     * GET /trips/card-view — 여행정보카드 전용 데이터 조회
+     * TB_TRIP_CARD_VIEW + 가디언 여행 + 오늘 일정 요약
+     * (DOC-T3-TIC-024 §11.3)
+     */
+    async getCardView(userId: string) {
+        if (!userId) throw new BadRequestException('user_id is required');
+
+        // 1) 자동 상태 전환: end_date 지난 active 여행 → completed (§04.5, P1-5)
+        await this.dataSource.query(`
+            UPDATE tb_trip
+            SET status = 'completed', updated_at = NOW()
+            WHERE status = 'active'
+              AND end_date < CURRENT_DATE
+              AND deleted_at IS NULL
+        `);
+
+        // 2) 멤버 여행 카드 데이터
+        const memberTrips = await this.dataSource.query(`
+            SELECT
+                v.trip_id, v.trip_name, v.status, v.start_date, v.end_date,
+                v.trip_days, v.privacy_level, v.sharing_mode, v.schedule_type,
+                v.country_code, v.country_name, v.destination_city,
+                v.has_minor_members, v.reactivation_count,
+                v.d_day, v.current_day, v.member_count, v.can_reactivate,
+                v.group_id, v.reactivated_at, v.updated_at,
+                gm.member_role AS user_role,
+                gm.is_admin
+            FROM tb_trip_card_view v
+            JOIN tb_group_member gm ON gm.trip_id = v.trip_id
+            WHERE gm.user_id = $1
+              AND gm.status = 'active'
+              AND gm.member_role IN ('captain', 'crew_chief', 'crew')
+            ORDER BY
+                CASE v.status
+                    WHEN 'active' THEN 1
+                    WHEN 'planning' THEN 2
+                    WHEN 'completed' THEN 3
+                END,
+                v.start_date DESC
+        `, [userId]);
+
+        // 3) 가디언 여행 카드 데이터 (§05)
+        //    tb_guardian_link.guardian_id = guardian's user_id
+        //    tb_guardian_link.member_id = member's user_id
+        let guardianTrips: any[] = [];
+        try {
+            guardianTrips = await this.dataSource.query(`
+                SELECT
+                    v.trip_id, v.trip_name, v.status, v.start_date, v.end_date,
+                    v.privacy_level, v.group_id,
+                    gl.guardian_type,
+                    gl.is_paid,
+                    u.display_name AS member_name,
+                    gm.location_sharing_enabled AS location_sharing_status
+                FROM tb_guardian_link gl
+                JOIN tb_user u ON u.user_id = gl.member_id
+                JOIN tb_group_member gm ON gm.user_id = gl.member_id AND gm.status = 'active'
+                JOIN tb_trip_card_view v ON v.trip_id = gm.trip_id
+                WHERE gl.guardian_id = $1
+                  AND gl.status = 'accepted'
+                  AND v.status IN ('active', 'planning')
+                ORDER BY v.start_date DESC
+            `, [userId]);
+        } catch (err) {
+            // Fallback: if is_paid or location_sharing_enabled column doesn't exist
+            console.warn('getCardView guardianTrips query fallback:', err.message);
+            try {
+                guardianTrips = await this.dataSource.query(`
+                    SELECT
+                        v.trip_id, v.trip_name, v.status, v.start_date, v.end_date,
+                        v.privacy_level, v.group_id,
+                        gl.guardian_type,
+                        FALSE AS is_paid,
+                        u.display_name AS member_name,
+                        TRUE AS location_sharing_status
+                    FROM tb_guardian_link gl
+                    JOIN tb_user u ON u.user_id = gl.member_id
+                    JOIN tb_group_member gm ON gm.user_id = gl.member_id AND gm.status = 'active'
+                    JOIN tb_trip_card_view v ON v.trip_id = gm.trip_id
+                    WHERE gl.guardian_id = $1
+                      AND gl.status = 'accepted'
+                      AND v.status IN ('active', 'planning')
+                    ORDER BY v.start_date DESC
+                `, [userId]);
+            } catch (err2) {
+                console.warn('getCardView guardianTrips fallback also failed:', err2.message);
+                guardianTrips = [];
+            }
+        }
+
+        // 4) 오늘 일정 요약 (active 여행만, P2-2)
+        //    tb_travel_schedule: schedule_date, title, trip_id
+        let scheduleMap = new Map<string, string>();
+        try {
+            const activeTripIds = memberTrips
+                .filter((t: any) => t.status === 'active')
+                .map((t: any) => t.trip_id);
+            if (activeTripIds.length > 0) {
+                const todaySchedules = await this.dataSource.query(`
+                    SELECT
+                        ts.trip_id,
+                        STRING_AGG(ts.title, ' → ' ORDER BY ts.start_time) AS today_summary
+                    FROM tb_travel_schedule ts
+                    WHERE ts.schedule_date = CURRENT_DATE
+                      AND ts.trip_id = ANY($1::uuid[])
+                    GROUP BY ts.trip_id
+                `, [activeTripIds]);
+                scheduleMap = new Map(todaySchedules.map((s: any) => [s.trip_id, s.today_summary]));
+            }
+        } catch (err) {
+            console.warn('getCardView todaySchedules query failed (tables may not exist):', err.message);
+        }
+
+        // 5) completed 통계 (P3-1)
+        //    tb_movement_history may not exist yet
+        let statsMap = new Map<string, any>();
+        try {
+            const completedTripIds = memberTrips
+                .filter((t: any) => t.status === 'completed')
+                .map((t: any) => t.trip_id);
+            if (completedTripIds.length > 0) {
+                const stats = await this.dataSource.query(`
+                    SELECT
+                        trip_id,
+                        COALESCE(SUM(distance_meters), 0) / 1000.0 AS total_distance_km,
+                        COUNT(DISTINCT place_name) AS visited_places
+                    FROM tb_movement_history
+                    WHERE trip_id = ANY($1::uuid[])
+                    GROUP BY trip_id
+                `, [completedTripIds]);
+                statsMap = new Map(stats.map((s: any) => [s.trip_id, s]));
+            }
+        } catch (err) {
+            console.warn('getCardView completedStats query failed (tb_movement_history may not exist):', err.message);
+        }
+
+        return {
+            memberTrips: memberTrips.map((t: any) => ({
+                ...t,
+                today_schedule_summary: scheduleMap.get(t.trip_id) || null,
+                total_distance_km: statsMap.get(t.trip_id)?.total_distance_km || null,
+                visited_places: statsMap.get(t.trip_id)?.visited_places || null,
+            })),
+            guardianTrips,
+        };
+    }
+
+    /**
+     * PATCH /trips/:tripId/reactivate — 여행 재활성화 (§04.5, P2-1)
+     * 조건: completed + 24시간 이내 + reactivation_count == 0
+     */
+    async reactivateTrip(tripId: string, userId: string) {
+        const trip = await this.findById(tripId);
+
+        // 캡틴만 가능
+        const member = await this.memberRepo.findOne({
+            where: { tripId, userId, status: 'active', memberRole: 'captain' },
+        });
+        if (!member) throw new ForbiddenException('캡틴만 재활성화할 수 있습니다.');
+
+        if (trip.status !== 'completed') {
+            throw new BadRequestException('완료된 여행만 재활성화할 수 있습니다.');
+        }
+
+        if (trip.reactivationCount >= 1) {
+            throw new BadRequestException('재활성화는 1회만 가능합니다. (비즈니스 원칙 §02.6)');
+        }
+
+        const referenceTime = trip.updatedAt ? new Date(trip.updatedAt).getTime() : 0;
+        const hoursSinceUpdate = (Date.now() - referenceTime) / (1000 * 60 * 60);
+        if (hoursSinceUpdate > 24) {
+            throw new BadRequestException('재활성화 가능 시간(24시간)이 지났습니다.');
+        }
+
+        await this.tripRepo.update(tripId, {
+            status: 'active',
+            reactivationCount: trip.reactivationCount + 1,
+            reactivatedAt: new Date(),
+        });
+
+        return { success: true, message: '여행이 재활성화되었습니다.' };
+    }
+
     // ── §5.A 추가 조회 엔드포인트 ──────────────────────────────────
 
     /** GET /trips/groups/:groupId — group_id로 첫 번째 여행 조회 */

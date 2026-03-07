@@ -3,12 +3,16 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { TripsService } from './trips.service';
+import { InviteCodesService } from '../invite-codes/invite-codes.service';
 
 @ApiTags('Trips')
 @ApiBearerAuth('firebase-auth')
 @Controller('trips')
 export class TripsController {
-    constructor(private readonly tripsService: TripsService) { }
+    constructor(
+        private readonly tripsService: TripsService,
+        private readonly inviteCodesService: InviteCodesService,
+    ) { }
 
     @Post()
     @ApiOperation({ summary: '여행 생성 (그룹+captain+채팅방 자동 생성)' })
@@ -45,14 +49,14 @@ export class TripsController {
     @Get('invite/:inviteCode')
     @ApiOperation({ summary: '여행자용 초대 코드로 여행 정보 조회' })
     findByInviteCode(@Param('inviteCode') inviteCode: string) {
-        return this.tripsService.findByInviteCode(inviteCode);
+        return this.inviteCodesService.validateCode(inviteCode);
     }
 
     @Public()
     @Get('verify-invite-code/:code')
     @ApiOperation({ summary: '초대 코드 유효성 검증' })
     verifyInviteCode(@Param('code') code: string) {
-        return this.tripsService.verifyInviteCode(code);
+        return this.inviteCodesService.validateCode(code);
     }
 
     @Post('join')
@@ -70,7 +74,7 @@ export class TripsController {
         @CurrentUser() userId: string,
         @Body() body: { inviteCode: string },
     ) {
-        return this.tripsService.acceptInvite(body.inviteCode, userId);
+        return this.inviteCodesService.useCode(body.inviteCode, userId);
     }
 
     // ── §5.A 보호자 초대코드 조회 ──
@@ -148,6 +152,13 @@ export class TripsController {
         return this.tripsService.getTripStats();
     }
 
+    // ── 여행정보카드 (DOC-T3-TIC-024 §11.3) ──
+    @Get('card-view')
+    @ApiOperation({ summary: '여행정보카드 전용 데이터 조회 (§11.3)' })
+    getCardView(@CurrentUser() userId: string) {
+        return this.tripsService.getCardView(userId);
+    }
+
     // ── 파라미터 라우트 (반드시 정적 라우트 뒤에 위치) ──
     @Public()
     @Get(':tripId')
@@ -164,6 +175,15 @@ export class TripsController {
         @Body() body: any,
     ) {
         return this.tripsService.updateTrip(tripId, userId, body);
+    }
+
+    @Patch(':tripId/reactivate')
+    @ApiOperation({ summary: '여행 재활성화 (§04.5, §02.6)' })
+    reactivateTrip(
+        @CurrentUser() userId: string,
+        @Param('tripId') tripId: string,
+    ) {
+        return this.tripsService.reactivateTrip(tripId, userId);
     }
 
     @Patch(':tripId/members/:memberId')
