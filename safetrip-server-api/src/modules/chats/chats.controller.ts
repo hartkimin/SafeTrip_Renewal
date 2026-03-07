@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ChatsService } from './chats.service';
@@ -43,5 +43,42 @@ export class ChatsController {
         @Body() body: { lastReadMessageId: string },
     ) {
         return this.chatsService.markRead(roomId, userId, body.lastReadMessageId);
+    }
+
+    // ------------------------------------------------------------------
+    // Pin / Unpin / Pinned List / Delete
+    // ------------------------------------------------------------------
+
+    @Patch('messages/:messageId/pin')
+    @ApiOperation({ summary: '메시지 공지 고정 (captain/crew_chief, 최대 3개)' })
+    pinMessage(
+        @CurrentUser() userId: string,
+        @Param('messageId') messageId: string,
+    ) {
+        return this.chatsService.pinMessage(messageId, userId);
+    }
+
+    @Delete('messages/:messageId/pin')
+    @ApiOperation({ summary: '공지 해제 (captain/crew_chief)' })
+    unpinMessage(
+        @CurrentUser() userId: string,
+        @Param('messageId') messageId: string,
+    ) {
+        return this.chatsService.unpinMessage(messageId, userId);
+    }
+
+    @Get('rooms/:roomId/pinned')
+    @ApiOperation({ summary: '고정된 메시지 목록 조회 (최대 3개)' })
+    getPinnedMessages(@Param('roomId') roomId: string) {
+        return this.chatsService.getPinnedMessages(roomId);
+    }
+
+    @Delete('messages/:messageId')
+    @ApiOperation({ summary: '메시지 소프트 삭제' })
+    deleteMessage(
+        @CurrentUser() userId: string,
+        @Param('messageId') messageId: string,
+    ) {
+        return this.chatsService.deleteMessage(messageId, userId);
     }
 }
