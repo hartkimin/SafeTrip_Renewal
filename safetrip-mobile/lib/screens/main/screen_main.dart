@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -79,12 +80,19 @@ class _MainScreenState extends ConsumerState<MainScreen>
   late final SafetyFacilityManager _safetyFacilityManager;
   late final GeofenceMapRenderer _geofenceMapRenderer;
 
-  final ValueNotifier<List<Marker>> _scheduleMarkersNotifier = ValueNotifier([]);
-  final ValueNotifier<List<Polyline>> _scheduleLinesNotifier = ValueNotifier([]);
+  final ValueNotifier<List<Marker>> _scheduleMarkersNotifier = ValueNotifier(
+    [],
+  );
+  final ValueNotifier<List<Polyline>> _scheduleLinesNotifier = ValueNotifier(
+    [],
+  );
   final ValueNotifier<List<Marker>> _eventMarkersNotifier = ValueNotifier([]);
   final ValueNotifier<List<Marker>> _safetyMarkersNotifier = ValueNotifier([]);
-  final ValueNotifier<List<CircleMarker>> _geofenceCirclesNotifier = ValueNotifier([]);
-  final ValueNotifier<List<Marker>> _geofenceTapMarkersNotifier = ValueNotifier([]);
+  final ValueNotifier<List<CircleMarker>> _geofenceCirclesNotifier =
+      ValueNotifier([]);
+  final ValueNotifier<List<Marker>> _geofenceTapMarkersNotifier = ValueNotifier(
+    [],
+  );
 
   /// 멤버 미니카드 표시 상태 (§5.4)
   String? _selectedMarkerUserId;
@@ -105,7 +113,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
   late final StreamSubscription<SyncResult> _syncSubscription;
 
   /// §3.3: 프로그래밍적 시트 이동 시 점프 가드 우회 콜백
-  void Function()? _markSheetProgrammatic;
+  void Function([Duration])? _markSheetProgrammatic;
 
   /// §3.3: 두 손가락 제스처 감지용
   int _pointerCount = 0;
@@ -120,14 +128,12 @@ class _MainScreenState extends ConsumerState<MainScreen>
     _checkDeletionPending();
 
     // §4.2, §8.3: 동기화 완료 토스트 알림
-    _syncSubscription =
-        DeviceStatusService().syncResultStream.listen((result) {
+    _syncSubscription = DeviceStatusService().syncResultStream.listen((result) {
       if (!mounted) return;
       if (result.synced > 0 && !result.hasFailures) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('오프라인 중 ${result.synced}건의 데이터가 동기화되었습니다.'),
+            content: Text('오프라인 중 ${result.synced}건의 데이터가 동기화되었습니다.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -172,8 +178,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         debugPrint('[MainScreen] User selected: $userId');
       },
       onClusterMarkerTapped: (positions) {
-        debugPrint(
-            '[MainScreen] Cluster tapped: ${positions.length} markers');
+        debugPrint('[MainScreen] Cluster tapped: ${positions.length} markers');
       },
       onZoomLevelChanged: (zoom) {
         debugPrint('[MainScreen] Zoom changed: $zoom');
@@ -216,8 +221,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
             .where((s) => s.scheduleId == id)
             .firstOrNull;
         if (schedule != null && mounted) {
-          final userRole =
-              ref.read(tripProvider).currentUserRole;
+          final userRole = ref.read(tripProvider).currentUserRole;
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -244,7 +248,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
             builder: (_) => EventDetailModal(
               eventType: data['eventType'] as String,
               memberName: data['memberName'] as String,
-              description: '${data['memberName']} ${data['geofenceName'] ?? '지오펜스'} 이탈',
+              description:
+                  '${data['memberName']} ${data['geofenceName'] ?? '지오펜스'} 이탈',
               timestamp: data['timestamp'] as DateTime,
               latitude: (data['position'] as LatLng?)?.latitude,
               longitude: (data['position'] as LatLng?)?.longitude,
@@ -261,7 +266,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
     _geofenceMapRenderer = GeofenceMapRenderer(
       onGeofencesUpdated: (circles) => _geofenceCirclesNotifier.value = circles,
-      onMarkersUpdated: (markers) => _geofenceTapMarkersNotifier.value = markers,
+      onMarkersUpdated: (markers) =>
+          _geofenceTapMarkersNotifier.value = markers,
       isMounted: () => mounted,
       onGeofenceTap: (geofence) async {
         if (!mounted) return;
@@ -270,10 +276,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
         if (!mounted) return;
         showModalBottomSheet(
           context: context,
-          builder: (_) => GeofenceInfoModal(
-            geofence: geofence,
-            userRole: userRole,
-          ),
+          builder: (_) =>
+              GeofenceInfoModal(geofence: geofence, userRole: userRole),
         );
       },
     );
@@ -329,8 +333,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
       if (mounted) {
         // 여행 상태별 초기 높이 적용 (§5.2)
-        final tripStatus =
-            ref.read(tripProvider).currentTripStatus;
+        final tripStatus = ref.read(tripProvider).currentTripStatus;
         final initialLevel = initialHeightForTripStatus(tripStatus);
         final notifier = ref.read(mainScreenProvider.notifier);
         notifier.setSheetLevel(initialLevel);
@@ -347,8 +350,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
           final networkStatus = ref.read(networkStateProvider);
           if (networkStatus.isOnline) {
             _emergencyCached = true;
-            final countryCode =
-                ref.read(tripProvider).countryCode ?? 'KR';
+            final countryCode = ref.read(tripProvider).countryCode ?? 'KR';
             final emergencyCache = EmergencyCacheService(
               apiService: ApiService(),
               offlineSyncService: OfflineSyncService(),
@@ -395,8 +397,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         _isKeyboardVisible = false;
         final notifier = ref.read(mainScreenProvider.notifier);
         final target = notifier.onKeyboardHide();
-        _animateSheetTo(target,
-            duration: const Duration(milliseconds: 250));
+        _animateSheetTo(target, duration: const Duration(milliseconds: 250));
       }
     });
   }
@@ -420,9 +421,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           title: const Text('계정 삭제 예약됨'),
-          content: const Text(
-            '계정 삭제가 요청된 상태입니다.\n삭제를 취소하고 계정을 유지하시겠습니까?',
-          ),
+          content: const Text('계정 삭제가 요청된 상태입니다.\n삭제를 취소하고 계정을 유지하시겠습니까?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -479,7 +478,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     Curve curve = Curves.easeInOut,
   }) {
     if (!_sheetController.isAttached) return;
-    _markSheetProgrammatic?.call(); // §3.3: 점프 가드 우회
+    _markSheetProgrammatic?.call(duration); // §3.3: 점프 가드 우회
     _sheetController.animateTo(
       level.fraction,
       duration: duration,
@@ -508,8 +507,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
           !mainState.isNoTrip) {
         final notifier = ref.read(mainScreenProvider.notifier);
         notifier.setSheetLevel(BottomSheetLevel.full);
-        _animateSheetTo(BottomSheetLevel.full,
-            duration: const Duration(milliseconds: 300));
+        _animateSheetTo(
+          BottomSheetLevel.full,
+          duration: const Duration(milliseconds: 300),
+        );
       }
     }
     _pointerCount--;
@@ -538,7 +539,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
       notifier.setSheetLevel(targetLevel);
 
       // §3.1: collapsed → half 전환은 250ms easeInOut
-      final duration = (previousLevel == BottomSheetLevel.collapsed &&
+      final duration =
+          (previousLevel == BottomSheetLevel.collapsed &&
               targetLevel == BottomSheetLevel.half)
           ? const Duration(milliseconds: 250)
           : const Duration(milliseconds: 200);
@@ -598,256 +600,279 @@ class _MainScreenState extends ConsumerState<MainScreen>
           onPointerDown: _onPointerDown,
           onPointerUp: _onPointerUp,
           child: Stack(
-          children: [
-            // ── Layer 1: Base Map ──────────────────────────────
-            ValueListenableBuilder<List<Marker>>(
-              valueListenable: _userMarkersNotifier,
-              builder: (context, userMarkers, _) {
-                return FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: const LatLng(37.5665, 126.9780),
-                    initialZoom: 13.0,
-                    onTap: (_, __) {
-                      // §5.4: 빈 영역 탭 → 미니카드 닫기
-                      setState(() {
-                        _selectedMarkerUserId = null;
-                        _selectedMarkerUserData = null;
-                      });
-                    },
-                  ),
-                  children: [
-                    // Layer 0: 지도 타일
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.urock.safe.trip',
+            children: [
+              // ── Layer 1: Base Map ──────────────────────────────
+              ValueListenableBuilder<List<Marker>>(
+                valueListenable: _userMarkersNotifier,
+                builder: (context, userMarkers, _) {
+                  return FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: const LatLng(37.5665, 126.9780),
+                      initialZoom: 13.0,
+                      onTap: (_, __) {
+                        // §5.4: 빈 영역 탭 → 미니카드 닫기
+                        setState(() {
+                          _selectedMarkerUserId = null;
+                          _selectedMarkerUserData = null;
+                        });
+                      },
                     ),
-                    // Layer 1: 안전시설 마커
-                    if (layerState.layer1SafetyFacilities)
-                      ValueListenableBuilder<List<Marker>>(
-                        valueListenable: _safetyMarkersNotifier,
-                        builder: (_, markers, __) => MarkerLayer(markers: markers),
+                    children: [
+                      // Layer 0: 지도 타일
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.urock.safe.trip',
+                        evictErrorTileStrategy: EvictErrorTileStrategy.dispose,
                       ),
-                    // Layer 2: 멤버 위치 마커
-                    if (layerState.layer2MemberMarkers)
-                      MarkerLayer(markers: userMarkers),
-                    // Layer 3: 일정 폴리라인
-                    if (layerState.layer3SchedulePlaces)
-                      ValueListenableBuilder<List<Polyline>>(
-                        valueListenable: _scheduleLinesNotifier,
-                        builder: (_, lines, __) => PolylineLayer(polylines: lines),
-                      ),
-                    // Layer 3: 일정 장소 마커
-                    if (layerState.layer3SchedulePlaces)
-                      ValueListenableBuilder<List<Marker>>(
-                        valueListenable: _scheduleMarkersNotifier,
-                        builder: (_, markers, __) => MarkerLayer(markers: markers),
-                      ),
-                    // Layer 4: 지오펜스 영역 (CircleLayer)
-                    if (layerState.layer4EventAlerts)
-                      ValueListenableBuilder<List<CircleMarker>>(
-                        valueListenable: _geofenceCirclesNotifier,
-                        builder: (_, circles, __) => CircleLayer(circles: circles),
-                      ),
-                    // Layer 4: 지오펜스 탭 감지 마커
-                    if (layerState.layer4EventAlerts)
-                      ValueListenableBuilder<List<Marker>>(
-                        valueListenable: _geofenceTapMarkersNotifier,
-                        builder: (_, markers, __) => MarkerLayer(markers: markers),
-                      ),
-                    // Layer 4: 이벤트/알림 마커
-                    if (layerState.layer4EventAlerts)
-                      ValueListenableBuilder<List<Marker>>(
-                        valueListenable: _eventMarkersNotifier,
-                        builder: (_, markers, __) => MarkerLayer(markers: markers),
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            if (_isInitialLoading)
-              Container(
-                color: Colors.black26,
-                child: const Center(child: CircularProgressIndicator()),
+                      // Layer 1: 안전시설 마커
+                      if (layerState.layer1SafetyFacilities)
+                        ValueListenableBuilder<List<Marker>>(
+                          valueListenable: _safetyMarkersNotifier,
+                          builder: (_, markers, __) =>
+                              MarkerLayer(markers: markers),
+                        ),
+                      // Layer 2: 멤버 위치 마커
+                      if (layerState.layer2MemberMarkers)
+                        MarkerLayer(markers: userMarkers),
+                      // Layer 3: 일정 폴리라인
+                      if (layerState.layer3SchedulePlaces)
+                        ValueListenableBuilder<List<Polyline>>(
+                          valueListenable: _scheduleLinesNotifier,
+                          builder: (_, lines, __) =>
+                              PolylineLayer(polylines: lines),
+                        ),
+                      // Layer 3: 일정 장소 마커
+                      if (layerState.layer3SchedulePlaces)
+                        ValueListenableBuilder<List<Marker>>(
+                          valueListenable: _scheduleMarkersNotifier,
+                          builder: (_, markers, __) =>
+                              MarkerLayer(markers: markers),
+                        ),
+                      // Layer 4: 지오펜스 영역 (CircleLayer)
+                      if (layerState.layer4EventAlerts)
+                        ValueListenableBuilder<List<CircleMarker>>(
+                          valueListenable: _geofenceCirclesNotifier,
+                          builder: (_, circles, __) =>
+                              CircleLayer(circles: circles),
+                        ),
+                      // Layer 4: 지오펜스 탭 감지 마커
+                      if (layerState.layer4EventAlerts)
+                        ValueListenableBuilder<List<Marker>>(
+                          valueListenable: _geofenceTapMarkersNotifier,
+                          builder: (_, markers, __) =>
+                              MarkerLayer(markers: markers),
+                        ),
+                      // Layer 4: 이벤트/알림 마커
+                      if (layerState.layer4EventAlerts)
+                        ValueListenableBuilder<List<Marker>>(
+                          valueListenable: _eventMarkersNotifier,
+                          builder: (_, markers, __) =>
+                              MarkerLayer(markers: markers),
+                        ),
+                    ],
+                  );
+                },
               ),
 
-            // ── Layer 2: Top Bar ──────────────────────────────
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              left: AppSpacing.md,
-              right: AppSpacing.md,
-              child: const TripInfoCardSection(),
-            ),
-
-            // ── Layer Settings Button (우측 상단) ─────────
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 70,
-              right: AppSpacing.md,
-              child: FloatingActionButton.small(
-                heroTag: 'layer_settings',
-                onPressed: () => showLayerSettingsSheet(context),
-                backgroundColor: Colors.white,
-                child: const Icon(Icons.layers, color: AppColors.textSecondary),
-              ),
-            ),
-
-            // ── Layer 3: Snapping Bottom Sheet ────────────────
-            SnappingBottomSheet(
-              controller: _sheetController,
-              initialLevel: BottomSheetLevel.half,
-              isDragEnabled: !mainState.isSosActive && !isNoTrip, // SOS/NoTrip 잠금 (§10.2, §8.2)
-              onCreated: (markFn) => _markSheetProgrammatic = markFn,
-              onLevelChanged: (level) {
-                final applied =
-                    ref.read(mainScreenProvider.notifier).setSheetLevel(level);
-                // SOS 잠금 시 collapsed로 되돌리기
-                if (applied != level) {
-                  _animateSheetTo(applied,
-                      duration: const Duration(milliseconds: 150));
-                }
-              },
-              builder: (context, scrollController) {
-                // §8.2: 여행 없음 → CTA만 표시
-                if (isNoTrip) {
-                  return _buildNoTripContent();
-                }
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  child: _buildTabContent(scrollController),
-                );
-              },
-            ),
-
-            // ── Layer 4: Bottom Navigation ────────────────────
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AppBottomNavigationBar(
-                currentTab: _currentTab,
-                onTabChanged: _handleTabChanged,
-                isGuardian: false,
-                isDisabled: mainState.isSosActive || isNoTrip, // SOS/NoTrip 시 탭 전환 비활성화 (§10.2, §8.2)
-              ),
-            ),
-
-            // ── Layer 5: SOS Button (독립 Positioned) ─────────
-            // SOS 버튼은 active 상태에서 항상 표시 (§2.2)
-            // SOS 활성 시 해제 버튼으로 전환 (§10.2)
-            if (showSos)
-              Positioned(
-                right: 16,
-                bottom: AppSpacing.navigationBarHeight + 28 + systemBottomPadding,
-                child: Semantics(
-                  label: mainState.isSosActive
-                      ? 'SOS 해제 버튼'
-                      : '긴급 SOS 발송 버튼, 3초간 누르세요',
-                  child: SosButton(
-                    onSosActivated: _handleSOS,
-                    onSosDeactivated: _handleSOSRelease,
-                    isSosActive: mainState.isSosActive,
-                  ),
+              if (_isInitialLoading)
+                Container(
+                  color: Colors.black26,
+                  child: const Center(child: CircularProgressIndicator()),
                 ),
-              ),
 
-            // ── Layer 6: SOS Overlay (§10.1 — 전체 화면 최상단) ──
-            if (mainState.isSosActive)
+              // ── Layer 2: Top Bar ──────────────────────────────
               Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SosOverlay(
-                  userName: _sosUserName ?? '',
-                ),
-              ),
-
-            // ── Member Mini Card (§5.4) ───────────────────
-            if (_selectedMarkerUserId != null && _selectedMarkerUserData != null)
-              Positioned(
-                bottom: AppSpacing.navigationBarHeight + 80 + systemBottomPadding,
-                left: AppSpacing.md,
-                right: AppSpacing.md + 72,
-                child: MemberMiniCard(
-                  userName: _selectedMarkerUserData!['user_name'] as String? ?? '',
-                  role: _selectedMarkerUserData!['role'] as String? ?? 'crew',
-                  batteryLevel: _selectedMarkerUserData!['battery'] as int?,
-                  onClose: () => setState(() {
-                    _selectedMarkerUserId = null;
-                    _selectedMarkerUserData = null;
-                  }),
-                ),
-              ),
-
-            // ── Layer 7: Offline / Degraded Banner (§8.1) ─────
-            if (!networkStatus.isOnline)
-              Positioned(
-                top: MediaQuery.of(context).padding.top,
-                left: 0,
-                right: 0,
-                child: OfflineBanner(status: networkStatus),
-              ),
-
-            // ── Layer 7b: Battery Warning Banner (§7.3) ──────
-            if (showBatteryWarning)
-              Positioned(
-                top: MediaQuery.of(context).padding.top +
-                    (!networkStatus.isOnline ? 32 : 0),
-                left: 0,
-                right: 0,
-                child: BatteryWarningBanner(batteryLevel: batteryLevel),
-              ),
-
-            // ── Privacy Banner (active 상태에서만) ────────────
-            if (isActive)
-              Positioned(
-                top: MediaQuery.of(context).padding.top +
-                    (!networkStatus.isOnline ? 32 : 0) +
-                    (showBatteryWarning ? 32 : 0),
-                left: 0,
-                right: 0,
-                child: PrivacyBanner(privacyLevel: privacyLevel),
-              ),
-
-            // ── Completed 상태 읽기 전용 뱃지 ─────────────────
-            if (isCompleted)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 70,
+                top: MediaQuery.of(context).padding.top + 10,
                 left: AppSpacing.md,
                 right: AppSpacing.md,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.tripCompleted.withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radius8),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle,
-                          size: 16, color: AppColors.tripCompleted),
-                      SizedBox(width: 6),
-                      Text(
-                        '종료된 여행 — 읽기 전용 모드',
-                        style: TextStyle(
-                          color: AppColors.tripCompleted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                child: const TripInfoCardSection(),
+              ),
+
+              // ── Layer Settings Button (우측 상단) ─────────
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 70,
+                right: AppSpacing.md,
+                child: FloatingActionButton.small(
+                  heroTag: 'layer_settings',
+                  onPressed: () => showLayerSettingsSheet(context),
+                  backgroundColor: Colors.white,
+                  child: const Icon(
+                    Icons.layers,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ),
-          ],
+
+              // ── Layer 3: Snapping Bottom Sheet ────────────────
+              SnappingBottomSheet(
+                controller: _sheetController,
+                initialLevel: BottomSheetLevel.half,
+                isDragEnabled:
+                    !mainState.isSosActive &&
+                    !isNoTrip, // SOS/NoTrip 잠금 (§10.2, §8.2)
+                onCreated: (markFn) => _markSheetProgrammatic = markFn,
+                onLevelChanged: (level) {
+                  final applied = ref
+                      .read(mainScreenProvider.notifier)
+                      .setSheetLevel(level);
+                  // SOS 잠금 시 collapsed로 되돌리기
+                  if (applied != level) {
+                    _animateSheetTo(
+                      applied,
+                      duration: const Duration(milliseconds: 150),
+                    );
+                  }
+                },
+                builder: (context, scrollController) {
+                  // §8.2: 여행 없음 → CTA만 표시
+                  if (isNoTrip) {
+                    return _buildNoTripContent();
+                  }
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    child: _buildTabContent(scrollController),
+                  );
+                },
+              ),
+
+              // ── Layer 4: Bottom Navigation ────────────────────
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AppBottomNavigationBar(
+                  currentTab: _currentTab,
+                  onTabChanged: _handleTabChanged,
+                  isGuardian: false,
+                  isDisabled:
+                      mainState.isSosActive ||
+                      isNoTrip, // SOS/NoTrip 시 탭 전환 비활성화 (§10.2, §8.2)
+                ),
+              ),
+
+              // ── Layer 5: SOS Button (독립 Positioned) ─────────
+              // SOS 버튼은 active 상태에서 항상 표시 (§2.2)
+              // SOS 활성 시 해제 버튼으로 전환 (§10.2)
+              if (showSos)
+                Positioned(
+                  right: 16,
+                  bottom:
+                      AppSpacing.navigationBarHeight + 28 + systemBottomPadding,
+                  child: Semantics(
+                    label: mainState.isSosActive
+                        ? 'SOS 해제 버튼'
+                        : '긴급 SOS 발송 버튼, 3초간 누르세요',
+                    child: SosButton(
+                      onSosActivated: _handleSOS,
+                      onSosDeactivated: _handleSOSRelease,
+                      isSosActive: mainState.isSosActive,
+                    ),
+                  ),
+                ),
+
+              // ── Layer 6: SOS Overlay (§10.1 — 전체 화면 최상단) ──
+              if (mainState.isSosActive)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: SosOverlay(userName: _sosUserName ?? ''),
+                ),
+
+              // ── Member Mini Card (§5.4) ───────────────────
+              if (_selectedMarkerUserId != null &&
+                  _selectedMarkerUserData != null)
+                Positioned(
+                  bottom:
+                      AppSpacing.navigationBarHeight + 80 + systemBottomPadding,
+                  left: AppSpacing.md,
+                  right: AppSpacing.md + 72,
+                  child: MemberMiniCard(
+                    userName:
+                        _selectedMarkerUserData!['user_name'] as String? ?? '',
+                    role: _selectedMarkerUserData!['role'] as String? ?? 'crew',
+                    batteryLevel: _selectedMarkerUserData!['battery'] as int?,
+                    onClose: () => setState(() {
+                      _selectedMarkerUserId = null;
+                      _selectedMarkerUserData = null;
+                    }),
+                  ),
+                ),
+
+              // ── Layer 7: Offline / Degraded Banner (§8.1) ─────
+              if (!networkStatus.isOnline)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top,
+                  left: 0,
+                  right: 0,
+                  child: OfflineBanner(status: networkStatus),
+                ),
+
+              // ── Layer 7b: Battery Warning Banner (§7.3) ──────
+              if (showBatteryWarning)
+                Positioned(
+                  top:
+                      MediaQuery.of(context).padding.top +
+                      (!networkStatus.isOnline ? 32 : 0),
+                  left: 0,
+                  right: 0,
+                  child: BatteryWarningBanner(batteryLevel: batteryLevel),
+                ),
+
+              // ── Privacy Banner (active 상태에서만) ────────────
+              if (isActive)
+                Positioned(
+                  top:
+                      MediaQuery.of(context).padding.top +
+                      (!networkStatus.isOnline ? 32 : 0) +
+                      (showBatteryWarning ? 32 : 0),
+                  left: 0,
+                  right: 0,
+                  child: PrivacyBanner(privacyLevel: privacyLevel),
+                ),
+
+              // ── Completed 상태 읽기 전용 뱃지 ─────────────────
+              if (isCompleted)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 70,
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.tripCompleted.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppSpacing.radius8),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 16,
+                          color: AppColors.tripCompleted,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          '종료된 여행 — 읽기 전용 모드',
+                          style: TextStyle(
+                            color: AppColors.tripCompleted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -868,15 +893,23 @@ class _MainScreenState extends ConsumerState<MainScreen>
           scrollController: scrollController,
           onEnterDetail: () {
             // §7.4: 세부 화면 진입 → full
-            final target =
-                ref.read(mainScreenProvider.notifier).enterDetailView();
-            _animateSheetTo(target, duration: const Duration(milliseconds: 250));
+            final target = ref
+                .read(mainScreenProvider.notifier)
+                .enterDetailView();
+            _animateSheetTo(
+              target,
+              duration: const Duration(milliseconds: 250),
+            );
           },
           onExitDetail: () {
             // §7.4: 세부 화면 종료 → 이전 레벨 복원
-            final target =
-                ref.read(mainScreenProvider.notifier).exitDetailView();
-            _animateSheetTo(target, duration: const Duration(milliseconds: 250));
+            final target = ref
+                .read(mainScreenProvider.notifier)
+                .exitDetailView();
+            _animateSheetTo(
+              target,
+              duration: const Duration(milliseconds: 250),
+            );
           },
         );
       case BottomTab.chat:
@@ -930,9 +963,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
     // §10.1: 바텀시트 → collapsed 강제 전환 + 잠금
     notifier.activateSos();
-    _animateSheetTo(BottomSheetLevel.collapsed,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut);
+    _animateSheetTo(
+      BottomSheetLevel.collapsed,
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+    );
 
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
@@ -992,8 +1027,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // §10.3: 잠금 해제 + peek 복원
     notifier.deactivateSos();
     _cameraTransitionManager.onSosDeactivated();
-    _animateSheetTo(BottomSheetLevel.peek,
-        duration: const Duration(milliseconds: 250));
+    _animateSheetTo(
+      BottomSheetLevel.peek,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.elasticOut,
+    );
 
     setState(() => _sosUserName = null);
   }
@@ -1016,9 +1054,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
         ],
       ),
     );
-    // Note: 실제 앱 종료는 SystemNavigator.pop() 필요
     if (shouldExit == true && mounted) {
-      // Let system handle back
+      SystemNavigator.pop();
     }
   }
 }

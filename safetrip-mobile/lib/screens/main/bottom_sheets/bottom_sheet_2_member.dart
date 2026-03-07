@@ -402,8 +402,19 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
   // ---------------------------------------------------------------------------
 
   void _onMemberTap(TripMember member) {
-    // TODO: 지도 카메라를 해당 멤버 위치로 이동 (SS4 map focus)
-    debugPrint('[BottomSheetMember] Tapped member: ${member.userName}');
+    // §7.4: 세부 화면 진입 → full 전환
+    widget.onEnterDetail?.call();
+
+    // 멤버 프로필 모달 표시
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MemberDetailSheet(member: member),
+    ).then((_) {
+      // §7.4: 세부 화면 종료 → 이전 레벨 복원
+      widget.onExitDetail?.call();
+    });
   }
 
   void _showAddMemberModal(BuildContext context, MemberTabState state) {
@@ -1512,4 +1523,59 @@ class _GuardianManageSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+// =============================================================================
+// _MemberDetailSheet (§7.4) — Member profile detail modal
+// =============================================================================
+
+class _MemberDetailSheet extends StatelessWidget {
+  const _MemberDetailSheet({required this.member});
+  final TripMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.outline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                member.userName,
+                style: AppTypography.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                member.displayRoleName,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 }

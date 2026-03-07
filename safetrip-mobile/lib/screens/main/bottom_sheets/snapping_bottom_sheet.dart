@@ -39,7 +39,7 @@ class SnappingBottomSheet extends StatefulWidget {
   final bool isDragEnabled;
 
   /// §3.3: 시트 상태 생성 후 콜백 — 프로그래밍적 이동 표시 기능 접근용
-  final void Function(void Function() markProgrammatic)? onCreated;
+  final void Function(void Function([Duration]) markProgrammatic)? onCreated;
 
   @override
   State<SnappingBottomSheet> createState() => _SnappingBottomSheetState();
@@ -64,6 +64,11 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
   /// 프로그래밍적 애니메이션 중인지 여부
   bool _isProgrammaticMove = false;
 
+  /// §3.3: 마지막 수직 드래그 velocity (dp/s)
+  double _lastDragVelocity = 0;
+  double _previousSize = 0.5;
+  DateTime _previousSizeTime = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +80,7 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
     }
     _controller.addListener(_onSizeChanged);
     _previousStableLevel = widget.initialLevel;
+    _previousSize = widget.initialLevel.fraction;
     widget.onCreated?.call(_markProgrammaticMove);
   }
 
@@ -87,9 +93,9 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
     super.dispose();
   }
 
-  void _markProgrammaticMove() {
+  void _markProgrammaticMove([Duration duration = const Duration(milliseconds: 300)]) {
     _isProgrammaticMove = true;
-    Future.delayed(const Duration(milliseconds: 350), () {
+    Future.delayed(duration + const Duration(milliseconds: 50), () {
       _isProgrammaticMove = false;
     });
   }
@@ -97,26 +103,38 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
   void _onSizeChanged() {
     if (!_controller.isAttached) return;
     final size = _controller.size;
+    final now = DateTime.now();
     final level = BottomSheetLevelExt.fromFraction(size);
+
+    // §3.3: 속도 추정 (dp/s 환산)
+    final dt = now.difference(_previousSizeTime).inMilliseconds;
+    if (dt > 0) {
+      final screenHeight = MediaQuery.of(context).size.height;
+      final deltaDp = (size - _previousSize).abs() * screenHeight;
+      _lastDragVelocity = deltaDp / (dt / 1000); // dp/s
+    }
+    _previousSize = size;
+    _previousSizeTime = now;
 
     // §3.3: 프로그래밍적 이동이 아닌 사용자 제스처에 의한 직접 점프 검증
     if (!_isProgrammaticMove && widget.isDragEnabled) {
       final distance = (level.index - _previousStableLevel.index).abs();
-      if (distance >= 3) {
-        // full→collapsed or collapsed→full 직접 점프 감지 — 중간 레벨로 리다이렉트
+      if (distance >= 3 && _lastDragVelocity < 2000) {
+        // 느린 점프 → 리다이렉트
         final redirectLevel = level.index > _previousStableLevel.index
-            ? BottomSheetLevel.peek // collapsed→full 시도 → peek로 제한
-            : BottomSheetLevel.expanded; // full→collapsed 시도 → expanded로 제한
+            ? BottomSheetLevel.peek
+            : BottomSheetLevel.expanded;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_controller.isAttached) {
+            const redirectDuration = Duration(milliseconds: 300);
             _isProgrammaticMove = true;
             _controller.animateTo(
               redirectLevel.fraction,
-              duration: const Duration(milliseconds: 300),
+              duration: redirectDuration,
               curve: Curves.easeInOut,
             );
-            Future.delayed(const Duration(milliseconds: 350), () {
+            Future.delayed(redirectDuration + const Duration(milliseconds: 50), () {
               _isProgrammaticMove = false;
             });
           }
@@ -126,6 +144,7 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
         _previousStableLevel = redirectLevel;
         return;
       }
+      // distance >= 3 && velocity >= 2000 → 직접 전환 허용 (스펙 §3.3)
     }
 
     _previousStableLevel = level;
