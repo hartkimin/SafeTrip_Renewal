@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Public } from '../../common/decorators/public.decorator';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { InviteCodesService } from './invite-codes.service';
 import { CreateInviteCodeDto } from './dto/create-invite-code.dto';
@@ -24,7 +24,7 @@ export class InviteCodesController {
     }
 
     @Get('trips/:tripId/invite-codes')
-    @ApiOperation({ summary: '초대코드 목록 조회 (§04.1)' })
+    @ApiOperation({ summary: '활성 초대코드 목록 조회 (§04.1, §14.1)' })
     listCodes(
         @Param('tripId') tripId: string,
         @CurrentUser() userId: string,
@@ -32,13 +32,17 @@ export class InviteCodesController {
         return this.service.listCodes(tripId, userId);
     }
 
-    @Public()
+    @Throttle({ default: { ttl: 60000, limit: 10 } })
     @Post('invite-codes/validate')
-    @ApiOperation({ summary: '초대코드 사전 검증 (§05)' })
-    validateCode(@Body() dto: ValidateCodeDto) {
+    @ApiOperation({ summary: '초대코드 사전 검증 — 인증 필요 (§05, §14.1)' })
+    validateCode(
+        @CurrentUser() userId: string,
+        @Body() dto: ValidateCodeDto,
+    ) {
         return this.service.validateCode(dto.code);
     }
 
+    @Throttle({ default: { ttl: 60000, limit: 5 } })
     @Post('invite-codes/use')
     @ApiOperation({ summary: '초대코드 사용/합류 (§05, §11)' })
     useCode(
