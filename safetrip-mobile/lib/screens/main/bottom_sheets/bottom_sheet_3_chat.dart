@@ -7,10 +7,12 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../features/chat/providers/chat_provider.dart';
 import '../../../features/chat/screens/guardian_channel_list_screen.dart';
+import '../../../features/chat/screens/media_gallery_screen.dart';
 import '../../../features/chat/widgets/attachment_menu_widget.dart';
 import '../../../features/chat/widgets/chat_message_bubble.dart';
 import '../../../features/chat/widgets/date_divider_widget.dart';
 import '../../../features/chat/widgets/location_card_widget.dart';
+import '../../../features/chat/widgets/message_search_widget.dart';
 import '../../../features/chat/widgets/pinned_notices_widget.dart';
 import '../../../features/chat/widgets/poll_card_widget.dart';
 import '../../../features/chat/widgets/schedule_card_widget.dart';
@@ -56,6 +58,9 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
 
   /// 현재 선택된 서브탭 인덱스 (0: 그룹 채팅, 1: 보호자 메시지)
   int _selectedTab = 0;
+
+  /// 메시지 검색 위젯 표시 여부.
+  bool _showSearch = false;
 
   @override
   void initState() {
@@ -118,7 +123,7 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
 
   Widget _buildSubTabBar() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(
           bottom: BorderSide(color: AppColors.outlineVariant),
@@ -128,6 +133,38 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
         children: [
           _buildSubTab(0, '그룹 채팅'),
           _buildSubTab(1, '보호자 메시지'),
+          // 검색 아이콘 버튼
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              onPressed: () => setState(() => _showSearch = !_showSearch),
+              icon: Icon(
+                _showSearch ? Icons.search_off : Icons.search,
+                size: 20,
+                color: _showSearch
+                    ? AppColors.primaryTeal
+                    : AppColors.textTertiary,
+              ),
+              padding: EdgeInsets.zero,
+              tooltip: '메시지 검색',
+            ),
+          ),
+          // 미디어 갤러리 아이콘 버튼
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              onPressed: () => _openMediaGallery(),
+              icon: const Icon(
+                Icons.photo_library_outlined,
+                size: 20,
+                color: AppColors.textTertiary,
+              ),
+              padding: EdgeInsets.zero,
+              tooltip: '미디어 모아보기',
+            ),
+          ),
         ],
       ),
     );
@@ -167,6 +204,17 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
 
   List<Widget> _buildGroupChatContent(ChatState chatState, bool isOffline) {
     return [
+      // 메시지 검색 위젯
+      if (_showSearch && chatState.roomId != null)
+        MessageSearchWidget(
+          roomId: chatState.roomId!,
+          onResultTap: (msg) {
+            // 검색 결과 탭 시 검색 닫기 (향후: 해당 메시지로 스크롤)
+            setState(() => _showSearch = false);
+          },
+          onClose: () => setState(() => _showSearch = false),
+        ),
+
       // 오프라인 배너
       if (isOffline) _buildOfflineBanner(),
 
@@ -274,7 +322,15 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
     final senderId =
         msg['sender_id'] as String? ?? msg['user_id'] as String? ?? '';
     final isMe = senderId == _currentUserId;
-    return ChatMessageBubble(message: msg, isMe: isMe);
+    return ChatMessageBubble(
+      message: msg,
+      isMe: isMe,
+      currentUserId: _currentUserId,
+      onReactionChanged: () {
+        // 리액션 변경 후 메시지 목록 새로고침
+        ref.read(chatProvider.notifier).refresh();
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -467,6 +523,17 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
 
   void _showAttachmentMenu() {
     AttachmentMenuWidget.show(context);
+  }
+
+  void _openMediaGallery() {
+    final chatState = ref.read(chatProvider);
+    final roomId = chatState.roomId;
+    if (roomId == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MediaGalleryScreen(roomId: roomId),
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
