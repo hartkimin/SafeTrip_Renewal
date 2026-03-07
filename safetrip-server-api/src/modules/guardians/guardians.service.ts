@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, Between } from 'typeorm';
 import {
     Guardian, GuardianLink, GuardianPause,
-    GuardianLocationRequest, GuardianSnapshot,
+    GuardianLocationRequest, GuardianSnapshot, GuardianReleaseRequest,
 } from '../../entities/guardian.entity';
 import { User } from '../../entities/user.entity';
+import { GroupMember } from '../../entities/group-member.entity';
+import { Schedule } from '../../entities/schedule.entity';
 import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
@@ -16,7 +18,10 @@ export class GuardiansService {
         @InjectRepository(GuardianPause) private pauseRepo: Repository<GuardianPause>,
         @InjectRepository(GuardianLocationRequest) private locReqRepo: Repository<GuardianLocationRequest>,
         @InjectRepository(GuardianSnapshot) private snapshotRepo: Repository<GuardianSnapshot>,
+        @InjectRepository(GuardianReleaseRequest) private releaseRequestRepo: Repository<GuardianReleaseRequest>,
         @InjectRepository(User) private userRepo: Repository<User>,
+        @InjectRepository(GroupMember) private groupMemberRepo: Repository<GroupMember>,
+        @InjectRepository(Schedule) private scheduleRepo: Repository<Schedule>,
         private paymentsService: PaymentsService,
     ) { }
 
@@ -216,5 +221,128 @@ export class GuardiansService {
 
     async getSnapshots(linkId: string) {
         return this.snapshotRepo.find({ where: { linkId }, order: { capturedAt: 'DESC' }, take: 48 });
+    }
+
+    // ── 일정 요약 (§9.3 — 유료 가디언 전용) ──
+
+    async getScheduleSummary(tripId: string, linkId: string, guardianId: string) {
+        // 1. 링크 존재 및 소유권 확인
+        const link = await this.linkRepo.findOne({ where: { linkId, tripId } });
+        if (!link || link.guardianId !== guardianId) {
+            throw new NotFoundException('해당 가디언 연결을 찾을 수 없습니다');
+        }
+
+        // 2. 유료 가디언 확인
+        if (!link.isPaid) {
+            throw new ForbiddenException('일정 요약은 유료 가디언에게만 제공됩니다');
+        }
+
+        // 3. 오늘 날짜 범위 계산 (서버 로컬 시간 기준)
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        // 4. 해당 여행의 오늘 일정 조회
+        const schedules = await this.scheduleRepo.find({
+            where: {
+                tripId,
+                scheduleDate: Between(todayStart, todayEnd),
+            },
+            order: { orderIndex: 'ASC', startTime: 'ASC' },
+        });
+
+        return schedules.map((s) => ({
+            schedule_id: s.scheduleId,
+            title: s.title,
+            scheduled_date: s.scheduleDate,
+            location_name: s.location || null,
+        }));
+    }
+
+    // ── 미성년자 가디언 해제 요청 (§10.2) ──
+
+    async createReleaseRequest(tripId: string, linkId: string, requestedBy: string) {
+        // 1. 링크 존재 확인
+        const link = await this.linkRepo.findOne({ where: { linkId, tripId } });
+        if (!link) {
+            throw new NotFoundException('해당 가디언 연결을 찾을 수 없습니다');
+        }
+
+        // 2. 요청자가 해당 링크의 멤버인지 확인
+        if (link.memberId !== requestedBy) {
+            throw new ForbiddenException('본인의 가디언 연결에 대해서만 해제 요청할 수 있습니다');
+        }
+
+        // 3. 미성년자 여부 확인
+        const user = await this.userRepo.findOne({ where: { userId: requestedBy } });
+        if (!user || !user.minorStatus || user.minorStatus === 'adult') {
+            throw new BadRequestException('미성년자만 가디언 해제 요청을 할 수 있습니다. 성인 사용자는 직접 해제하세요.');
+        }
+
+        // 4. 중복 pending 요청 확인
+        const existingRequest = await this.releaseRequestRepo.findOne({
+            where: { linkId, tripId, status: 'pending' },
+        });
+        if (existingRequest) {
+            throw new ConflictException('이미 대기 중인 해제 요청이 있습니다');
+        }
+
+        // 5. 요청 생성
+        const request = this.releaseRequestRepo.create({
+            linkId,
+            tripId,
+            requestedBy,
+            status: 'pending',
+        });
+        await this.releaseRequestRepo.save(request);
+
+        return {
+            request_id: request.requestId,
+            link_id: request.linkId,
+            trip_id: request.tripId,
+            status: request.status,
+            created_at: request.createdAt,
+        };
+    }
+
+    async respondToReleaseRequest(requestId: string, captainId: string, action: 'approved' | 'rejected') {
+        // 1. 요청 존재 확인
+        const request = await this.releaseRequestRepo.findOne({ where: { requestId } });
+        if (!request) {
+            throw new NotFoundException('해당 해제 요청을 찾을 수 없습니다');
+        }
+
+        if (request.status !== 'pending') {
+            throw new BadRequestException('이미 처리된 요청입니다');
+        }
+
+        // 2. 캡틴 권한 확인
+        const captain = await this.groupMemberRepo.findOne({
+            where: { tripId: request.tripId, userId: captainId, memberRole: 'captain', status: 'active' },
+        });
+        if (!captain) {
+            throw new ForbiddenException('캡틴만 가디언 해제 요청을 승인/거절할 수 있습니다');
+        }
+
+        // 3. 요청 상태 업데이트
+        request.status = action;
+        request.captainId = captainId;
+        request.respondedAt = new Date();
+        await this.releaseRequestRepo.save(request);
+
+        // 4. 승인 시 가디언 링크 삭제
+        if (action === 'approved') {
+            const link = await this.linkRepo.findOne({ where: { linkId: request.linkId } });
+            if (link) {
+                await this.linkRepo.remove(link);
+            }
+        }
+
+        return {
+            request_id: request.requestId,
+            status: request.status,
+            captain_id: request.captainId,
+            responded_at: request.respondedAt,
+        };
     }
 }

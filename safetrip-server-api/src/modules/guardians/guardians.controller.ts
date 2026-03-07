@@ -38,6 +38,17 @@ export class GuardiansController {
         return this.guardiansService.getLinkedMembers(tripId, guardianId);
     }
 
+    @Post('release-requests')
+    @ApiOperation({ summary: '미성년자 가디언 해제 요청 생성 (§10.2)' })
+    @HttpCode(HttpStatus.CREATED)
+    async createReleaseRequest(
+        @Param('tripId') tripId: string,
+        @CurrentUser() userId: string,
+        @Body('link_id') linkId: string,
+    ) {
+        return this.guardiansService.createReleaseRequest(tripId, linkId, userId);
+    }
+
     @Post()
     @ApiOperation({ summary: '가디언 추가 (초대)' })
     @HttpCode(HttpStatus.CREATED)
@@ -50,6 +61,17 @@ export class GuardiansController {
     }
 
     // ── Parameterized routes ──
+
+    @Patch('release-requests/:requestId')
+    @ApiOperation({ summary: '미성년자 가디언 해제 요청 승인/거절 (캡틴 전용, §10.2)' })
+    async respondToReleaseRequest(
+        @Param('tripId') tripId: string,
+        @Param('requestId') requestId: string,
+        @CurrentUser() captainId: string,
+        @Body('action') action: 'approved' | 'rejected',
+    ) {
+        return this.guardiansService.respondToReleaseRequest(requestId, captainId, action);
+    }
 
     @Patch(':linkId/respond')
     @ApiOperation({ summary: '가디언 연결 수락/거절' })
@@ -97,5 +119,15 @@ export class GuardiansController {
     @ApiOperation({ summary: '30분 스냅샷 목록' })
     getSnapshots(@Param('linkId') linkId: string) {
         return this.guardiansService.getSnapshots(linkId);
+    }
+
+    @Get(':linkId/schedule-summary')
+    @ApiOperation({ summary: '가디언 일정 요약 조회 (유료 가디언 전용, §9.3)' })
+    async getScheduleSummary(
+        @Param('tripId') tripId: string,
+        @Param('linkId') linkId: string,
+        @CurrentUser() guardianId: string,
+    ) {
+        return this.guardiansService.getScheduleSummary(tripId, linkId, guardianId);
     }
 }

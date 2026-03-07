@@ -20,6 +20,7 @@ export {
     GuardianPause,
     GuardianLocationRequest,
     GuardianSnapshot,
+    GuardianReleaseRequest,
 } from './guardian.entity';
 
 // Schedule & Geofence Domain (D)
