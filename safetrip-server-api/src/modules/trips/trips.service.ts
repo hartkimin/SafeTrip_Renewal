@@ -357,9 +357,9 @@ export class TripsService {
         // §10.2: 미성년자 합류 시 보호 로직 실행
         await this.checkAndEnforceMinorProtection(trip.tripId, userId);
 
-        // 초대 상태 갱신 (usedCount 증가 및 maxUses 도달 시 비활성화)
-        invite.usedCount += 1;
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) {
+        // 초대 상태 갱신 (currentUses 증가 및 maxUses 도달 시 비활성화)
+        invite.currentUses += 1;
+        if (invite.maxUses && invite.currentUses >= invite.maxUses) {
             invite.isActive = false;
         }
         await this.inviteCodeRepo.save(invite);
