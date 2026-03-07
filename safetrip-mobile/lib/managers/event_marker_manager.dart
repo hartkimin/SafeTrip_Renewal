@@ -18,15 +18,30 @@ class EventMarkerManager {
   final void Function(String eventId)? onEventMarkerTap;
 
   final List<Marker> _markers = [];
+  final Map<String, Map<String, dynamic>> _eventDataMap = {};
 
   List<Marker> get markers => List.from(_markers);
+
+  /// 이벤트 데이터 조회 (모달 표시용)
+  Map<String, dynamic>? getEventData(String eventId) => _eventDataMap[eventId];
 
   /// 지오펜스 이탈 경보 마커 추가
   void addGeofenceExitAlert({
     required String eventId,
     required String memberName,
     required LatLng position,
+    String? geofenceName,
+    DateTime? timestamp,
   }) {
+    // 이벤트 데이터 저장 (모달 표시용)
+    _eventDataMap[eventId] = {
+      'eventType': 'geofence_exit',
+      'memberName': memberName,
+      'position': position,
+      'geofenceName': geofenceName,
+      'timestamp': timestamp ?? DateTime.now(),
+    };
+
     // 중복 방지
     _markers.removeWhere((m) {
       final key = m.key is ValueKey<String> ? (m.key as ValueKey<String>).value : null;
@@ -53,17 +68,20 @@ class EventMarkerManager {
       final key = m.key is ValueKey<String> ? (m.key as ValueKey<String>).value : null;
       return key == 'event_$eventId';
     });
+    _eventDataMap.remove(eventId);
     onMarkersUpdated(List.from(_markers));
   }
 
   /// 전체 이벤트 마커 초기화
   void clear() {
     _markers.clear();
+    _eventDataMap.clear();
     onMarkersUpdated([]);
   }
 
   void dispose() {
     _markers.clear();
+    _eventDataMap.clear();
   }
 }
 
