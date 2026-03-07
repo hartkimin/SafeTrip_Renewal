@@ -19,6 +19,17 @@ export class ChatsController {
         return this.chatsService.getRooms(tripId);
     }
 
+    @Get('rooms/:roomId/messages/search')
+    @ApiOperation({ summary: '메시지 검색 (P3)' })
+    searchMessages(
+        @Param('roomId') roomId: string,
+        @Query('q') query: string,
+        @Query('cursor') cursor?: string,
+        @Query('limit') limit?: number,
+    ) {
+        return this.chatsService.searchMessages(roomId, query, cursor, limit);
+    }
+
     @Get('rooms/:roomId/messages')
     @ApiOperation({ summary: '채팅 메시지 조회 (커서 기반)' })
     getMessages(
@@ -84,6 +95,50 @@ export class ChatsController {
         @Param('messageId') messageId: string,
     ) {
         return this.chatsService.deleteMessage(messageId, userId);
+    }
+
+    // ------------------------------------------------------------------
+    // Media Gallery (Phase 3)
+    // ------------------------------------------------------------------
+
+    @Get('rooms/:roomId/media')
+    @ApiOperation({ summary: '미디어 모아보기 (P3)' })
+    getMedia(
+        @Param('roomId') roomId: string,
+        @Query('cursor') cursor?: string,
+        @Query('limit') limit?: number,
+    ) {
+        return this.chatsService.getMedia(roomId, cursor, limit);
+    }
+
+    // ------------------------------------------------------------------
+    // Reactions (Phase 3)
+    // ------------------------------------------------------------------
+
+    @Post('messages/:messageId/reactions')
+    @ApiOperation({ summary: '리액션 추가' })
+    addReaction(
+        @CurrentUser() userId: string,
+        @Param('messageId') messageId: string,
+        @Body() body: { emoji: string },
+    ) {
+        return this.chatsService.addReaction(messageId, userId, body.emoji);
+    }
+
+    @Delete('messages/:messageId/reactions/:emoji')
+    @ApiOperation({ summary: '리액션 제거' })
+    removeReaction(
+        @CurrentUser() userId: string,
+        @Param('messageId') messageId: string,
+        @Param('emoji') emoji: string,
+    ) {
+        return this.chatsService.removeReaction(messageId, userId, emoji);
+    }
+
+    @Get('messages/:messageId/reactions')
+    @ApiOperation({ summary: '리액션 목록' })
+    getReactions(@Param('messageId') messageId: string) {
+        return this.chatsService.getReactions(messageId);
     }
 
     // ------------------------------------------------------------------

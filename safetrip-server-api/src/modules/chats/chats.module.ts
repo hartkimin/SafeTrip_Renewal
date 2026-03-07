@@ -6,6 +6,7 @@ import { ChatsGateway } from './chats.gateway';
 import { SystemMessageService } from './system-message.service';
 import { PollService } from './poll.service';
 import { ChatRoom, ChatMessage, ChatReadStatus, ChatPoll, ChatPollVote } from '../../entities/chat.entity';
+import { ChatReaction } from '../../entities/chat-reaction.entity';
 import { GroupMember } from '../../entities/group-member.entity';
 import { User } from '../../entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -14,7 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     imports: [
         TypeOrmModule.forFeature([
             ChatRoom, ChatMessage, ChatReadStatus,
-            ChatPoll, ChatPollVote,
+            ChatPoll, ChatPollVote, ChatReaction,
             GroupMember, User,
         ]),
         NotificationsModule,

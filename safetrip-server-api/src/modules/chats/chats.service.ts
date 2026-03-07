@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { ChatRoom, ChatMessage, ChatReadStatus } from '../../entities/chat.entity';
+import { ChatReaction } from '../../entities/chat-reaction.entity';
 import { GroupMember } from '../../entities/group-member.entity';
 import { User } from '../../entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -13,6 +14,7 @@ export class ChatsService {
         @InjectRepository(ChatRoom) private roomRepo: Repository<ChatRoom>,
         @InjectRepository(ChatMessage) private messageRepo: Repository<ChatMessage>,
         @InjectRepository(ChatReadStatus) private readStatusRepo: Repository<ChatReadStatus>,
+        @InjectRepository(ChatReaction) private reactionRepo: Repository<ChatReaction>,
         @InjectRepository(GroupMember) private memberRepo: Repository<GroupMember>,
         @InjectRepository(User) private userRepo: Repository<User>,
         private notifService: NotificationsService,
@@ -262,6 +264,63 @@ export class ChatsService {
         });
 
         return { success: true, data: { messageId, isDeleted: true } };
+    }
+
+    // ------------------------------------------------------------------
+    // Search + Media Gallery (Phase 3)
+    // ------------------------------------------------------------------
+
+    /**
+     * 메시지 전문 검색 (ILIKE, pg_trgm 인덱스 활용)
+     * SQL column names in QueryBuilder (project convention)
+     */
+    async searchMessages(roomId: string, query: string, cursor?: string, limit = 20) {
+        const qb = this.messageRepo.createQueryBuilder('m')
+            .where('m.room_id = :roomId', { roomId })
+            .andWhere('m.is_deleted = false')
+            .andWhere('m.content ILIKE :query', { query: `%${query}%` });
+        if (cursor) {
+            qb.andWhere('m.sent_at < :cursor', { cursor: new Date(cursor) });
+        }
+        qb.orderBy('m.sent_at', 'DESC').take(limit || 20);
+        return qb.getMany();
+    }
+
+    /**
+     * 미디어 모아보기 (image, video 타입만)
+     */
+    async getMedia(roomId: string, cursor?: string, limit = 30) {
+        const qb = this.messageRepo.createQueryBuilder('m')
+            .where('m.room_id = :roomId', { roomId })
+            .andWhere('m.is_deleted = false')
+            .andWhere('m.message_type IN (:...types)', { types: ['image', 'video'] });
+        if (cursor) {
+            qb.andWhere('m.sent_at < :cursor', { cursor: new Date(cursor) });
+        }
+        qb.orderBy('m.sent_at', 'DESC').take(limit || 30);
+        return qb.getMany();
+    }
+
+    // ------------------------------------------------------------------
+    // Reactions (Phase 3)
+    // ------------------------------------------------------------------
+
+    async addReaction(messageId: string, userId: string, emoji: string) {
+        const existing = await this.reactionRepo.findOne({
+            where: { messageId, userId, emoji },
+        });
+        if (existing) return existing;
+        const reaction = this.reactionRepo.create({ messageId, userId, emoji });
+        return this.reactionRepo.save(reaction);
+    }
+
+    async removeReaction(messageId: string, userId: string, emoji: string) {
+        await this.reactionRepo.delete({ messageId, userId, emoji });
+        return { success: true };
+    }
+
+    async getReactions(messageId: string) {
+        return this.reactionRepo.find({ where: { messageId } });
     }
 
     // ------------------------------------------------------------------
