@@ -118,4 +118,4 @@ export {
 } from './event-log.entity';
 
 // AI Domain (O)
-export { AiUsage } from './ai.entity';
+export { AiUsage, AiUsageLog, AiSubscription } from './ai.entity';
