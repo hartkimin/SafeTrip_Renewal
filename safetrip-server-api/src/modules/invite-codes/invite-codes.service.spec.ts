@@ -237,7 +237,7 @@ describe('InviteCodesService', () => {
             tripId,
             targetRole: 'crew',
             maxUses: 5,
-            usedCount: 2,
+            currentUses: 2,
             isActive: true,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h from now
         };
@@ -270,7 +270,7 @@ describe('InviteCodesService', () => {
             mockInviteCodeRepo.findOne.mockResolvedValue({
                 ...validInvite,
                 maxUses: 3,
-                usedCount: 3, // fully used
+                currentUses: 3, // fully used
             });
 
             await expect(service.validateCode('ABCDE12')).rejects.toThrow(BadRequestException);
@@ -309,7 +309,7 @@ describe('InviteCodesService', () => {
             tripId,
             targetRole: 'crew',
             maxUses: 5,
-            usedCount: 2,
+            currentUses: 2,
             isActive: true,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         };
@@ -377,13 +377,13 @@ describe('InviteCodesService', () => {
             expect(mockQueryRunner.release).toHaveBeenCalled();
         });
 
-        it('should increment usedCount within transaction', async () => {
+        it('should increment currentUses within transaction', async () => {
             setupSuccessfulUseCode();
 
             await service.useCode('ABCDE12', joiningUserId);
 
             expect(mockQueryRunner.query).toHaveBeenCalledWith(
-                `UPDATE tb_invite_code SET used_count = used_count + 1 WHERE invite_code_id = $1`,
+                `UPDATE tb_invite_code SET current_uses = current_uses + 1 WHERE invite_code_id = $1`,
                 [validInvite.inviteCodeId],
             );
         });
@@ -399,7 +399,7 @@ describe('InviteCodesService', () => {
                 code: 'ABC1234',
                 targetRole: 'crew',
                 maxUses: 1,
-                usedCount: 0,
+                currentUses: 0,
                 expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
                 isActive: true,
                 modelType: 'direct',
@@ -412,7 +412,7 @@ describe('InviteCodesService', () => {
                 code: 'DEF5678',
                 targetRole: 'crew_chief',
                 maxUses: 3,
-                usedCount: 1,
+                currentUses: 1,
                 expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
                 isActive: true,
                 modelType: 'direct',
@@ -430,7 +430,7 @@ describe('InviteCodesService', () => {
             await service.listCodes(tripId, mockCrewChiefMember.userId);
 
             expect(mockInviteCodeRepo.find).toHaveBeenCalledWith({
-                where: { groupId, createdBy: mockCrewChiefMember.userId },
+                where: { groupId, isActive: true, createdBy: mockCrewChiefMember.userId },
                 order: { createdAt: 'DESC' },
             });
         });
@@ -443,7 +443,7 @@ describe('InviteCodesService', () => {
             const result = await service.listCodes(tripId, userId);
 
             expect(mockInviteCodeRepo.find).toHaveBeenCalledWith({
-                where: { groupId },
+                where: { groupId, isActive: true },
                 order: { createdAt: 'DESC' },
             });
             expect(result.length).toBe(2);
@@ -488,6 +488,136 @@ describe('InviteCodesService', () => {
                     return service.deactivateCode(tripId, 'ic-001', mockCrewChiefMember.userId);
                 })(),
             ).rejects.toThrow('Crew chief can only deactivate own codes');
+        });
+    });
+
+    // ==========================================
+    // 아키텍처 원칙 정합성 검증 추가 테스트
+    // ==========================================
+    describe('Architecture Compliance Tests', () => {
+        // #5: 크루장 고급 설정 제한 (§04.1)
+        it('should force defaults for crew_chief (max_uses=1, expires_hours=72)', async () => {
+            mockTripRepo.findOne.mockResolvedValue(mockTrip);
+            mockMemberRepo.findOne.mockResolvedValue(mockCrewChiefMember);
+            mockInviteCodeRepo.count.mockResolvedValue(0);
+            mockInviteCodeRepo.findOne.mockResolvedValue(null);
+            mockInviteCodeRepo.create.mockImplementation((data: any) => ({ inviteCodeId: 'ic-cc-001', ...data }));
+            mockInviteCodeRepo.save.mockImplementation((data: any) => Promise.resolve(data));
+
+            const result = await service.createCode(tripId, mockCrewChiefMember.userId, {
+                target_role: 'crew',
+                max_uses: 10,
+                expires_hours: 168,
+            });
+
+            expect(result.max_uses).toBe(1);
+            const expiresAt = new Date(result.expires_at as Date);
+            const expected72h = new Date();
+            expected72h.setTime(expected72h.getTime() + 72 * 60 * 60 * 1000);
+            const diff = Math.abs(expiresAt.getTime() - expected72h.getTime());
+            expect(diff).toBeLessThan(5000);
+        });
+
+        // #7: 크루장 정원 초과 시 ERR_ROLE_UNAVAILABLE (§05 Step 8)
+        it('should throw ERR_ROLE_UNAVAILABLE when crew_chief quota exceeded', async () => {
+            const crewChiefInvite = {
+                inviteCodeId: 'ic-cc-quota',
+                code: 'CCQUOTA',
+                groupId,
+                tripId,
+                targetRole: 'crew_chief',
+                maxUses: 5,
+                currentUses: 0,
+                isActive: true,
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            };
+
+            mockQueryRunner.manager.findOne
+                .mockResolvedValueOnce(crewChiefInvite)
+                .mockResolvedValueOnce(mockTrip)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({ groupId, groupName: 'Test', maxMembers: 50 });
+
+            mockQueryRunner.manager.count
+                .mockResolvedValueOnce(10)
+                .mockResolvedValueOnce(5);
+
+            await expect(service.useCode('CCQUOTA', 'user-new-001')).rejects.toThrow('ERR_ROLE_UNAVAILABLE');
+        });
+
+        // #8: createCode 응답에 qr_url 포함 (§14.2)
+        it('should include qr_url in createCode response', async () => {
+            mockTripRepo.findOne.mockResolvedValue(mockTrip);
+            mockMemberRepo.findOne.mockResolvedValue(mockCaptainMember);
+            mockInviteCodeRepo.count.mockResolvedValue(0);
+            mockInviteCodeRepo.findOne.mockResolvedValue(null);
+            mockInviteCodeRepo.create.mockImplementation((data: any) => ({ inviteCodeId: 'ic-qr', ...data }));
+            mockInviteCodeRepo.save.mockImplementation((data: any) => Promise.resolve(data));
+
+            const result = await service.createCode(tripId, userId, { target_role: 'crew' });
+
+            expect(result.qr_url).toBeDefined();
+            expect(result.qr_url).toContain('https://api.safetrip.app/qr/');
+            expect(result.qr_url).toContain(result.code);
+        });
+
+        // #9: listCodes는 isActive=true만 반환 (§14.1)
+        it('should filter only active codes in listCodes', async () => {
+            mockTripRepo.findOne.mockResolvedValue(mockTrip);
+            mockMemberRepo.findOne.mockResolvedValue(mockCaptainMember);
+            mockInviteCodeRepo.find.mockResolvedValue([]);
+
+            await service.listCodes(tripId, userId);
+
+            expect(mockInviteCodeRepo.find).toHaveBeenCalledWith({
+                where: { groupId, isActive: true },
+                order: { createdAt: 'DESC' },
+            });
+        });
+
+        // #2: currentUses 컬럼명 사용 확인
+        it('should use current_uses column in atomic increment', async () => {
+            const validInvite = {
+                inviteCodeId: 'ic-cu',
+                code: 'CURUSES',
+                groupId,
+                tripId,
+                targetRole: 'crew',
+                maxUses: 5,
+                currentUses: 2,
+                isActive: true,
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            };
+            mockQueryRunner.manager.findOne
+                .mockResolvedValueOnce(validInvite)
+                .mockResolvedValueOnce(mockTrip)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({ groupId, groupName: 'Test', maxMembers: 50 });
+            mockQueryRunner.manager.count.mockResolvedValue(5);
+
+            await service.useCode('CURUSES', 'user-new-002');
+
+            expect(mockQueryRunner.query).toHaveBeenCalledWith(
+                `UPDATE tb_invite_code SET current_uses = current_uses + 1 WHERE invite_code_id = $1`,
+                ['ic-cu'],
+            );
+        });
+
+        // #2: validateCode에서 currentUses 사용 확인
+        it('should check currentUses for exhaustion in validateCode', async () => {
+            mockInviteCodeRepo.findOne.mockResolvedValue({
+                inviteCodeId: 'ic-exh',
+                code: 'EXHAUST',
+                groupId,
+                tripId,
+                targetRole: 'crew',
+                maxUses: 3,
+                currentUses: 3,
+                isActive: true,
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            });
+
+            await expect(service.validateCode('EXHAUST')).rejects.toThrow('ERR_CODE_EXHAUSTED');
         });
     });
 });
