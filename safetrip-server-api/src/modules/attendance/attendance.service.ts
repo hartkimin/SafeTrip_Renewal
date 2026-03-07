@@ -36,6 +36,10 @@ export class AttendanceService {
 
     // ── [POST] /trips/:tripId/attendance ─────────────────────────────
     async startCheck(tripId: string, initiatedBy: string, groupId: string) {
+        if (!groupId) {
+            throw new BadRequestException('group_id는 필수입니다');
+        }
+
         // Validate no ongoing check exists for this group
         const ongoing = await this.checkRepo.findOne({
             where: { tripId, groupId, status: 'ongoing' },
@@ -86,6 +90,10 @@ export class AttendanceService {
 
     // ── [PATCH] /trips/:tripId/attendance/:checkId/respond ───────────
     async respond(tripId: string, checkId: string, userId: string, responseType: 'present' | 'absent') {
+        if (!responseType || !['present', 'absent'].includes(responseType)) {
+            throw new BadRequestException('response_type은 present 또는 absent여야 합니다');
+        }
+
         const check = await this.checkRepo.findOne({
             where: { checkId, tripId },
         });
@@ -151,7 +159,7 @@ export class AttendanceService {
             .createQueryBuilder()
             .update(AttendanceResponse)
             .set({ responseType: 'absent', respondedAt: new Date() })
-            .where('checkId = :checkId AND responseType = :type', {
+            .where('"check_id" = :checkId AND "response_type" = :type', {
                 checkId,
                 type: 'unknown',
             })
