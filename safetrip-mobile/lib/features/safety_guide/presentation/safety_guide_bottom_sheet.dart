@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../features/main/providers/connectivity_provider.dart';
+import '../../../features/trip/providers/trip_provider.dart';
 import '../providers/country_context_provider.dart';
 import '../providers/safety_guide_providers.dart';
 import 'tabs/overview_tab.dart';
@@ -57,6 +58,21 @@ class _SafetyGuideBottomSheetState extends ConsumerState<SafetyGuideBottomSheet>
     final isOffline = !networkStatus.isOnline;
     final countryCtx = ref.watch(countryContextProvider);
     final guideState = ref.watch(safetyGuideProvider);
+
+    // S1: 컨텍스트 기반 국가 자동 선택 (§3.3 — active trip → country context)
+    final tripState = ref.watch(tripProvider);
+    if (tripState.countryCode != null &&
+        !countryCtx.isManualOverride &&
+        countryCtx.countryCode != tripState.countryCode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(countryContextProvider.notifier).setFromTrip(
+                tripState.countryCode!,
+                countryNameKo: tripState.countryName,
+              );
+        }
+      });
+    }
 
     // 국가 변경 시 자동 로드
     final countryCode = countryCtx.countryCode;
