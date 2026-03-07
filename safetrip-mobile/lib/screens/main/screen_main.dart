@@ -43,7 +43,7 @@ import '../../features/safety_guide/presentation/safety_guide_bottom_sheet.dart'
 import 'bottom_sheets/bottom_sheet_layer_settings.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
 import 'navigation/bottom_navigation_bar.dart';
-import 'widgets/top_trip_info_card.dart';
+import '../../features/trip_card/widgets/trip_info_card_section.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key, required this.authNotifier});
@@ -598,7 +598,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
               top: MediaQuery.of(context).padding.top + 10,
               left: AppSpacing.md,
               right: AppSpacing.md,
-              child: const TopTripInfoCard(),
+              child: const TripInfoCardSection(),
             ),
 
             // ── Layer Settings Button (우측 상단) ─────────
