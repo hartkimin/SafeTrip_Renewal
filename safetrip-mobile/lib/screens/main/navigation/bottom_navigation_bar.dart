@@ -23,10 +23,11 @@ class AppBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final systemBottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return Container(
       width: double.infinity,
-      height: AppSpacing.navigationBarHeight + 20,
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      height: AppSpacing.navigationBarHeight + 20 + systemBottomPadding,
+      padding: EdgeInsets.only(top: 8, bottom: 12 + systemBottomPadding),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.only(

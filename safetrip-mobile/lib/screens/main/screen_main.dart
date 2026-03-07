@@ -569,6 +569,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // SOS는 active 상태 + 비가디언일 때만 표시
     final showSos = isActive && tripState.currentUserRole != 'guardian';
     final isNoTrip = tripStatus == 'none';
+    // 안드로이드 시스템 네비게이션 바 높이 (소프트키/제스처 영역)
+    final systemBottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     // §7.3: 배터리 레벨 (위치 업데이트에서 수신)
     final batteryAsync = ref.watch(batteryLevelProvider);
@@ -741,7 +743,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
             if (showSos)
               Positioned(
                 right: 16,
-                bottom: AppSpacing.navigationBarHeight + 28,
+                bottom: AppSpacing.navigationBarHeight + 28 + systemBottomPadding,
                 child: Semantics(
                   label: mainState.isSosActive
                       ? 'SOS 해제 버튼'
@@ -768,7 +770,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
             // ── Member Mini Card (§5.4) ───────────────────
             if (_selectedMarkerUserId != null && _selectedMarkerUserData != null)
               Positioned(
-                bottom: AppSpacing.navigationBarHeight + 80,
+                bottom: AppSpacing.navigationBarHeight + 80 + systemBottomPadding,
                 left: AppSpacing.md,
                 right: AppSpacing.md + 72,
                 child: MemberMiniCard(
