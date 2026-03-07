@@ -36,7 +36,6 @@ import '../../managers/schedule_marker_manager.dart';
 import '../../managers/event_marker_manager.dart';
 import '../../managers/geofence_map_renderer.dart';
 import '../../managers/safety_facility_manager.dart';
-import '../../models/geofence.dart';
 import '../../widgets/map/member_mini_card.dart';
 import 'bottom_sheets/modals/event_detail_modal.dart';
 import 'bottom_sheets/modals/geofence_info_modal.dart';
@@ -218,7 +217,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
             .firstOrNull;
         if (schedule != null && mounted) {
           final userRole =
-              ref.read(tripProvider).currentUserRole ?? 'crew';
+              ref.read(tripProvider).currentUserRole;
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
