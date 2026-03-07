@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import '../../../../constants/app_tokens.dart';
 import '../../../../services/api_service.dart';
 
-/// 위치 공유 관리 모달
-/// 마스터 ON/OFF 토글 + 개별 멤버별 공유 설정 토글
+/// 위치 공유 관리 모달 (§6 프라이버시 등급별 UI 분기)
+///
+/// - safety_first: 토글 비활성화, "항상 공유" 안내문
+/// - standard: 마스터 ON/OFF 토글 + 개별 멤버별 공유 설정 토글
+/// - privacy_first: 일정 연동 안내 + 버퍼 구간(±15분) 설명
 class LocationSharingModal extends StatefulWidget {
 
   const LocationSharingModal({
     super.key,
     required this.groupId,
     required this.currentUserId,
+    this.privacyLevel = 'standard',
   });
   final String groupId;
   final String currentUserId;
+  /// 프라이버시 등급: 'safety_first' | 'standard' | 'privacy_first'
+  final String privacyLevel;
 
   @override
   State<LocationSharingModal> createState() => _LocationSharingModalState();
@@ -91,6 +97,419 @@ class _LocationSharingModalState extends State<LocationSharingModal> {
     // TB_LOCATION_SHARING 테이블 활용
   }
 
+  /// §6 프라이버시 등급별 콘텐츠 분기
+  Widget _buildPrivacyContent() {
+    switch (widget.privacyLevel) {
+      case 'safety_first':
+        return _buildSafetyFirstContent();
+      case 'privacy_first':
+        return _buildPrivacyFirstContent();
+      default: // 'standard'
+        return _buildStandardContent();
+    }
+  }
+
+  /// safety_first: 토글 비활성화 + "항상 공유" 안내문 (§6)
+  Widget _buildSafetyFirstContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 항상 공유 안내 배너
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppTokens.spacing16),
+          decoration: BoxDecoration(
+            color: AppTokens.primaryTeal.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppTokens.radius12),
+            border: Border.all(color: AppTokens.primaryTeal),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.shield,
+                color: AppTokens.primaryTeal,
+                size: 24,
+              ),
+              const SizedBox(width: AppTokens.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '안전 우선 모드',
+                      style: AppTokens.textStyle(
+                        fontSize: AppTokens.fontSize14,
+                        fontWeight: AppTokens.fontWeightSemibold,
+                        color: AppTokens.primaryTeal,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '이 여행은 안전 우선 모드로 설정되어\n위치가 항상 그룹 멤버에게 공유됩니다.',
+                      style: AppTokens.textStyle(
+                        fontSize: AppTokens.fontSize12,
+                        color: AppTokens.text04,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spacing16),
+        // 마스터 토글 (비활성화)
+        _buildMasterToggle(disabled: true, alwaysOn: true),
+        const SizedBox(height: AppTokens.spacing16),
+        // 안내문
+        Container(
+          padding: const EdgeInsets.all(AppTokens.spacing16),
+          decoration: BoxDecoration(
+            color: AppTokens.bgBasic03,
+            borderRadius: BorderRadius.circular(AppTokens.radius12),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, color: AppTokens.text03, size: 20),
+              const SizedBox(width: AppTokens.spacing8),
+              Expanded(
+                child: Text(
+                  '안전 우선 모드에서는 위치 공유를 끌 수 없습니다.\n여행 설정에서 프라이버시 등급을 변경할 수 있습니다.',
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize12,
+                    color: AppTokens.text03,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// privacy_first: 일정 연동 안내 + 버퍼 구간(±15분) 설명 (§6)
+  Widget _buildPrivacyFirstContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 프라이버시 우선 안내 배너
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppTokens.spacing16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3E5F5),
+            borderRadius: BorderRadius.circular(AppTokens.radius12),
+            border: Border.all(color: const Color(0xFF9C27B0)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.lock,
+                color: Color(0xFF9C27B0),
+                size: 24,
+              ),
+              const SizedBox(width: AppTokens.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '프라이버시 우선 모드',
+                      style: AppTokens.textStyle(
+                        fontSize: AppTokens.fontSize14,
+                        fontWeight: AppTokens.fontWeightSemibold,
+                        color: const Color(0xFF9C27B0),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '일정이 등록된 시간대에만 위치가 공유됩니다.',
+                      style: AppTokens.textStyle(
+                        fontSize: AppTokens.fontSize12,
+                        color: AppTokens.text04,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spacing16),
+        // 마스터 토글
+        _buildMasterToggle(),
+        const SizedBox(height: AppTokens.spacing24),
+        // 일정 연동 설명
+        Text(
+          '일정 기반 위치 공유',
+          style: AppTokens.textStyle(
+            fontSize: AppTokens.fontSize14,
+            fontWeight: AppTokens.fontWeightSemibold,
+          ),
+        ),
+        const SizedBox(height: AppTokens.spacing8),
+        _buildInfoRow(
+          Icons.schedule,
+          '일정 시간대에만 위치 공유',
+          '등록된 일정의 시작~종료 시간 동안만\n그룹 멤버에게 위치가 공유됩니다.',
+        ),
+        const SizedBox(height: AppTokens.spacing8),
+        _buildInfoRow(
+          Icons.timer,
+          '버퍼 구간 ±15분',
+          '일정 시작 15분 전부터 종료 15분 후까지\n위치가 공유되어 안전한 이동을 지원합니다.',
+        ),
+        const SizedBox(height: AppTokens.spacing8),
+        _buildInfoRow(
+          Icons.visibility_off,
+          '일정 외 시간',
+          '등록된 일정이 없는 시간에는\n위치가 공유되지 않습니다.',
+        ),
+        if (_masterEnabled) ...[
+          const SizedBox(height: AppTokens.spacing24),
+          Text(
+            '멤버별 위치 공유 설정',
+            style: AppTokens.textStyle(
+              fontSize: AppTokens.fontSize14,
+              fontWeight: AppTokens.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spacing4),
+          Text(
+            '일정 시간대에 위치를 공유할 멤버를 선택하세요',
+            style: AppTokens.textStyle(
+              fontSize: AppTokens.fontSize12,
+              color: AppTokens.text03,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spacing12),
+          ..._members.map(_buildMemberRow),
+        ],
+      ],
+    );
+  }
+
+  /// standard: 기존 마스터 + 개별 토글 동작 유지 (§6)
+  Widget _buildStandardContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildMasterToggle(),
+        const SizedBox(height: AppTokens.spacing24),
+        if (_masterEnabled) ...[
+          Text(
+            '멤버별 위치 공유 설정',
+            style: AppTokens.textStyle(
+              fontSize: AppTokens.fontSize14,
+              fontWeight: AppTokens.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spacing4),
+          Text(
+            '각 멤버에게 내 위치를 공유할지 선택하세요',
+            style: AppTokens.textStyle(
+              fontSize: AppTokens.fontSize12,
+              color: AppTokens.text03,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spacing12),
+          ..._members.map(_buildMemberRow),
+        ],
+        if (!_masterEnabled) ...[
+          const SizedBox(height: AppTokens.spacing16),
+          Container(
+            padding: const EdgeInsets.all(AppTokens.spacing16),
+            decoration: BoxDecoration(
+              color: AppTokens.bgBasic03,
+              borderRadius: BorderRadius.circular(AppTokens.radius12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppTokens.text03, size: 20),
+                const SizedBox(width: AppTokens.spacing8),
+                Expanded(
+                  child: Text(
+                    '위치 공유를 켜면 개별 멤버별로\n공유 범위를 설정할 수 있습니다.',
+                    style: AppTokens.textStyle(
+                      fontSize: AppTokens.fontSize12,
+                      color: AppTokens.text03,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// 마스터 토글 위젯 (공통)
+  Widget _buildMasterToggle({bool disabled = false, bool alwaysOn = false}) {
+    final enabled = alwaysOn ? true : _masterEnabled;
+    return Container(
+      padding: const EdgeInsets.all(AppTokens.spacing16),
+      decoration: BoxDecoration(
+        color: enabled
+            ? AppTokens.primaryTeal.withValues(alpha: 0.08)
+            : AppTokens.bgBasic03,
+        borderRadius: BorderRadius.circular(AppTokens.radius12),
+        border: Border.all(
+          color: enabled ? AppTokens.primaryTeal : AppTokens.line03,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            enabled ? Icons.location_on : Icons.location_off,
+            color: enabled ? AppTokens.primaryTeal : AppTokens.text03,
+            size: 24,
+          ),
+          const SizedBox(width: AppTokens.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '내 위치 공유',
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize14,
+                    fontWeight: AppTokens.fontWeightSemibold,
+                    color: enabled ? AppTokens.text06 : AppTokens.text04,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  enabled
+                      ? '그룹 멤버에게 내 위치가 공유됩니다'
+                      : '위치 공유가 꺼져 있습니다',
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize12,
+                    color: AppTokens.text03,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: disabled ? null : _toggleMaster,
+            activeThumbColor: AppTokens.primaryTeal,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 멤버 행 위젯 (공통)
+  Widget _buildMemberRow(Map<String, dynamic> member) {
+    final userId = member['user_id'] as String;
+    final isEnabled = _memberSharingStates[userId] ?? true;
+    final role = member['member_role'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppTokens.spacing8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.spacing12,
+        vertical: AppTokens.spacing8,
+      ),
+      decoration: BoxDecoration(
+        color: AppTokens.bgBasic01,
+        borderRadius: BorderRadius.circular(AppTokens.radius12),
+        border: Border.all(color: AppTokens.line03),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppTokens.bgTeal03,
+            child: Text(
+              (member['display_name'] as String? ?? '?').characters.first,
+              style: AppTokens.textStyle(
+                fontSize: AppTokens.fontSize12,
+                fontWeight: AppTokens.fontWeightBold,
+                color: AppTokens.primaryTeal,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppTokens.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member['display_name'] as String? ?? userId,
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize14,
+                    fontWeight: AppTokens.fontWeightMedium,
+                  ),
+                ),
+                Text(
+                  _getRoleName(role),
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize11,
+                    color: AppTokens.text03,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: isEnabled,
+            onChanged: (v) => _toggleMemberSharing(userId, v),
+            activeThumbColor: AppTokens.primaryTeal,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 정보 행 위젯 (privacy_first 모드용)
+  Widget _buildInfoRow(IconData icon, String title, String description) {
+    return Container(
+      padding: const EdgeInsets.all(AppTokens.spacing12),
+      decoration: BoxDecoration(
+        color: AppTokens.bgBasic02,
+        borderRadius: BorderRadius.circular(AppTokens.radius12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppTokens.primaryTeal, size: 20),
+          const SizedBox(width: AppTokens.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize13,
+                    fontWeight: AppTokens.fontWeightSemibold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: AppTokens.textStyle(
+                    fontSize: AppTokens.fontSize12,
+                    color: AppTokens.text03,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _getRoleName(String? role) {
     switch (role) {
       case 'captain':
@@ -154,213 +573,7 @@ class _LocationSharingModalState extends State<LocationSharingModal> {
                   )
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(AppTokens.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 마스터 토글
-                        Container(
-                          padding: const EdgeInsets.all(AppTokens.spacing16),
-                          decoration: BoxDecoration(
-                            color: _masterEnabled
-                                ? AppTokens.primaryTeal
-                                    .withValues(alpha: 0.08)
-                                : AppTokens.bgBasic03,
-                            borderRadius:
-                                BorderRadius.circular(AppTokens.radius12),
-                            border: Border.all(
-                              color: _masterEnabled
-                                  ? AppTokens.primaryTeal
-                                  : AppTokens.line03,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _masterEnabled
-                                    ? Icons.location_on
-                                    : Icons.location_off,
-                                color: _masterEnabled
-                                    ? AppTokens.primaryTeal
-                                    : AppTokens.text03,
-                                size: 24,
-                              ),
-                              const SizedBox(width: AppTokens.spacing12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '내 위치 공유',
-                                      style: AppTokens.textStyle(
-                                        fontSize: AppTokens.fontSize14,
-                                        fontWeight:
-                                            AppTokens.fontWeightSemibold,
-                                        color: _masterEnabled
-                                            ? AppTokens.text06
-                                            : AppTokens.text04,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _masterEnabled
-                                          ? '그룹 멤버에게 내 위치가 공유됩니다'
-                                          : '위치 공유가 꺼져 있습니다',
-                                      style: AppTokens.textStyle(
-                                        fontSize: AppTokens.fontSize12,
-                                        color: AppTokens.text03,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Switch(
-                                value: _masterEnabled,
-                                onChanged: _toggleMaster,
-                                activeThumbColor: AppTokens.primaryTeal,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: AppTokens.spacing24),
-
-                        // 개별 멤버 토글
-                        if (_masterEnabled) ...[
-                          Text(
-                            '멤버별 위치 공유 설정',
-                            style: AppTokens.textStyle(
-                              fontSize: AppTokens.fontSize14,
-                              fontWeight: AppTokens.fontWeightSemibold,
-                            ),
-                          ),
-                          const SizedBox(height: AppTokens.spacing4),
-                          Text(
-                            '각 멤버에게 내 위치를 공유할지 선택하세요',
-                            style: AppTokens.textStyle(
-                              fontSize: AppTokens.fontSize12,
-                              color: AppTokens.text03,
-                            ),
-                          ),
-                          const SizedBox(height: AppTokens.spacing12),
-                          ..._members.map((member) {
-                            final userId = member['user_id'] as String;
-                            final isEnabled =
-                                _memberSharingStates[userId] ?? true;
-                            final role =
-                                member['member_role'] as String? ?? '';
-
-                            return Container(
-                              margin: const EdgeInsets.only(
-                                  bottom: AppTokens.spacing8),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppTokens.spacing12,
-                                vertical: AppTokens.spacing8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTokens.bgBasic01,
-                                borderRadius: BorderRadius.circular(
-                                    AppTokens.radius12),
-                                border:
-                                    Border.all(color: AppTokens.line03),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: AppTokens.bgTeal03,
-                                    child: Text(
-                                      (member['display_name']
-                                                  as String? ??
-                                              '?')
-                                          .characters
-                                          .first,
-                                      style: AppTokens.textStyle(
-                                        fontSize: AppTokens.fontSize12,
-                                        fontWeight:
-                                            AppTokens.fontWeightBold,
-                                        color: AppTokens.primaryTeal,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                      width: AppTokens.spacing12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          member['display_name']
-                                                  as String? ??
-                                              userId,
-                                          style: AppTokens.textStyle(
-                                            fontSize:
-                                                AppTokens.fontSize14,
-                                            fontWeight: AppTokens
-                                                .fontWeightMedium,
-                                          ),
-                                        ),
-                                        Text(
-                                          _getRoleName(role),
-                                          style: AppTokens.textStyle(
-                                            fontSize:
-                                                AppTokens.fontSize11,
-                                            color: AppTokens.text03,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: isEnabled,
-                                    onChanged: (v) =>
-                                        _toggleMemberSharing(
-                                            userId, v),
-                                    activeThumbColor: AppTokens.primaryTeal,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
-
-                        // 마스터 OFF 시 안내
-                        if (!_masterEnabled) ...[
-                          const SizedBox(height: AppTokens.spacing16),
-                          Container(
-                            padding:
-                                const EdgeInsets.all(AppTokens.spacing16),
-                            decoration: BoxDecoration(
-                              color: AppTokens.bgBasic03,
-                              borderRadius: BorderRadius.circular(
-                                  AppTokens.radius12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline,
-                                  color: AppTokens.text03,
-                                  size: 20,
-                                ),
-                                const SizedBox(
-                                    width: AppTokens.spacing8),
-                                Expanded(
-                                  child: Text(
-                                    '위치 공유를 켜면 개별 멤버별로\n공유 범위를 설정할 수 있습니다.',
-                                    style: AppTokens.textStyle(
-                                      fontSize: AppTokens.fontSize12,
-                                      color: AppTokens.text03,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    child: _buildPrivacyContent(),
                   ),
           ),
         ],
