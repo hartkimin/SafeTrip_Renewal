@@ -317,6 +317,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
           apiService: ApiService(),
           tripId: groupId,
         );
+
+        // §7.3: SOS 앱 재시작 시 활성 SOS 상태 복원
+        _checkAndRestoreSos();
       }
 
       // 가디언이면 가디언 전용 화면으로 리다이렉트
@@ -961,6 +964,23 @@ class _MainScreenState extends ConsumerState<MainScreen>
           ),
         );
       }
+    }
+  }
+
+  /// §7.3: 앱 재시작 시 활성 SOS 상태 복원
+  Future<void> _checkAndRestoreSos() async {
+    if (_sosService == null) return;
+    try {
+      final activeSos = await _sosService!.checkActiveSos();
+      if (activeSos != null && mounted) {
+        final userName = activeSos['user_name'] as String? ?? 'SOS';
+        setState(() => _sosUserName = userName);
+        ref.read(mainScreenProvider.notifier).activateSos();
+        _animateSheetTo(BottomSheetLevel.collapsed);
+        debugPrint('[SOS] 활성 SOS 상태 복원: $userName');
+      }
+    } catch (e) {
+      debugPrint('[SOS] 활성 SOS 복원 실패: $e');
     }
   }
 

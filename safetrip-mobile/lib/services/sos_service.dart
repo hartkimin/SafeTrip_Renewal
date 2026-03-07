@@ -23,6 +23,27 @@ class SOSService {
   final OfflineSyncService offlineSyncService;
   final String tripId;
 
+  /// §7.3: 앱 재시작 시 서버에서 활성 SOS 상태 조회
+  /// 활성 SOS가 있으면 {sosId, userId, userName, latitude, longitude} 반환
+  Future<Map<String, dynamic>?> checkActiveSos() async {
+    try {
+      final response = await apiService.dio.get(
+        '/api/v1/trips/$tripId/emergencies/active',
+      );
+      if (response.data?['success'] == true) {
+        final data = response.data['data'];
+        if (data != null && data['sos_id'] != null) {
+          debugPrint('[SOS] 활성 SOS 발견: ${data['sos_id']}');
+          return Map<String, dynamic>.from(data as Map);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[SOS] 활성 SOS 조회 실패: $e');
+      return null;
+    }
+  }
+
   // SOS 전송
   Future<bool> sendSOS({
     required String userId,
@@ -33,13 +54,10 @@ class SOSService {
     try {
       // 1. 현재 위치 수집
       final location = await locationService.getCurrentPosition();
-      if (location == null) {
-        debugPrint('[SOS] 위치 수집 실패');
-        return false;
-      }
 
-      final latitude = location.coords.latitude;
-      final longitude = location.coords.longitude;
+      // §7.3: 위치 미확인 시에도 SOS 발동 (위치=null 허용)
+      final latitude = location?.coords.latitude;
+      final longitude = location?.coords.longitude;
 
       // 2. SOS 객체 생성
       final sosId = const Uuid().v4();
@@ -67,13 +85,13 @@ class SOSService {
         // 2순위: 로컬 알람
         await _playLocalAlarm();
 
-        // 3순위: SQLite 큐잉 (기존)
+        // 3순위: SQLite 큐잉 (§7.3: 위치 없으면 0.0으로 큐잉)
         await offlineSyncService.pushSOS(
           sosId: sosId,
           userId: userId,
           tripId: tripId,
-          latitude: latitude,
-          longitude: longitude,
+          latitude: latitude ?? 0.0,
+          longitude: longitude ?? 0.0,
           triggerType: triggerType,
           message: message,
           timestamp: timestamp,
@@ -106,8 +124,8 @@ class SOSService {
           sosId: sosId,
           userId: userId,
           tripId: tripId,
-          latitude: latitude,
-          longitude: longitude,
+          latitude: latitude ?? 0.0,
+          longitude: longitude ?? 0.0,
           triggerType: triggerType,
           message: message,
           timestamp: timestamp,
@@ -126,8 +144,10 @@ class SOSService {
           sosId: responseSosId,
           latitude: latitude,
           longitude: longitude,
-          batteryLevel: (location.battery.level * 100).toInt(),
-          batteryIsCharging: location.battery.isCharging,
+          batteryLevel: location != null
+              ? (location.battery.level * 100).toInt()
+              : null,
+          batteryIsCharging: location?.battery.isCharging,
           networkType: await _getNetworkType(),
           appVersion: await _getAppVersion(),
           eventData: {
@@ -181,13 +201,16 @@ class SOSService {
   /// 오프라인 SMS 폴백: 긴급 연락처 + 가디언 전화번호로 SOS 메시지 발송
   Future<void> _sendSOSSms({
     required String userName,
-    required double latitude,
-    required double longitude,
+    required double? latitude,
+    required double? longitude,
     required String tripName,
     required List<String> phoneNumbers,
   }) async {
+    final locationStr = (latitude != null && longitude != null)
+        ? '위치: $latitude,$longitude'
+        : '위치: 확인 중';
     final message = '[SafeTrip SOS] $userName님이 긴급 도움을 요청합니다. '
-        '위치: $latitude,$longitude | 여행: $tripName';
+        '$locationStr | 여행: $tripName';
     for (final phone in phoneNumbers) {
       try {
         final uri = Uri(
