@@ -20,11 +20,17 @@ export class AttendanceCheck {
     @Column({ name: 'initiated_by', type: 'varchar', length: 128 })
     initiatedBy: string;
 
+    @Column({ name: 'status', type: 'varchar', length: 20, default: 'ongoing' })
+    status: string; // 'ongoing' | 'completed' | 'cancelled'
+
     @Column({ name: 'deadline_at', type: 'timestamptz' })
     deadlineAt: Date;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
+
+    @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+    completedAt: Date | null;
 }
 
 /**

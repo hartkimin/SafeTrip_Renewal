@@ -36,6 +36,7 @@ import { MofaModule } from './modules/mofa/mofa.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 
 @Module({
     imports: [
@@ -106,6 +107,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
         TasksModule,
         AiModule,
         SchedulesModule,
+        AttendanceModule,
     ],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
