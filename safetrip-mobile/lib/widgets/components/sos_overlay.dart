@@ -11,12 +11,15 @@ class SosOverlay extends StatelessWidget {
     required this.userName,
     this.onDismiss,
     this.additionalSosUsers = const [],
+    this.isLocationPending = false,
   });
 
   final String userName;
   final VoidCallback? onDismiss;
   /// 동시 다수 SOS 시 추가 발신자 이름 (§7.3)
   final List<String> additionalSosUsers;
+  /// §7.3: SOS 발신자 위치 미확인 시 "위치 확인 중" 표시
+  final bool isLocationPending;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +63,9 @@ class SosOverlay extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$userName님의 위치가 보호자에게 공유되고 있습니다',
+                      isLocationPending
+                          ? 'SOS 발신 — 위치 확인 중'
+                          : '$userName님의 위치가 보호자에게 공유되고 있습니다',
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.sosText.withValues(alpha: 0.9),
                       ),
