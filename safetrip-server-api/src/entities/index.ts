@@ -119,3 +119,7 @@ export {
 
 // AI Domain (O)
 export { AiUsage, AiUsageLog, AiSubscription } from './ai.entity';
+
+// Safety Guide (안전가이드)
+export { SafetyGuideCache } from './safety-guide-cache.entity';
+export { CountryEmergencyContact } from './country-emergency-contact.entity';
