@@ -180,8 +180,8 @@ export class TripsService {
 
         // §08.2: 기간 변경 시 15일 검증
         if (data.endDate || data.startDate) {
-            const newStart = data.startDate ? new Date(data.startDate as string) : trip.startDate;
-            const newEnd = data.endDate ? new Date(data.endDate as string) : trip.endDate;
+            const newStart = data.startDate ? new Date(data.startDate as unknown as string) : trip.startDate;
+            const newEnd = data.endDate ? new Date(data.endDate as unknown as string) : trip.endDate;
             const diffDays = Math.ceil((newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24));
             if (diffDays > 15) {
                 throw new BadRequestException({
