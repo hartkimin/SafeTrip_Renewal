@@ -10,7 +10,7 @@ import '../../features/main/providers/connectivity_provider.dart';
 import '../../features/main/providers/main_screen_provider.dart';
 import '../../widgets/components/offline_banner.dart';
 import 'bottom_sheets/bottom_sheet_1_trip.dart';
-import 'bottom_sheets/bottom_sheet_4_guide.dart';
+import '../../features/safety_guide/presentation/safety_guide_bottom_sheet.dart';
 import 'bottom_sheets/bottom_sheet_guardian_members.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
 import 'navigation/bottom_navigation_bar.dart';
@@ -141,7 +141,7 @@ class _MainGuardianScreenState extends ConsumerState<MainGuardianScreen> {
           scrollController: scrollController,
         );
       case BottomTab.guide:
-        return BottomSheetGuide(
+        return SafetyGuideBottomSheet(
           key: const ValueKey('guide'),
           scrollController: scrollController,
         );

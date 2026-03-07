@@ -39,7 +39,7 @@ import '../../widgets/map/member_mini_card.dart';
 import 'bottom_sheets/bottom_sheet_1_trip.dart';
 import 'bottom_sheets/bottom_sheet_2_member.dart';
 import 'bottom_sheets/bottom_sheet_3_chat.dart';
-import 'bottom_sheets/bottom_sheet_4_guide.dart';
+import '../../features/safety_guide/presentation/safety_guide_bottom_sheet.dart';
 import 'bottom_sheets/bottom_sheet_layer_settings.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
 import 'navigation/bottom_navigation_bar.dart';
@@ -805,7 +805,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
           scrollController: scrollController,
         );
       case BottomTab.guide:
-        return BottomSheetGuide(
+        return SafetyGuideBottomSheet(
           key: const ValueKey('tab_guide'),
           scrollController: scrollController,
         );
