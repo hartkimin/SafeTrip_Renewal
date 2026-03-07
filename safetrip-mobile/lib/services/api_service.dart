@@ -1450,6 +1450,279 @@ class ApiService {
     }
   }
 
+  // ----- 채팅 확장: 공지 고정 (Pin) -----
+
+  /// PATCH /api/v1/chats/messages/:messageId/pin — 메시지 공지 고정
+  Future<Map<String, dynamic>?> pinChatMessage(String messageId) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/chats/messages/$messageId/pin',
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] pinChatMessage Error: $e');
+      return null;
+    }
+  }
+
+  /// DELETE /api/v1/chats/messages/:messageId/pin — 공지 고정 해제
+  Future<bool> unpinChatMessage(String messageId) async {
+    try {
+      await _dio.delete('/api/v1/chats/messages/$messageId/pin');
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] unpinChatMessage Error: $e');
+      return false;
+    }
+  }
+
+  /// GET /api/v1/chats/rooms/:roomId/pinned — 고정 공지 목록 조회 (최대 3건)
+  Future<List<Map<String, dynamic>>> getPinnedMessages(String roomId) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/pinned',
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getPinnedMessages Error: $e');
+      return [];
+    }
+  }
+
+  // ----- 채팅 확장: 메시지 삭제 -----
+
+  /// DELETE /api/v1/chats/messages/:messageId — 메시지 삭제 (소프트 삭제)
+  Future<bool> deleteChatMessage(String messageId) async {
+    try {
+      await _dio.delete('/api/v1/chats/messages/$messageId');
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] deleteChatMessage Error: $e');
+      return false;
+    }
+  }
+
+  // ----- 채팅 확장: 확장 메시지 전송 -----
+
+  /// POST /api/v1/chats/rooms/:roomId/messages — 확장된 메시지 전송 (위치 카드, 일정 카드 등)
+  Future<Map<String, dynamic>?> sendChatMessageExtended({
+    required String roomId,
+    required String content,
+    String messageType = 'text',
+    Map<String, dynamic>? locationData,
+    Map<String, dynamic>? cardData,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'content': content,
+        'message_type': messageType,
+      };
+      if (locationData != null) body['location_data'] = locationData;
+      if (cardData != null) body['card_data'] = cardData;
+
+      final response = await _dio.post(
+        '/api/v1/chats/rooms/$roomId/messages',
+        data: body,
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] sendChatMessageExtended Error: $e');
+      return null;
+    }
+  }
+
+  // ----- 채팅 확장: 투표 (Poll) — Phase 2 -----
+
+  /// POST /api/v1/chats/rooms/:roomId/polls — 투표 생성
+  Future<Map<String, dynamic>?> createChatPoll({
+    required String roomId,
+    required String title,
+    required List<Map<String, dynamic>> options,
+    String? closesAt,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'title': title,
+        'options': options,
+      };
+      if (closesAt != null) body['closes_at'] = closesAt;
+
+      final response = await _dio.post(
+        '/api/v1/chats/rooms/$roomId/polls',
+        data: body,
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] createChatPoll Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/chats/polls/:pollId — 투표 상세 조회
+  Future<Map<String, dynamic>?> getChatPoll(String pollId) async {
+    try {
+      final response = await _dio.get('/api/v1/chats/polls/$pollId');
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getChatPoll Error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/chats/polls/:pollId/vote — 투표 응답
+  Future<Map<String, dynamic>?> castChatVote(
+    String pollId,
+    int optionId,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/polls/$pollId/vote',
+        data: {'option_id': optionId},
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] castChatVote Error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/chats/polls/:pollId/close — 투표 수동 종료
+  Future<Map<String, dynamic>?> closeChatPoll(String pollId) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/polls/$pollId/close',
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] closeChatPoll Error: $e');
+      return null;
+    }
+  }
+
+  // ----- 채팅 확장: 검색 / 미디어 / 리액션 — Phase 3 -----
+
+  /// GET /api/v1/chats/rooms/:roomId/messages/search — 메시지 검색
+  Future<List<Map<String, dynamic>>> searchChatMessages(
+    String roomId,
+    String query, {
+    String? cursor,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'q': query,
+        'limit': limit,
+      };
+      if (cursor != null) queryParams['cursor'] = cursor;
+
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/messages/search',
+        queryParameters: queryParams,
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] searchChatMessages Error: $e');
+      return [];
+    }
+  }
+
+  /// GET /api/v1/chats/rooms/:roomId/media — 미디어 모아보기
+  Future<List<Map<String, dynamic>>> getChatMedia(
+    String roomId, {
+    String? cursor,
+    int limit = 30,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'limit': limit};
+      if (cursor != null) queryParams['cursor'] = cursor;
+
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/media',
+        queryParameters: queryParams,
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getChatMedia Error: $e');
+      return [];
+    }
+  }
+
+  /// POST /api/v1/chats/messages/:messageId/reactions — 리액션 추가
+  Future<Map<String, dynamic>?> addChatReaction(
+    String messageId,
+    String emoji,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/messages/$messageId/reactions',
+        data: {'emoji': emoji},
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] addChatReaction Error: $e');
+      return null;
+    }
+  }
+
+  /// DELETE /api/v1/chats/messages/:messageId/reactions/:emoji — 리액션 제거
+  Future<bool> removeChatReaction(String messageId, String emoji) async {
+    try {
+      await _dio.delete(
+        '/api/v1/chats/messages/$messageId/reactions/$emoji',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] removeChatReaction Error: $e');
+      return false;
+    }
+  }
+
   /// GET /health — 서버 상태 확인 (오프라인 감지용, §2.2)
   Future<bool> healthCheck() async {
     try {
@@ -1538,6 +1811,102 @@ class ApiService {
       return null;
     } catch (e) {
       debugPrint('[ApiService] getSafetyGuide Error: $e');
+      return null;
+    }
+  }
+
+  // ===== 안전가이드 통합 API (DOC-T3-SFG-021 §3.2) =====
+
+  /// GET /api/v1/guides/:countryCode — 전체 6탭 통합
+  Future<Map<String, dynamic>?> getSafetyGuideAll(String countryCode) async {
+    try {
+      final response = await _dio.get('/api/v1/guides/$countryCode');
+      if (response.data != null) {
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : {'data': response.data};
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideAll Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/overview
+  Future<Map<String, dynamic>?> getSafetyGuideOverview(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/overview');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideOverview Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/safety
+  Future<Map<String, dynamic>?> getSafetyGuideSafety(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/safety');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideSafety Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/medical
+  Future<Map<String, dynamic>?> getSafetyGuideMedical(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/medical');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideMedical Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/entry
+  Future<Map<String, dynamic>?> getSafetyGuideEntry(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/entry');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideEntry Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/emergency — 긴급연락처 (§3.2.5)
+  Future<Map<String, dynamic>?> getSafetyGuideEmergency(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/emergency');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideEmergency Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/local-life
+  Future<Map<String, dynamic>?> getSafetyGuideLocalLife(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/local-life');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideLocalLife Error: $e');
       return null;
     }
   }
