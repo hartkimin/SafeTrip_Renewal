@@ -90,6 +90,20 @@ class WelcomeStrings {
     _ja: '招待コードを直接入力してください。',
   };
 
+  // §3.6 A/B CTA variant B: "안전 여행 시작"
+  static const _createTripSafety = {
+    _ko: '안전 여행 시작',
+    _en: 'Start Safe Trip',
+    _ja: '安全な旅を始める',
+  };
+
+  // §3.5, §3.7: Dot indicator semantics (3-language)
+  static const _dotSemanticsFormat = {
+    _ko: '슬라이드 %d / %d',
+    _en: 'Slide %d of %d',
+    _ja: 'スライド %d / %d',
+  };
+
   // ─ Public getters ──────────────────────────────────────────────
   static List<String> get slideTitles => _slideTitles[_langKey()]!;
   static List<String> get slideSubtitles => _slideSubtitles[_langKey()]!;
@@ -104,4 +118,16 @@ class WelcomeStrings {
   static String get guardianJoin => _guardianJoin[_langKey()]!;
   static String get demoTourLink => _demoTourLink[_langKey()]!;
   static String get inviteCodeManualHint => _inviteCodeManualHint[_langKey()]!;
+
+  /// §3.6: A/B CTA variant — returns create trip label for given variant
+  static String createTripForVariant(String variant) {
+    if (variant == 'safety') return _createTripSafety[_langKey()]!;
+    return _createTrip[_langKey()]!; // default
+  }
+
+  /// §3.5, §3.7: Localized dot indicator semantics label
+  static String dotSemantics(int current, int total) {
+    final fmt = _dotSemanticsFormat[_langKey()]!;
+    return fmt.replaceFirst('%d', '$current').replaceFirst('%d', '$total');
+  }
 }

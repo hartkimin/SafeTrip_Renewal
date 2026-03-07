@@ -51,7 +51,7 @@ class AppRouter {
       ),
       GoRoute(
         path: RoutePaths.onboardingPurpose,
-        builder: (context, state) => const ScreenPurposeSelect(),
+        builder: (context, state) => ScreenPurposeSelect(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.authPhone,
@@ -240,6 +240,10 @@ class AppRouter {
         if (authNotifier.pendingGuardianCode != null) {
           // Guardian code → skip slides, go to auth (guardian needs account)
           return RoutePaths.authPhone;
+        }
+        // §6.1: Invite URI received but code parse failed → Phase 3 + toast
+        if (authNotifier.inviteDeeplinkFailed) {
+          return RoutePaths.onboardingPurpose;
         }
         // Route A: new user → welcome slides / Route B: returning → purpose
         return authNotifier.isFirstLaunch

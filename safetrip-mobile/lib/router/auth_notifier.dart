@@ -24,6 +24,9 @@ class AuthNotifier extends ChangeNotifier {
   bool _consentCompleted = false;
   bool _profileCompleted = false;
 
+  // §6.1: invite deeplink received but code parse failed
+  bool _inviteDeeplinkFailed = false;
+
   // Splash initialization state (DOC-T3-SPL-028 §4, §7)
   bool _initCompleted = false;
   bool _requiresForceUpdate = false;
@@ -43,6 +46,7 @@ class AuthNotifier extends ChangeNotifier {
   String? get pendingGuardianCode => _pendingGuardianCode;
   bool get consentCompleted => _consentCompleted;
   bool get profileCompleted => _profileCompleted;
+  bool get inviteDeeplinkFailed => _inviteDeeplinkFailed;
   bool get initCompleted => _initCompleted;
   bool get requiresForceUpdate => _requiresForceUpdate;
   String? get forceUpdateStoreUrl => _forceUpdateStoreUrl;
@@ -135,6 +139,16 @@ class AuthNotifier extends ChangeNotifier {
   void clearPendingInviteCode() {
     _pendingInviteCode = null;
     notifyListeners();
+  }
+
+  /// §6.1: Mark that an invite deeplink was received but parsing failed
+  void setInviteDeeplinkFailed() {
+    _inviteDeeplinkFailed = true;
+    notifyListeners();
+  }
+
+  void clearInviteDeeplinkFailed() {
+    _inviteDeeplinkFailed = false;
   }
 
   void setOnboardingType(OnboardingType type) {

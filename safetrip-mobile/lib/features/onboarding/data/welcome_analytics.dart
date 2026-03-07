@@ -5,11 +5,19 @@ import 'package:flutter/foundation.dart';
 class WelcomeAnalytics {
   WelcomeAnalytics._();
 
+  /// §7.3: Prevent double-firing welcome_view across ScreenWelcome → ScreenPurposeSelect
+  static bool _welcomeViewFired = false;
+
+  /// Reset for testing purposes
+  static void resetForTesting() => _welcomeViewFired = false;
+
   static void welcomeView({
     required String abVariant,
     required String timeOfDay,
     required bool deeplinkPresent,
   }) {
+    if (_welcomeViewFired) return; // §7.3: one per session
+    _welcomeViewFired = true;
     _log('welcome_view', {
       'ab_variant': abVariant,
       'time_of_day': timeOfDay,

@@ -90,6 +90,9 @@ class _MyAppState extends State<MyApp> {
     final deeplink = DeeplinkService.instance;
     if (deeplink.pendingInviteCode != null) {
       _authNotifier.setPendingInviteCode(deeplink.pendingInviteCode!);
+    } else if (deeplink.inviteDeeplinkReceived) {
+      // §6.1: invite URI received but code parse failed → mark for Phase 3 + toast
+      _authNotifier.setInviteDeeplinkFailed();
     }
     if (deeplink.pendingGuardianCode != null) {
       _authNotifier.setPendingGuardianCode(deeplink.pendingGuardianCode!);

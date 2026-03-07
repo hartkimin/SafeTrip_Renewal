@@ -115,6 +115,16 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
     }
   }
 
+  /// §3.2: Navigate to specific slide via dot indicator tap
+  void _goToPage(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: _reducedMotion ? Duration.zero : const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+    _resetAutoAdvance();
+  }
+
   void _skip() {
     WelcomeAnalytics.slideSkipped(skippedAtSlide: _currentPage);
     context.go(RoutePaths.onboardingPurpose);
@@ -199,10 +209,11 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
             right: 0,
             child: Column(
               children: [
-                // Dot indicator (§3.4)
+                // Dot indicator (§3.4) — tappable per §3.2
                 WelcomeDotIndicator(
                   count: _slideCount,
                   current: _currentPage,
+                  onDotTap: _goToPage,
                 ),
                 const SizedBox(height: AppSpacing.lg),
 

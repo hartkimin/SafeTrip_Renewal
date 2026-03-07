@@ -4,15 +4,64 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../router/auth_notifier.dart';
 import '../../../../router/route_paths.dart';
+import '../../data/ab_test_service.dart';
 import '../../data/welcome_analytics.dart';
 import '../../l10n/welcome_strings.dart';
 
 /// DOC-T3-WLC-029 §3.2 Phase 3 — Purpose Selection Screen
 /// W4: Role-based purpose selection without exposing internal role terms
 /// W5: Zero frustration — every choice leads to a valid path
-class ScreenPurposeSelect extends StatelessWidget {
-  const ScreenPurposeSelect({super.key});
+class ScreenPurposeSelect extends StatefulWidget {
+  const ScreenPurposeSelect({super.key, this.authNotifier});
+
+  final AuthNotifier? authNotifier;
+
+  @override
+  State<ScreenPurposeSelect> createState() => _ScreenPurposeSelectState();
+}
+
+class _ScreenPurposeSelectState extends State<ScreenPurposeSelect> {
+  WelcomeAbVariant _abVariant = WelcomeAbVariant.a;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAbVariantAndAnalytics();
+    _showDeeplinkFailureToast();
+  }
+
+  Future<void> _initAbVariantAndAnalytics() async {
+    final variant = await WelcomeAbTestService.getVariant();
+    if (!mounted) return;
+    setState(() => _abVariant = variant);
+
+    // §7.3: Fire welcome_view if not already fired (dedup covers deeplink path)
+    WelcomeAnalytics.welcomeView(
+      abVariant: variant.name,
+      timeOfDay: AppColors.timeOfDayName(),
+      deeplinkPresent: widget.authNotifier?.inviteDeeplinkFailed == true,
+    );
+  }
+
+  /// §6.1: Show toast when invite deeplink parsing failed
+  void _showDeeplinkFailureToast() {
+    final authNotifier = widget.authNotifier;
+    if (authNotifier == null || !authNotifier.inviteDeeplinkFailed) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(WelcomeStrings.inviteCodeManualHint),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      authNotifier.clearInviteDeeplinkFailed();
+    });
+  }
 
   void _onRoleSelected(BuildContext context, String role) {
     WelcomeAnalytics.purposeSelected(purpose: role);
@@ -21,6 +70,10 @@ class ScreenPurposeSelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // §3.6: CTA text variant
+    final ctaVariant = WelcomeAbTestService.ctaText(_abVariant);
+    final createTripLabel = WelcomeStrings.createTripForVariant(ctaVariant);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -52,11 +105,11 @@ class ScreenPurposeSelect extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xxl),
 
-              // 1. 여행 만들기 (Captain) — Primary CTA
+              // 1. 여행 만들기 (Captain) — Primary CTA with A/B variant
               _PurposeButton(
                 icon: '✈️',
-                label: WelcomeStrings.createTrip,
-                semanticLabel: '${WelcomeStrings.createTrip} 버튼',
+                label: createTripLabel,
+                semanticLabel: '$createTripLabel 버튼',
                 onTap: () => _onRoleSelected(context, 'captain'),
               ),
               const SizedBox(height: AppSpacing.md),
