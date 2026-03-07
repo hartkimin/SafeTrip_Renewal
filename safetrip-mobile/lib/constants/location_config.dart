@@ -99,8 +99,8 @@ class LocationConfig {
   /// updated_at 업데이트 주기 (5분마다 Firebase updated_at만 업데이트)
   static const int updatedAtInterval = 5; // 분 단위
 
-  /// 오프라인 판단 기준 시간 (20분 이상 업데이트 없으면 오프라인)
-  static const int offlineThresholdMinutes = 20; // 분 단위
+  /// 오프라인 판단 기준 시간 (5분 이상 업데이트 없으면 오프라인)
+  static const int offlineThresholdMinutes = 5; // §7.1: 5분 이상 업데이트 없음 → 오프라인
 
   // ============================================================================
   // RTDB 리스너 설정
