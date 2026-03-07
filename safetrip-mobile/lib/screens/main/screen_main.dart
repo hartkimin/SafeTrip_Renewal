@@ -40,9 +40,11 @@ import '../../models/geofence.dart';
 import '../../widgets/map/member_mini_card.dart';
 import 'bottom_sheets/modals/event_detail_modal.dart';
 import 'bottom_sheets/modals/geofence_info_modal.dart';
+import 'bottom_sheets/modals/schedule_detail_modal.dart';
 import 'bottom_sheets/bottom_sheet_1_trip.dart';
 import 'bottom_sheets/bottom_sheet_2_member.dart';
 import 'bottom_sheets/bottom_sheet_3_chat.dart';
+import '../../features/schedule/providers/schedule_provider.dart';
 import '../../features/safety_guide/presentation/safety_guide_bottom_sheet.dart';
 import 'bottom_sheets/bottom_sheet_layer_settings.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
@@ -210,7 +212,26 @@ class _MainScreenState extends ConsumerState<MainScreen>
       onMarkersUpdated: (markers) => _scheduleMarkersNotifier.value = markers,
       onPolylinesUpdated: (lines) => _scheduleLinesNotifier.value = lines,
       onScheduleMarkerTap: (id) {
-        debugPrint('[MainScreen] Schedule marker tapped: $id');
+        final scheduleState = ref.read(scheduleProvider);
+        final schedule = scheduleState.schedules
+            .where((s) => s.scheduleId == id)
+            .firstOrNull;
+        if (schedule != null && mounted) {
+          final userRole =
+              ref.read(tripProvider).currentUserRole ?? 'crew';
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => ScheduleDetailModal(
+              schedule: schedule,
+              userRole: userRole,
+              onScheduleUpdated: () {
+                ref.read(scheduleProvider.notifier).fetchSchedules();
+              },
+            ),
+          );
+        }
       },
     );
 
