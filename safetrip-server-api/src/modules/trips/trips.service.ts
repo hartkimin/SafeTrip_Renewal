@@ -178,6 +178,27 @@ export class TripsService {
 
         const trip = await this.findById(tripId);
 
+        // §08.2: 기간 변경 시 15일 검증
+        if (data.endDate || data.startDate) {
+            const newStart = data.startDate ? new Date(data.startDate as string) : trip.startDate;
+            const newEnd = data.endDate ? new Date(data.endDate as string) : trip.endDate;
+            const diffDays = Math.ceil((newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays > 15) {
+                throw new BadRequestException({
+                    statusCode: 400,
+                    errorCode: 'TRIP_DURATION_EXCEEDED',
+                    message: '여행 기간은 최대 15일까지 설정할 수 있습니다.',
+                });
+            }
+            if (diffDays < 0) {
+                throw new BadRequestException({
+                    statusCode: 400,
+                    errorCode: 'TRIP_DATE_CONFLICT',
+                    message: '종료일이 시작일보다 앞설 수 없습니다.',
+                });
+            }
+        }
+
         // §10.2: 미성년자가 포함된 여행은 safety_first 외 등급 변경 불가
         if (trip.hasMinorMembers && data.privacyLevel && data.privacyLevel !== 'safety_first') {
             throw new BadRequestException('미성년자가 포함된 여행은 "안전 최우선" 등급만 사용할 수 있습니다. (비즈니스 원칙 §10.2)');
