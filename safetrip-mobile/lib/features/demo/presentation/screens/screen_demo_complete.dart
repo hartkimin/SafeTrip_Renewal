@@ -7,14 +7,37 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../router/route_paths.dart';
+import '../../data/demo_analytics.dart';
 import '../../providers/demo_state_provider.dart';
 
 /// §3.6 step 6: 데모 체험 완료 화면
-class ScreenDemoComplete extends ConsumerWidget {
+class ScreenDemoComplete extends ConsumerStatefulWidget {
   const ScreenDemoComplete({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScreenDemoComplete> createState() =>
+      _ScreenDemoCompleteState();
+}
+
+class _ScreenDemoCompleteState extends ConsumerState<ScreenDemoComplete> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final demoState = ref.read(demoStateProvider);
+      final duration = demoState.simStartTime != null
+          ? DateTime.now().difference(demoState.simStartTime!).inSeconds
+          : 0;
+      final scenarioId = demoState.currentScenario?.id.name ?? 'unknown';
+      DemoAnalytics.demoCompleted(
+        durationSeconds: duration,
+        scenarioId: scenarioId,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -63,7 +86,7 @@ class ScreenDemoComplete extends ConsumerWidget {
               SizedBox(
                 height: AppSpacing.buttonHeight,
                 child: ElevatedButton(
-                  onPressed: () => _exitAndNavigate(context, ref, RoutePaths.authPhone),
+                  onPressed: () => _exitAndNavigate(context, RoutePaths.authPhone),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryTeal,
                     shape: RoundedRectangleBorder(
@@ -85,7 +108,7 @@ class ScreenDemoComplete extends ConsumerWidget {
               SizedBox(
                 height: AppSpacing.buttonHeight,
                 child: OutlinedButton(
-                  onPressed: () => _exitAndNavigate(context, ref, RoutePaths.tripJoin),
+                  onPressed: () => _exitAndNavigate(context, RoutePaths.tripJoin),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.primaryTeal),
                     shape: RoundedRectangleBorder(
@@ -106,7 +129,7 @@ class ScreenDemoComplete extends ConsumerWidget {
               // Dismiss
               Center(
                 child: TextButton(
-                  onPressed: () => _dismissAndGoWelcome(context, ref),
+                  onPressed: () => _dismissAndGoWelcome(context),
                   child: Text(
                     '나중에 할게요',
                     style: AppTypography.bodyMedium
@@ -123,18 +146,17 @@ class ScreenDemoComplete extends ConsumerWidget {
   }
 
   Future<void> _exitAndNavigate(
-      BuildContext context, WidgetRef ref, String route) async {
-    await _clearDemoState(ref);
+      BuildContext context, String route) async {
+    await _clearDemoState();
     if (context.mounted) context.go(route);
   }
 
-  Future<void> _dismissAndGoWelcome(
-      BuildContext context, WidgetRef ref) async {
-    await _clearDemoState(ref);
+  Future<void> _dismissAndGoWelcome(BuildContext context) async {
+    await _clearDemoState();
     if (context.mounted) context.go(RoutePaths.onboardingWelcome);
   }
 
-  Future<void> _clearDemoState(WidgetRef ref) async {
+  Future<void> _clearDemoState() async {
     ref.read(demoStateProvider.notifier).endDemo();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('is_demo_mode');

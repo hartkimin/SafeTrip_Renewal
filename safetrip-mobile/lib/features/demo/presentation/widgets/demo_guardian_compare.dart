@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../models/demo_scenario.dart';
+import '../../data/demo_analytics.dart';
 import '../../providers/demo_state_provider.dart';
 
 /// §3.3: 가디언 무료/유료 비교 뷰 — 캡틴 역할일 때만 표시
@@ -12,6 +12,7 @@ class DemoGuardianCompare extends ConsumerWidget {
   const DemoGuardianCompare({super.key});
 
   static Future<void> show(BuildContext context) {
+    DemoAnalytics.guardianUpgradeViewed();
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,

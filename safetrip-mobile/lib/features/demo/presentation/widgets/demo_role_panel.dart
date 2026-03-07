@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../features/trip/providers/trip_provider.dart';
+import '../../data/demo_analytics.dart';
 import '../../models/demo_scenario.dart';
 import '../../providers/demo_state_provider.dart';
 
@@ -26,6 +27,7 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
     final scenario = demoState.currentScenario;
     if (scenario == null) return;
 
+    final fromRole = ref.read(demoStateProvider).roleString;
     notifier.switchRole(role);
 
     // Sync role string
@@ -36,6 +38,8 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
             : role == DemoRole.crew
                 ? 'crew'
                 : 'guardian';
+
+    DemoAnalytics.roleSwitched(fromRole: fromRole, toRole: roleStr);
 
     // Update SharedPreferences
     final prefs = await SharedPreferences.getInstance();

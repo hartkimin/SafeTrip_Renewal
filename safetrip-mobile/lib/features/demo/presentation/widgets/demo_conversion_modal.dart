@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../router/route_paths.dart';
+import '../../data/demo_analytics.dart';
 import '../../providers/demo_state_provider.dart';
 
 /// §3.8: 데모 → 실제 앱 전환 유도 모달
@@ -143,6 +144,8 @@ class DemoConversionModal extends ConsumerWidget {
 
   Future<void> _exitAndNavigate(
       BuildContext context, WidgetRef ref, String route) async {
+    final ctaType = route == RoutePaths.authPhone ? 'create_trip' : 'join_code';
+    DemoAnalytics.demoConverted(ctaType);
     await _clearDemoState(ref);
     if (context.mounted) {
       Navigator.of(context).pop(); // close modal
