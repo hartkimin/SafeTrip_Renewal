@@ -1,10 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, Unique } from 'typeorm';
 
 /**
  * TB_SAFETY_GUIDE_CACHE — MOFA API 응답 캐시 (안전가이드)
  * DOC-T3-SFG-021 §7.1
  */
 @Entity('tb_safety_guide_cache')
+@Unique('uq_safety_cache_country_type', ['countryCode', 'dataType'])
 @Index('idx_safety_cache_country', ['countryCode'])
 @Index('idx_safety_cache_expires', ['expiresAt'])
 export class SafetyGuideCache {
