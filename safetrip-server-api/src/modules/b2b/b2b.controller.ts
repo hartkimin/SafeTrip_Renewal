@@ -14,6 +14,12 @@ export class B2bController {
         return this.b2bService.getOrganizations();
     }
 
+    @Get('stats')
+    @ApiOperation({ summary: 'B2B 대시보드 통계' })
+    getStats() {
+        return this.b2bService.getStats();
+    }
+
     @Get('organizations/:orgId')
     @ApiOperation({ summary: 'B2B 조직 상세' })
     getOrganization(@Param('orgId') orgId: string) {

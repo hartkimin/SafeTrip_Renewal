@@ -1,11 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../router/route_paths.dart';
+import '../../data/ab_test_service.dart';
+import '../../data/welcome_analytics.dart';
+import '../../l10n/welcome_strings.dart';
+import '../widgets/welcome_dot_indicator.dart';
+import '../widgets/welcome_slide_page.dart';
 
-/// A-02 Onboarding Intro Screen
+/// DOC-T3-WLC-029 — Welcome Screen (Phase 2: Value Proposition Slides)
+/// W1: 3-second value delivery
+/// W2: Emotion first — Safety → Connection → Protection → CTA
+/// W5: Zero frustration — skip always available
 class ScreenWelcome extends StatefulWidget {
   const ScreenWelcome({super.key});
 
@@ -14,42 +25,89 @@ class ScreenWelcome extends StatefulWidget {
 }
 
 class _ScreenWelcomeState extends State<ScreenWelcome> {
-  final _pageController = PageController();
+  late final PageController _pageController;
   int _currentPage = 0;
+  Timer? _autoAdvanceTimer;
+  double _pageOffset = 0.0;
+  bool _reducedMotion = false;
+  WelcomeAbVariant _abVariant = WelcomeAbVariant.a;
+  bool _isAutoAdvancing = false;
 
-  static const _pages = [
-    _IntroPageData(
-      emoji: '🛡️',
-      title: '여행, 더 안전하게',
-      subtitle: 'SafeTrip과 함께라면\n어디든 안심하고 떠날 수 있어요',
-      bgColor: Color(0xFF1A3A5C),
-    ),
-    _IntroPageData(
-      emoji: '👥',
-      title: '일정부터 위치까지, 함께',
-      subtitle: '멤버들의 실시간 위치와\n여행 일정을 한눈에 확인하세요',
-      bgColor: Color(0xFF00BFA5),
-    ),
-    _IntroPageData(
-      emoji: '👩‍👧‍👦',
-      title: '누군가 지켜보고 있어요',
-      subtitle: '가디언 기능을 통해\n소중한 사람의 안전을 지켜주세요',
-      bgColor: Color(0xFFFF6B6B),
-    ),
-    _IntroPageData(
-      emoji: '🚀',
-      title: '지금 시작하세요',
-      subtitle: 'SafeTrip으로 더 즐겁고\n안전한 여행을 시작해볼까요?',
-      bgColor: AppColors.primaryTeal,
-    ),
+  // §3.2 Phase 2 slide data — colors fixed per spec
+  static const _slideColors = [
+    Color(0xFF1A3A5C), // Navy — 안전
+    Color(0xFF00BFA5), // Mint — 연결
+    Color(0xFFFF6B6B), // Coral — 보호
+    AppColors.primaryTeal, // Brand — CTA
   ];
 
-  bool get _isLastPage => _currentPage == _pages.length - 1;
+  static const _slideImages = [
+    'assets/images/image-onboarding_01.png',
+    'assets/images/image-onboarding_02.png',
+    'assets/images/image-onboarding_03.png',
+    'assets/images/image-onboarding_04.png',
+  ];
+
+  int get _slideCount => WelcomeAbTestService.slideCount(_abVariant);
+  bool get _isLastPage => _currentPage == _slideCount - 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController()
+      ..addListener(() {
+        if (!mounted) return;
+        setState(() {
+          _pageOffset = (_pageController.page ?? 0) - _currentPage;
+        });
+      });
+
+    _initAbVariant();
+    _startAutoAdvance();
+  }
+
+  Future<void> _initAbVariant() async {
+    final variant = await WelcomeAbTestService.getVariant();
+    if (!mounted) return;
+    setState(() => _abVariant = variant);
+
+    // Analytics: welcome_view (§7.3) — fires after A/B variant is resolved
+    WelcomeAnalytics.welcomeView(
+      abVariant: variant.name,
+      timeOfDay: AppColors.timeOfDayName(),
+      deeplinkPresent: false,
+    );
+  }
+
+  /// §3.2: Auto-advance every 5 seconds when no user interaction
+  void _startAutoAdvance() {
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_isLastPage && mounted) {
+        _isAutoAdvancing = true;
+        _pageController.nextPage(
+          duration: _reducedMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _autoAdvanceTimer?.cancel();
+      }
+    });
+  }
+
+  /// Reset timer on manual interaction
+  void _resetAutoAdvance() {
+    _startAutoAdvance();
+  }
 
   void _goNext() {
     if (!_isLastPage) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
+        duration: _reducedMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
@@ -57,62 +115,112 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
     }
   }
 
+  /// §3.2: Navigate to specific slide via dot indicator tap
+  void _goToPage(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: _reducedMotion ? Duration.zero : const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+    _resetAutoAdvance();
+  }
+
+  void _skip() {
+    WelcomeAnalytics.slideSkipped(skippedAtSlide: _currentPage);
+    context.go(RoutePaths.onboardingPurpose);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // §3.5: Detect reduced motion preference
+    _reducedMotion = MediaQuery.of(context).disableAnimations;
+
+    final timeOverlay = AppColors.timeOfDayOverlay();
+    final titles = WelcomeStrings.slideTitles;
+    final subtitles = WelcomeStrings.slideSubtitles;
+    final semantics = WelcomeStrings.slideSemantics;
+
     return Scaffold(
       body: Stack(
         children: [
-          // 배경 색상 애니메이션 (선택 사항, 현재는 페이지 내 컨테이너로 처리)
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (i) => setState(() => _currentPage = i),
-            itemCount: _pages.length,
-            itemBuilder: (_, index) => _IntroPageWidget(page: _pages[index]),
+          // ── Slides (PageView) ──────────────────────────────────
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollStartNotification &&
+                  notification.dragDetails != null) {
+                _resetAutoAdvance();
+              }
+              return false;
+            },
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (i) {
+                final wasAutoAdvance = _isAutoAdvancing;
+                _isAutoAdvancing = false;
+                setState(() => _currentPage = i);
+                WelcomeAnalytics.slideViewed(
+                  slideIndex: i,
+                  autoAdvance: wasAutoAdvance,
+                );
+              },
+              itemCount: _slideCount,
+              itemBuilder: (_, index) => WelcomeSlidePage(
+                title: titles[index],
+                subtitle: subtitles[index],
+                bgColor: _slideColors[index],
+                semanticLabel: semantics[index],
+                imagePath: _slideImages[index],
+                pageOffset: index == _currentPage ? _pageOffset : 0.0,
+                timeOverlayColor: timeOverlay,
+                reducedMotion: _reducedMotion,
+              ),
+            ),
           ),
 
-          // 건너뛰기 버튼
+          // ── Skip button (top-right, not on last page) ──────────
           if (!_isLastPage)
             Positioned(
               top: MediaQuery.of(context).padding.top + AppSpacing.sm,
               right: AppSpacing.md,
-              child: TextButton(
-                onPressed: () => context.go(RoutePaths.onboardingPurpose),
-                child: Text(
-                  '건너뛰기',
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+              child: Semantics(
+                button: true,
+                label: WelcomeStrings.skip,
+                child: TextButton(
+                  onPressed: _skip,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(
+                      AppSpacing.minTouchTarget,
+                      AppSpacing.minTouchTarget,
+                    ),
+                  ),
+                  child: Text(
+                    WelcomeStrings.skip,
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: Colors.white70),
+                  ),
                 ),
               ),
             ),
 
-          // 하단 컨트롤
+          // ── Bottom controls ────────────────────────────────────
           Positioned(
             bottom: MediaQuery.of(context).padding.bottom + AppSpacing.xl,
             left: 0,
             right: 0,
             child: Column(
               children: [
-                // 인디케이터
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    _pages.length,
-                    (i) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: _currentPage == i ? 24 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == i ? Colors.white : Colors.white38,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
+                // Dot indicator (§3.4) — tappable per §3.2
+                WelcomeDotIndicator(
+                  count: _slideCount,
+                  current: _currentPage,
+                  onDotTap: _goToPage,
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-                // 액션 버튼
+                // Main action button
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                   child: SizedBox(
                     width: double.infinity,
                     height: AppSpacing.buttonHeight,
@@ -120,15 +228,19 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
                       onPressed: _goNext,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: _pages[_currentPage].bgColor,
+                        foregroundColor: _slideColors[_currentPage],
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radius16),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radius16,
+                          ),
                         ),
                       ),
                       child: Text(
-                        _isLastPage ? '시작하기' : '다음',
+                        _isLastPage
+                            ? WelcomeStrings.getStarted
+                            : WelcomeStrings.next,
                         style: AppTypography.labelLarge.copyWith(
-                          color: _pages[_currentPage].bgColor,
+                          color: _slideColors[_currentPage],
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -136,15 +248,29 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
                   ),
                 ),
 
+                // Demo tour link (last page only, same as Phase 3's demo button)
                 if (_isLastPage) ...[
                   const SizedBox(height: AppSpacing.md),
-                  TextButton(
-                    onPressed: () => context.go(RoutePaths.tripDemo),
-                    child: Text(
-                      '로그인 없이 먼저 둘러보기',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white,
-                        decoration: TextDecoration.underline,
+                  Semantics(
+                    button: true,
+                    label: WelcomeStrings.demoTourLink,
+                    child: TextButton(
+                      onPressed: () {
+                        WelcomeAnalytics.purposeSelected(purpose: 'demo');
+                        context.go(RoutePaths.tripDemo);
+                      },
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(
+                          AppSpacing.minTouchTarget,
+                          AppSpacing.minTouchTarget,
+                        ),
+                      ),
+                      child: Text(
+                        WelcomeStrings.demoTourLink,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: Colors.white,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ),
@@ -159,61 +285,8 @@ class _ScreenWelcomeState extends State<ScreenWelcome> {
 
   @override
   void dispose() {
+    _autoAdvanceTimer?.cancel();
     _pageController.dispose();
     super.dispose();
-  }
-}
-
-class _IntroPageData {
-  const _IntroPageData({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.bgColor,
-  });
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final Color bgColor;
-}
-
-class _IntroPageWidget extends StatelessWidget {
-  const _IntroPageWidget({required this.page});
-  final _IntroPageData page;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: page.bgColor,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(page.emoji, style: const TextStyle(fontSize: 80)),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                page.title,
-                style: AppTypography.headlineMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                page.subtitle,
-                style: AppTypography.bodyLarge.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

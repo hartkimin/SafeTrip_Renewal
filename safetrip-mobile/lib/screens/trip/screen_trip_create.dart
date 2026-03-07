@@ -37,6 +37,15 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
   Future<void> _onCreate() async {
     if (!_canProceed) return;
     
+    // §08: 클라이언트 측 15일 초과 검증
+    final duration = _endDate!.difference(_startDate!).inDays;
+    if (duration > 15) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('여행 기간은 최대 15일을 초과할 수 없습니다.')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final trip = await _apiService.createTrip(

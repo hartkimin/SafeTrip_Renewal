@@ -14,6 +14,7 @@ import { appConfig } from './config/app.config';
 import { LoggerModule } from './common/logger/logger.module';
 import { FirebaseModule } from './config/firebase/firebase.module';
 import { HealthModule } from './modules/health/health.module';
+import { VersionModule } from './modules/version/version.module';
 
 // Domain modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -34,6 +35,10 @@ import { EventLogModule } from './modules/event-log/event-log.module';
 import { MofaModule } from './modules/mofa/mofa.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AiModule } from './modules/ai/ai.module';
+import { SchedulesModule } from './modules/schedules/schedules.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { GuardianChatsModule } from './modules/guardian-chats/guardian-chats.module';
+import { InviteCodesModule } from './modules/invite-codes/invite-codes.module';
 
 @Module({
     imports: [
@@ -82,6 +87,7 @@ import { AiModule } from './modules/ai/ai.module';
         LoggerModule,
         FirebaseModule,
         HealthModule,
+        VersionModule,
 
         // ── Domain Modules ────────────────────────────────────────────
         AuthModule,
@@ -102,6 +108,10 @@ import { AiModule } from './modules/ai/ai.module';
         MofaModule,
         TasksModule,
         AiModule,
+        SchedulesModule,
+        AttendanceModule,
+        GuardianChatsModule,
+        InviteCodesModule,
     ],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },

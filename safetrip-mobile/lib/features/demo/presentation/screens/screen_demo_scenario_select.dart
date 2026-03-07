@@ -9,6 +9,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../features/trip/providers/trip_provider.dart';
 import '../../../../router/auth_notifier.dart';
 import '../../../../router/route_paths.dart';
+import '../../data/demo_analytics.dart';
 import '../../data/demo_scenario_loader.dart';
 import '../../models/demo_scenario.dart';
 import '../../providers/demo_state_provider.dart';
@@ -26,6 +27,12 @@ class _ScreenDemoScenarioSelectState
     extends ConsumerState<ScreenDemoScenarioSelect> {
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    DemoAnalytics.demoStarted();
+  }
+
   Future<void> _selectScenario(DemoScenarioId scenarioId) async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
@@ -36,6 +43,7 @@ class _ScreenDemoScenarioSelectState
 
       // 2. Seed demo state provider
       ref.read(demoStateProvider.notifier).startDemo(scenario);
+      DemoAnalytics.scenarioSelected(scenarioId.name);
 
       // 3. Seed trip provider with demo data
       final currentUser = scenario.members.firstWhere(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/attendance.dart';
 import '../../../services/api_service.dart';
@@ -8,17 +9,26 @@ class AttendanceState {
     this.error,
     this.currentCheck,
     this.history = const [],
+    this.presentCount = 0,
+    this.absentCount = 0,
+    this.unknownCount = 0,
   });
   final bool isLoading;
   final String? error;
   final AttendanceCheck? currentCheck;
   final List<AttendanceCheck> history;
+  final int presentCount;
+  final int absentCount;
+  final int unknownCount;
 
   AttendanceState copyWith({
     bool? isLoading,
     String? error,
     AttendanceCheck? currentCheck,
     List<AttendanceCheck>? history,
+    int? presentCount,
+    int? absentCount,
+    int? unknownCount,
     bool clearError = false,
   }) {
     return AttendanceState(
@@ -26,6 +36,9 @@ class AttendanceState {
       error: clearError ? null : (error ?? this.error),
       currentCheck: currentCheck ?? this.currentCheck,
       history: history ?? this.history,
+      presentCount: presentCount ?? this.presentCount,
+      absentCount: absentCount ?? this.absentCount,
+      unknownCount: unknownCount ?? this.unknownCount,
     );
   }
 }
@@ -83,6 +96,34 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       await fetchAttendances(tripId);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> fetchResponses(String tripId, String checkId) async {
+    try {
+      final responses =
+          await _apiService.getAttendanceResponses(tripId, checkId);
+      int present = 0, absent = 0, unknown = 0;
+      for (final r in responses) {
+        switch (r['response_type']) {
+          case 'present':
+            present++;
+            break;
+          case 'absent':
+            absent++;
+            break;
+          default:
+            unknown++;
+            break;
+        }
+      }
+      state = state.copyWith(
+        presentCount: present,
+        absentCount: absent,
+        unknownCount: unknown,
+      );
+    } catch (e) {
+      debugPrint('[AttendanceNotifier] fetchResponses error: $e');
     }
   }
 

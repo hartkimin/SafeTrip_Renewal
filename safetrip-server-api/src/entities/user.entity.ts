@@ -32,6 +32,21 @@ export class User {
     @Column({ name: 'location_sharing_mode', type: 'varchar', length: 20, nullable: true })
     locationSharingMode: string | null; // 'always' | 'in_trip' | 'off'
 
+    @Column({ name: 'avatar_id', type: 'varchar', length: 30, nullable: true })
+    avatarId: string | null;
+
+    @Column({ name: 'privacy_level', type: 'varchar', length: 20, default: 'standard' })
+    privacyLevel: string; // 'safety_first' | 'standard' | 'privacy_first'
+
+    @Column({ name: 'image_review_status', type: 'varchar', length: 20, default: 'none' })
+    imageReviewStatus: string; // 'none' | 'pending' | 'approved' | 'rejected'
+
+    @Column({ name: 'onboarding_completed', type: 'boolean', default: false })
+    onboardingCompleted: boolean;
+
+    @Column({ name: 'deletion_reason', type: 'text', nullable: true })
+    deletionReason: string | null;
+
     @Column({ name: 'fcm_token', type: 'text', nullable: true })
     fcmToken: string | null;
 

@@ -11,6 +11,7 @@ import 'core/theme/app_theme.dart';
 import 'features/onboarding/data/deeplink_service.dart';
 import 'router/app_router.dart';
 import 'router/auth_notifier.dart';
+import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,6 +90,9 @@ class _MyAppState extends State<MyApp> {
     final deeplink = DeeplinkService.instance;
     if (deeplink.pendingInviteCode != null) {
       _authNotifier.setPendingInviteCode(deeplink.pendingInviteCode!);
+    } else if (deeplink.inviteDeeplinkReceived) {
+      // §6.1: invite URI received but code parse failed → mark for Phase 3 + toast
+      _authNotifier.setInviteDeeplinkFailed();
     }
     if (deeplink.pendingGuardianCode != null) {
       _authNotifier.setPendingGuardianCode(deeplink.pendingGuardianCode!);
@@ -131,6 +135,21 @@ class _MyAppState extends State<MyApp> {
       ],
       locale: const Locale('ko', 'KR'),
       routerConfig: _appRouter.router,
+      builder: (context, child) {
+        // Global offline banner (DOC-T3-SPL-028 §13.2)
+        return ListenableBuilder(
+          listenable: _authNotifier,
+          builder: (context, _) {
+            return Column(
+              children: [
+                if (_authNotifier.isOffline && _authNotifier.initCompleted)
+                  const OfflineBanner(),
+                Expanded(child: child ?? const SizedBox.shrink()),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

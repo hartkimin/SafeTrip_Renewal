@@ -229,11 +229,30 @@ export class AuthService {
     /**
      * DELETE /auth/account — 계정 삭제 요청 (7일 유예)
      */
-    async requestDeletion(uid: string) {
-        await this.userRepo.update(uid, {
+    async requestDeletion(uid: string, reason?: string) {
+        // Check active trip participation (§9.2 Step 1)
+        const groupMemberRepo = this.userRepo.manager.getRepository('tb_group_member');
+        const activeMember = await groupMemberRepo.findOne({
+            where: { userId: uid, status: 'active' },
+        });
+
+        if (activeMember) {
+            const memberRole = (activeMember as any).memberRole || (activeMember as any).member_role;
+            if (memberRole === 'captain') {
+                throw new BadRequestException('리더십을 위임하거나 여행을 종료한 후 삭제해 주세요');
+            }
+            throw new BadRequestException('현재 참여 중인 여행이 있습니다. 여행 종료 또는 탈퇴 후 계정 삭제가 가능합니다');
+        }
+
+        const updateData: any = {
             deletionRequestedAt: new Date(),
             isActive: false,
-        });
+        };
+        if (reason) {
+            updateData.deletionReason = reason;
+        }
+
+        await this.userRepo.update(uid, updateData);
         return { message: '계정 삭제가 요청되었습니다. 7일 후 최종 삭제됩니다.' };
     }
 

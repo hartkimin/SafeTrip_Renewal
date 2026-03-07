@@ -6,10 +6,15 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../features/onboarding/data/onboarding_repository.dart';
+import '../../features/onboarding/l10n/welcome_strings.dart';
+import '../../router/auth_notifier.dart';
 import '../../router/route_paths.dart';
 
 class ScreenTripJoinCode extends StatefulWidget {
-  const ScreenTripJoinCode({super.key});
+  const ScreenTripJoinCode({super.key, this.authNotifier});
+
+  /// Optional AuthNotifier for deep link auto-fill (DOC-T3-WLC-029 §3.2)
+  final AuthNotifier? authNotifier;
 
   @override
   State<ScreenTripJoinCode> createState() => _ScreenTripJoinCodeState();
@@ -17,12 +22,50 @@ class ScreenTripJoinCode extends StatefulWidget {
 
 class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   final List<TextEditingController> _controllers = List.generate(
-    6,
+    7,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final List<FocusNode> _focusNodes = List.generate(7, (_) => FocusNode());
 
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // DOC-T3-WLC-029 §3.2: Auto-fill invite code from deep link
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authNotifier = widget.authNotifier;
+      if (authNotifier == null) return;
+      final pendingCode = authNotifier.pendingInviteCode;
+      authNotifier.clearPendingInviteCode();
+      if (pendingCode != null && pendingCode.isNotEmpty) {
+        // Fill each character into the 6-digit code controllers
+        final code = pendingCode.toUpperCase();
+        for (int i = 0; i < code.length && i < _controllers.length; i++) {
+          _controllers[i].text = code[i];
+        }
+        setState(() {});
+        // Auto-submit if code is complete (§03.1: 7-char codes)
+        if (code.length == 7) {
+          _onJoin();
+        } else {
+          // DOC-T3-WLC-029 §6.1: Deep link code incomplete — show manual input hint
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(WelcomeStrings.inviteCodeManualHint)),
+            );
+          }
+        }
+      } else if (pendingCode != null) {
+        // DOC-T3-WLC-029 §6.1: Deep link parameter was present but empty/corrupted
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(WelcomeStrings.inviteCodeManualHint)),
+          );
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -36,7 +79,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   }
 
   String get _fullCode => _controllers.map((c) => c.text).join().toUpperCase();
-  bool get _isComplete => _fullCode.length == 6;
+  bool get _isComplete => _fullCode.length == 7;
 
   Future<void> _onJoin() async {
     if (!_isComplete) return;
@@ -109,7 +152,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '캡틴에게 받은 6자리\n코드를 입력해주세요',
+                      '캡틴에게 받은 7자리\n코드를 입력해주세요',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.textTertiary,
@@ -118,10 +161,10 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                     const SizedBox(height: AppSpacing.xxl),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(6, (index) {
+                      children: List.generate(7, (index) {
                         return SizedBox(
                           width:
-                              (MediaQuery.of(context).size.width - 48 - 30) / 6,
+                              (MediaQuery.of(context).size.width - 48 - 36) / 7,
                           height: 56,
                           child: TextField(
                             controller: _controllers[index],
@@ -150,7 +193,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                             ),
                             onChanged: (value) {
                               if (value.isNotEmpty) {
-                                if (index < 5) {
+                                if (index < 6) {
                                   _focusNodes[index + 1].requestFocus();
                                 } else {
                                   _focusNodes[index].unfocus();

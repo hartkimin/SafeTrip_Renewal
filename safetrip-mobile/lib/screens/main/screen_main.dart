@@ -26,6 +26,7 @@ import '../../services/sos_service.dart';
 import '../../widgets/components/battery_warning_banner.dart';
 import '../../widgets/components/offline_banner.dart';
 import '../../widgets/components/privacy_banner.dart';
+import '../../widgets/components/schedule_conflict_dialog.dart';
 import '../../widgets/components/sos_button.dart';
 import '../../widgets/components/sos_overlay.dart';
 import '../../features/main/providers/battery_provider.dart';
@@ -38,11 +39,11 @@ import '../../widgets/map/member_mini_card.dart';
 import 'bottom_sheets/bottom_sheet_1_trip.dart';
 import 'bottom_sheets/bottom_sheet_2_member.dart';
 import 'bottom_sheets/bottom_sheet_3_chat.dart';
-import 'bottom_sheets/bottom_sheet_4_guide.dart';
+import '../../features/safety_guide/presentation/safety_guide_bottom_sheet.dart';
 import 'bottom_sheets/bottom_sheet_layer_settings.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
 import 'navigation/bottom_navigation_bar.dart';
-import 'widgets/top_trip_info_card.dart';
+import '../../features/trip_card/widgets/trip_info_card_section.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key, required this.authNotifier});
@@ -107,6 +108,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // §9.3: 유예 기간 내 재로그인 시 삭제 취소 팝업
+    _checkDeletionPending();
+
     // §4.2, §8.3: 동기화 완료 토스트 알림
     _syncSubscription =
         DeviceStatusService().syncResultStream.listen((result) {
@@ -127,6 +131,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+      // §6 충돌 감지: 동기화 후 충돌 드래프트 확인
+      if (mounted) {
+        ScheduleConflictDialog.showIfNeeded(context);
       }
     });
 
@@ -328,6 +336,56 @@ class _MainScreenState extends ConsumerState<MainScreen>
             duration: const Duration(milliseconds: 250));
       }
     });
+  }
+
+  /// §9.3: 유예 기간 내 재로그인 → 삭제 취소 팝업
+  Future<void> _checkDeletionPending() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      if (userId == null) return;
+
+      final profile = await ApiService().getUserById(userId);
+      if (profile == null) return;
+
+      final deletionAt = profile['deletion_requested_at'];
+      if (deletionAt == null) return;
+
+      if (!mounted) return;
+      final shouldCancel = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('계정 삭제 예약됨'),
+          content: const Text(
+            '계정 삭제가 요청된 상태입니다.\n삭제를 취소하고 계정을 유지하시겠습니까?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('삭제 유지'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('삭제 취소'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldCancel == true) {
+        final success = await ApiService().cancelAccountDeletion();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(success ? '계정 삭제가 취소되었습니다.' : '삭제 취소에 실패했습니다.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[MainScreen] _checkDeletionPending Error: $e');
+    }
   }
 
   @override
@@ -540,7 +598,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
               top: MediaQuery.of(context).padding.top + 10,
               left: AppSpacing.md,
               right: AppSpacing.md,
-              child: const TopTripInfoCard(),
+              child: const TripInfoCardSection(),
             ),
 
             // ── Layer Settings Button (우측 상단) ─────────
@@ -747,7 +805,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
           scrollController: scrollController,
         );
       case BottomTab.guide:
-        return BottomSheetGuide(
+        return SafetyGuideBottomSheet(
           key: const ValueKey('tab_guide'),
           scrollController: scrollController,
         );

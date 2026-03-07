@@ -8,8 +8,9 @@ import 'invite_code_management_modal.dart';
 /// 멤버 추가 모달 — 초대코드 탭 + 직접 검색 탭
 class AddMemberModal extends StatefulWidget {
 
-  const AddMemberModal({super.key, required this.groupId});
+  const AddMemberModal({super.key, required this.groupId, required this.tripId});
   final String groupId;
+  final String tripId;
 
   @override
   State<AddMemberModal> createState() => _AddMemberModalState();
@@ -223,7 +224,7 @@ class _AddMemberModalState extends State<AddMemberModal>
 
   Widget _buildInviteCodeTab() {
     return InviteCodeManagementModal(
-      groupId: widget.groupId,
+      tripId: widget.tripId,
       isEmbedded: true,
     );
   }

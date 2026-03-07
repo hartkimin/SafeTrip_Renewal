@@ -31,6 +31,7 @@ import '../screens/ai/screen_ai_briefing.dart';
 import '../screens/main/screen_main_guardian.dart';
 import '../features/onboarding/presentation/screens/screen_invite_confirm.dart';
 import '../features/onboarding/presentation/screens/screen_guardian_confirm.dart';
+import '../features/movement_history/presentation/screens/screen_movement_history.dart';
 
 class AppRouter {
   AppRouter(this.authNotifier);
@@ -43,7 +44,7 @@ class AppRouter {
     routes: [
       GoRoute(
         path: RoutePaths.splash,
-        builder: (context, state) => const InitialScreen(),
+        builder: (context, state) => InitialScreen(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.onboardingWelcome,
@@ -51,7 +52,7 @@ class AppRouter {
       ),
       GoRoute(
         path: RoutePaths.onboardingPurpose,
-        builder: (context, state) => const ScreenPurposeSelect(),
+        builder: (context, state) => ScreenPurposeSelect(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.authPhone,
@@ -157,7 +158,7 @@ class AppRouter {
       ),
       GoRoute(
         path: RoutePaths.tripJoin,
-        builder: (context, state) => const ScreenTripJoinCode(),
+        builder: (context, state) => ScreenTripJoinCode(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.tripDemo,
@@ -208,6 +209,14 @@ class AppRouter {
           return MainScreen(authNotifier: authNotifier);
         },
       ),
+      GoRoute(
+        path: RoutePaths.movementHistory,
+        builder: (context, state) => MovementHistoryScreen(
+          tripId: state.pathParameters['tripId'] ?? '',
+          targetUserId: state.pathParameters['userId'] ?? '',
+          memberName: state.uri.queryParameters['name'] ?? '',
+        ),
+      ),
     ],
   );
 
@@ -219,25 +228,38 @@ class AppRouter {
     // Demo routes don't need auth
     if (path.startsWith('/demo/')) return null;
 
-    // Still loading → stay on splash
+    // Still loading auth state → stay on splash
     if (isLoading) return path == RoutePaths.splash ? null : RoutePaths.splash;
 
-    // Splash: decide where to go
+    // Splash: wait for both auth loading AND splash initialization (DOC-T3-SPL-028 §3)
     if (path == RoutePaths.splash) {
+      // Wait for splash initialization to complete
+      if (!authNotifier.initCompleted) return null;
+
+      // Force update blocks all navigation (§7.1)
+      if (authNotifier.requiresForceUpdate) return null;
+
       if (!isAuth) {
-        // Check for deep link scenarios
+        // DOC-T3-WLC-029 §3.2 Phase 1: Deep link context detection
         if (authNotifier.pendingInviteCode != null) {
-          return RoutePaths.authPhone; // B: invite code → auth first
+          // Invite code → skip slides, go to Phase 3 (purpose/trip-join)
+          // tripJoin screen handles auto-fill from pendingInviteCode
+          return RoutePaths.tripJoin;
         }
         if (authNotifier.pendingGuardianCode != null) {
-          return RoutePaths.authPhone; // C: guardian → auth first
+          // Guardian code → skip slides, go to auth (guardian needs account)
+          return RoutePaths.authPhone;
         }
-        // A or D: normal flow
+        // §6.1: Invite URI received but code parse failed → Phase 3 + toast
+        if (authNotifier.inviteDeeplinkFailed) {
+          return RoutePaths.onboardingPurpose;
+        }
+        // Route A: new user → welcome slides / Route B: returning → purpose
         return authNotifier.isFirstLaunch
             ? RoutePaths.onboardingWelcome
             : RoutePaths.onboardingPurpose;
       }
-      // Authenticated: go to main
+      // Authenticated: Route B (§4.2)
       return authNotifier.hasActiveTrip
           ? RoutePaths.main
           : RoutePaths.noTripHome;

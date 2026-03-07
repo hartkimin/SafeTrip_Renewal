@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { Group } from '../../entities/group.entity';
 import { GroupMember } from '../../entities/group-member.entity';
 import { InviteCode } from '../../entities/invite-code.entity';
 import { Trip } from '../../entities/trip.entity';
 import { Schedule } from '../../entities/schedule.entity';
+import { GuardianLink } from '../../entities/guardian.entity';
+import { LocationSharing } from '../../entities/location.entity';
 
 @Injectable()
 export class GroupsService {
@@ -15,6 +17,8 @@ export class GroupsService {
         @InjectRepository(InviteCode) private inviteCodeRepo: Repository<InviteCode>,
         @InjectRepository(Trip) private tripRepo: Repository<Trip>,
         @InjectRepository(Schedule) private scheduleRepo: Repository<Schedule>,
+        @InjectRepository(GuardianLink) private guardianLinkRepo: Repository<GuardianLink>,
+        @InjectRepository(LocationSharing) private locationSharingRepo: Repository<LocationSharing>,
         private dataSource: DataSource
     ) { }
 
@@ -71,6 +75,31 @@ export class GroupsService {
     }
 
     async addMember(groupId: string, tripId: string, userId: string, role = 'crew') {
+        // §17#3: 동일 여행 내 동일 유저 중복 멤버 방지
+        const existingMember = await this.memberRepo.findOne({
+            where: { tripId, userId, status: 'active' },
+        });
+        if (existingMember) {
+            throw new BadRequestException(
+                `이미 이 여행에 참여 중입니다 (현재 역할: ${existingMember.memberRole}). (비즈니스 원칙 §17#3)`,
+            );
+        }
+
+        // §17#4: 멤버+가디언 겸직 방지
+        if (['captain', 'crew_chief', 'crew'].includes(role)) {
+            const existingGuardianLink = await this.guardianLinkRepo.findOne({
+                where: [
+                    { tripId, guardianId: userId, status: 'accepted' },
+                    { tripId, guardianId: userId, status: 'pending' },
+                ],
+            });
+            if (existingGuardianLink) {
+                throw new BadRequestException(
+                    '이 여행의 가디언으로 등록되어 있어 멤버로 참여할 수 없습니다. (비즈니스 원칙 §01.2, §17#4)',
+                );
+            }
+        }
+
         // §02.2: 일정 겹침 체크 (captain/crew_chief/crew 대상)
         if (['captain', 'crew_chief', 'crew'].includes(role)) {
             await this.checkDateOverlap(userId, tripId);
@@ -144,15 +173,42 @@ export class GroupsService {
         });
         if (!member) throw new NotFoundException('Member not found');
 
-        // captain은 제거 불가
+        // §07.2: 캡틴 탈퇴 규칙
         if (member.memberRole === 'captain') {
-            throw new ForbiddenException('Cannot remove captain');
+            const trip = await this.tripRepo.findOne({ where: { tripId } });
+            if (!trip) throw new NotFoundException('Trip not found');
+
+            // completed 상태 → 위임 없이 탈퇴 가능
+            if (trip.status === 'completed') {
+                await this.memberRepo.update(member.memberId, {
+                    status: 'left',
+                    leftAt: new Date(),
+                });
+                await this.cleanupVisibilityOnDeparture(tripId, userId);
+                return { message: 'Member removed' };
+            }
+
+            // active/planning 상태
+            const otherMemberCount = await this.memberRepo.count({
+                where: { tripId, status: 'active', userId: Not(userId) },
+            });
+
+            if (otherMemberCount > 0) {
+                throw new ForbiddenException(
+                    '다른 멤버가 있는 여행에서 캡틴은 리더 권한을 위임한 후에만 탈퇴할 수 있습니다. (비즈니스 원칙 §07.2)',
+                );
+            } else {
+                throw new ForbiddenException(
+                    '캡틴만 남은 여행에서는 여행을 종료(completed)하거나 삭제한 후 탈퇴해야 합니다. (비즈니스 원칙 §07.2)',
+                );
+            }
         }
 
         await this.memberRepo.update(member.memberId, {
             status: 'removed',
             leftAt: new Date(),
         });
+        await this.cleanupVisibilityOnDeparture(tripId, userId);
         return { message: 'Member removed' };
     }
 
@@ -211,7 +267,7 @@ export class GroupsService {
             throw new NotFoundException('Invalid, expired, or used-up invite code');
         }
 
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) {
+        if (invite.maxUses && invite.currentUses >= invite.maxUses) {
             throw new NotFoundException('Invalid, expired, or used-up invite code');
         }
 
@@ -238,7 +294,7 @@ export class GroupsService {
 
         return {
             target_role: invite.targetRole,
-            uses_remaining: invite.maxUses ? invite.maxUses - invite.usedCount : null,
+            uses_remaining: invite.maxUses ? invite.maxUses - invite.currentUses : null,
             trip: tripInfo
         };
     }
@@ -256,7 +312,7 @@ export class GroupsService {
         if (invite.expiresAt && new Date() > invite.expiresAt) throw new BadRequestException('ERR_CODE_EXPIRED');
 
         // Step 4: Uses remaining
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new BadRequestException('ERR_CODE_EXHAUSTED');
+        if (invite.maxUses && invite.currentUses >= invite.maxUses) throw new BadRequestException('ERR_CODE_EXHAUSTED');
 
         const group = await this.groupRepo.findOne({ where: { groupId: invite.groupId } });
         if (!group) throw new NotFoundException('Group not found');
@@ -292,7 +348,7 @@ export class GroupsService {
         const role = invite.targetRole;
         const newMember = await this.addMember(group.groupId, trip.tripId, userId, role);
 
-        invite.usedCount += 1;
+        invite.currentUses += 1;
         await this.inviteCodeRepo.save(invite);
 
         return {
@@ -496,7 +552,7 @@ export class GroupsService {
 
     // ── §6.D Schedule CRUD (group_id 기반) ──
 
-    private async getTripIdForGroup(groupId: string): Promise<string> {
+    async getTripIdForGroup(groupId: string): Promise<string> {
         const trip = await this.tripRepo.findOne({ where: { groupId }, select: ['tripId'] });
         if (!trip) throw new NotFoundException('No trip found for this group');
         return trip.tripId;
@@ -616,5 +672,23 @@ export class GroupsService {
             message: 'Attendance check started',
             created_at: result[0].created_at,
         };
+    }
+
+    /**
+     * §08.5: 탈퇴한 멤버를 다른 멤버의 공개 범위 설정에서 자동 제거
+     */
+    private async cleanupVisibilityOnDeparture(tripId: string, departedUserId: string) {
+        const sharings = await this.locationSharingRepo.find({
+            where: { tripId, visibilityType: 'specified' },
+        });
+
+        for (const sharing of sharings) {
+            if (Array.isArray(sharing.visibilityMemberIds) && sharing.visibilityMemberIds.includes(departedUserId)) {
+                sharing.visibilityMemberIds = sharing.visibilityMemberIds.filter(
+                    (id: string) => id !== departedUserId,
+                );
+                await this.locationSharingRepo.save(sharing);
+            }
+        }
     }
 }

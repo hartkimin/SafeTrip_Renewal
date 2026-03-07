@@ -10,6 +10,12 @@ import { Schedule } from '../../entities/schedule.entity';
 import { TravelSchedule } from '../../entities/travel-schedule.entity';
 import { InviteCode } from '../../entities/invite-code.entity';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { User } from '../../entities/user.entity';
+import { Guardian } from '../../entities/guardian.entity';
+import { Country } from '../../entities/country.entity';
+import { PaymentsService } from '../payments/payments.service';
+import { B2bService } from '../b2b/b2b.service';
+import { DataSource } from 'typeorm';
 
 describe('TripsService', () => {
     let service: TripsService;
@@ -41,6 +47,26 @@ describe('TripsService', () => {
     const mockInviteCodeRepo = {
         findOne: jest.fn(),
     };
+    const mockUserRepo = {
+        findOne: jest.fn(),
+        save: jest.fn(),
+    };
+    const mockGuardianRepo = {};
+    const mockCountryRepo = {
+        findOne: jest.fn(),
+    };
+    const mockPaymentsService = {};
+    const mockB2bService = {};
+    const mockDataSource = {
+        createQueryRunner: jest.fn().mockReturnValue({
+            connect: jest.fn(),
+            startTransaction: jest.fn(),
+            commitTransaction: jest.fn(),
+            rollbackTransaction: jest.fn(),
+            release: jest.fn(),
+            manager: { save: jest.fn() },
+        }),
+    };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -54,6 +80,12 @@ describe('TripsService', () => {
                 { provide: getRepositoryToken(Schedule), useValue: mockScheduleRepo },
                 { provide: getRepositoryToken(TravelSchedule), useValue: mockTravelScheduleRepo },
                 { provide: getRepositoryToken(InviteCode), useValue: mockInviteCodeRepo },
+                { provide: getRepositoryToken(User), useValue: mockUserRepo },
+                { provide: getRepositoryToken(Guardian), useValue: mockGuardianRepo },
+                { provide: getRepositoryToken(Country), useValue: mockCountryRepo },
+                { provide: PaymentsService, useValue: mockPaymentsService },
+                { provide: B2bService, useValue: mockB2bService },
+                { provide: DataSource, useValue: mockDataSource },
             ],
         }).compile();
 
@@ -93,6 +125,12 @@ describe('TripsService', () => {
 
             mockChatRoomRepo.create.mockReturnValue({});
             mockChatRoomRepo.save.mockResolvedValue({});
+
+            // checkAndEnforceMinorProtection uses userRepo.findOne
+            mockUserRepo.findOne.mockResolvedValue({ minorStatus: 'adult' });
+
+            // final tripRepo.findOne refresh
+            mockTripRepo.findOne.mockResolvedValue({ tripId: expectedTripId, ...tripData, groupId: expectedGroupId });
 
             const result = await service.create(userId, tripData);
 

@@ -20,11 +20,19 @@ export {
     GuardianPause,
     GuardianLocationRequest,
     GuardianSnapshot,
+    GuardianReleaseRequest,
 } from './guardian.entity';
 
 // Schedule & Geofence Domain (D)
 export { Schedule } from './schedule.entity';
 export { TravelSchedule } from './travel-schedule.entity';
+export { ScheduleHistory } from './schedule-history.entity';
+export { ScheduleComment } from './schedule-comment.entity';
+export { ScheduleReaction } from './schedule-reaction.entity';
+export { ScheduleVote } from './schedule-vote.entity';
+export { ScheduleVoteOption } from './schedule-vote-option.entity';
+export { ScheduleVoteResponse } from './schedule-vote-response.entity';
+export { ScheduleTemplate } from './schedule-template.entity';
 export { Geofence, GeofenceEvent, GeofencePenalty } from './geofence.entity';
 
 // Location Domain (E)
@@ -110,4 +118,8 @@ export {
 } from './event-log.entity';
 
 // AI Domain (O)
-export { AiUsage } from './ai.entity';
+export { AiUsage, AiUsageLog, AiSubscription } from './ai.entity';
+
+// Safety Guide (안전가이드)
+export { SafetyGuideCache } from './safety-guide-cache.entity';
+export { CountryEmergencyContact } from './country-emergency-contact.entity';

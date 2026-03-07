@@ -5,9 +5,10 @@ import { countryService } from '@/services/countryService';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { ErrorMessage } from '@/components/ErrorBoundary';
 import { Settings, Globe, RefreshCw, Phone } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
 
-const MOFA_BADGE = { 'none': 'success', 'watch': 'info', 'warning': 'warning', 'danger': 'danger', 'ban': 'danger' };
-const MOFA_LABEL = { 'none': '안전', 'watch': '관심', 'warning': '주의', 'danger': '위험', 'ban': '여행금지' };
+const MOFA_BADGE = { 'none': 'status-tag-success', 'watch': 'status-tag-info', 'warning': 'status-tag-warning', 'danger': 'status-tag-danger', 'ban': 'status-tag-danger' };
+const MOFA_LABEL = { 'none': '안전', 'watch': '관심', '주의': '주의', 'danger': '위험', 'ban': '여행금지' };
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -65,74 +66,82 @@ export default function SettingsPage() {
     const filteredCountries = countries.filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.code.includes(searchQuery.toUpperCase()));
 
     return (
-        <div className="slide-in">
-            <h1 className="page-title"><Settings size={24} strokeWidth={2} /> System Settings</h1>
-            <p className="page-subtitle">국가 데이터, 비상 연락망, 약관 등 시스템 설정을 관리합니다.</p>
+        <div className="page-enter space-y-6">
+            <PageHeader
+                icon={Settings}
+                iconBg="bg-slate-100"
+                iconColor="text-slate-600"
+                glowColor="bg-slate-400"
+                title="System Settings"
+                subtitle="국가 데이터, 비상 연락망, 약관 등 시스템 설정을 관리합니다."
+            />
             {error && <ErrorMessage error={error} onRetry={fetchCountries} />}
 
-            <div className="tabs">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
                 {['countries', 'emergency'].map(tab => (
-                    <button key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
+                    <button key={tab} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors flex items-center gap-2 ${activeTab === tab ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => setActiveTab(tab)}>
                         {tab === 'countries' ? <><Globe size={16} /> Countries & Alerts</> : <><Phone size={16} /> Emergency Numbers</>}
                     </button>
                 ))}
             </div>
 
             {activeTab === 'countries' && (
-                <div className="panel">
-                    <div className="panel-header">
-                        <span>Country & MOFA Travel Alert Management</span>
-                        <button className="btn btn-primary" onClick={fetchCountries}><RefreshCw size={14} /> Sync MOFA API</button>
+                <div className="glass-panel rounded-2xl overflow-hidden">
+                    <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white/40">
+                        <span className="font-bold text-slate-800">Country & MOFA Travel Alert Management</span>
+                        <button className="flex items-center gap-2 bg-[#00A2BD]/10 text-[#00A2BD] hover:bg-[#00A2BD]/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors" onClick={fetchCountries}><RefreshCw size={14} /> Sync MOFA API</button>
                     </div>
-                    <div className="panel-content">
-                        <div className="filter-bar">
-                            <input placeholder="Search country..." style={{ flex: 1 }} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                            <select><option>All Alert Levels</option><option>Level 0</option><option>Level 1</option><option>Level 2</option><option>Level 3</option><option>Level 4</option></select>
+                    <div className="p-5">
+                        <div className="flex gap-4 mb-4">
+                            <input className="flex-1 h-11 px-4 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-[#00A2BD] focus:outline-none" placeholder="Search country..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <select className="h-11 px-4 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-[#00A2BD] focus:outline-none"><option>All Alert Levels</option><option>Level 0</option><option>Level 1</option><option>Level 2</option><option>Level 3</option><option>Level 4</option></select>
                         </div>
                         {loading ? <LoadingSkeleton type="table" count={5} /> : filteredCountries.length === 0 ? (
-                            <div className="empty-state"><div className="empty-state-icon"><Globe size={48} strokeWidth={1.5} /></div><p>국가 데이터가 없습니다.</p></div>
+                            <div className="py-12 flex flex-col items-center justify-center text-slate-400"><Globe size={48} className="mb-4 opacity-50" /><p>국가 데이터가 없습니다.</p></div>
                         ) : (
-                            <table className="data-table">
-                                <thead><tr><th>FLAG</th><th>COUNTRY</th><th>CODE</th><th>MOFA ALERT</th><th>PHONE CODE</th><th>EMERGENCY #</th><th>LAST UPDATED</th></tr></thead>
-                                <tbody>
-                                    {filteredCountries.map(c => (
-                                        <tr key={c.code}>
-                                            <td style={{ fontSize: '18px', fontWeight: 700 }}>{c.flag}</td>
-                                            <td style={{ fontWeight: 600 }}>{c.name}</td>
-                                            <td>{c.code}</td>
-                                            <td><span className={`badge ${MOFA_BADGE[c.mofa] || 'neutral'}`}>{MOFA_LABEL[c.mofa] || c.mofa}</span></td>
-                                            <td>{c.phone}</td>
-                                            <td style={{ color: 'var(--primary-teal)', fontWeight: 600 }}>{c.emergency}</td>
-                                            <td>{c.updated}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <div className="premium-table p-1">
+                                <table className="w-full text-sm text-left">
+                                    <thead><tr className="border-b border-slate-100 text-slate-500 font-bold uppercase text-[11px] tracking-wider"><th className="p-4">FLAG</th><th className="p-4">COUNTRY</th><th className="p-4">CODE</th><th className="p-4">MOFA ALERT</th><th className="p-4">PHONE CODE</th><th className="p-4">EMERGENCY #</th><th className="p-4">LAST UPDATED</th></tr></thead>
+                                    <tbody>
+                                        {filteredCountries.map(c => (
+                                            <tr key={c.code} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                <td className="p-4 text-xl">{c.flag}</td>
+                                                <td className="p-4 font-bold text-slate-700">{c.name}</td>
+                                                <td className="p-4 font-mono text-xs">{c.code}</td>
+                                                <td className="p-4"><span className={`status-tag ${MOFA_BADGE[c.mofa] || 'status-tag-default'} uppercase`}>{MOFA_LABEL[c.mofa] || c.mofa}</span></td>
+                                                <td className="p-4 text-slate-600">{c.phone}</td>
+                                                <td className="p-4 font-bold text-[#00A2BD]">{c.emergency}</td>
+                                                <td className="p-4 text-xs text-slate-500">{c.updated}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
                 </div>
             )}
 
             {activeTab === 'emergency' && (
-                <div className="panel">
-                    <div className="panel-header"><span><Phone size={18} /> Emergency Numbers by Country</span></div>
-                    <div className="panel-content">
+                <div className="glass-panel rounded-2xl overflow-hidden">
+                    <div className="p-5 border-b border-slate-100 flex items-center bg-white/40"><span className="font-bold text-slate-800 flex items-center gap-2"><Phone size={18} className="text-slate-500" /> Emergency Numbers by Country</span></div>
+                    <div className="p-5">
                         {loading ? <LoadingSkeleton type="card" count={3} /> : countries.length === 0 ? (
-                            <div className="empty-state"><div className="empty-state-icon"><Phone size={48} strokeWidth={1.5} /></div><p>국가 데이터를 먼저 로드하세요.</p></div>
+                            <div className="py-12 flex flex-col items-center justify-center text-slate-400"><Phone size={48} className="mb-4 opacity-50" /><p>국가 데이터를 먼저 로드하세요.</p></div>
                         ) : (
                             <>
-                                <div className="filter-bar">
-                                    <select onChange={e => { setSelectedCountry(e.target.value); if (e.target.value) fetchEmergencyNumbers(e.target.value); }} value={selectedCountry || ''} style={{ minWidth: '200px' }}>
+                                <div className="mb-4">
+                                    <select className="h-11 px-4 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-[#00A2BD] focus:outline-none min-w-[200px]" onChange={e => { setSelectedCountry(e.target.value); if (e.target.value) fetchEmergencyNumbers(e.target.value); }} value={selectedCountry || ''}>
                                         <option value="">국가 선택...</option>
                                         {countries.map(c => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}
                                     </select>
                                 </div>
                                 {emergencyLoading ? <LoadingSkeleton type="card" count={1} /> : emergencyData ? (
-                                    <div style={{ padding: '16px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-12)' }}>
-                                        <pre style={{ fontSize: '13px', whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{JSON.stringify(emergencyData, null, 2)}</pre>
+                                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl overflow-x-auto">
+                                        <pre className="text-xs font-mono text-slate-600">{JSON.stringify(emergencyData, null, 2)}</pre>
                                     </div>
                                 ) : selectedCountry ? (
-                                    <div className="empty-state" style={{ padding: '20px' }}><p>비상 데이터를 불러올 수 없습니다.</p></div>
+                                    <div className="py-12 flex flex-col items-center justify-center text-slate-400"><p>비상 데이터를 불러올 수 없습니다.</p></div>
                                 ) : null}
                             </>
                         )}

@@ -14,6 +14,11 @@ describe('AuthService', () => {
         create: jest.fn(),
         save: jest.fn(),
         update: jest.fn(),
+        manager: {
+            getRepository: jest.fn().mockReturnValue({
+                findOne: jest.fn(),
+            }),
+        },
     };
 
     const mockConsentRepo = {
@@ -149,16 +154,33 @@ describe('AuthService', () => {
     });
 
     describe('requestDeletion', () => {
-        it('should mark the user as inactive and log deletion requested time', async () => {
-            mockUserRepo.update.mockResolvedValue({ affected: 1 });
+        it('should block when user has active trip as crew', async () => {
+            const mockGroupMemberRepo = { findOne: jest.fn().mockResolvedValue({ userId: 'user1', memberRole: 'crew', status: 'active' }) };
+            (mockUserRepo.manager.getRepository as jest.Mock).mockReturnValue(mockGroupMemberRepo);
 
-            const result = await service.requestDeletion('uid123');
+            await expect(service.requestDeletion('user1', '앱을 더 이상 사용하지 않음'))
+                .rejects.toThrow(BadRequestException);
+        });
 
-            expect(mockUserRepo.update).toHaveBeenCalledWith('uid123', expect.objectContaining({
+        it('should block captain without delegation', async () => {
+            const mockGroupMemberRepo = { findOne: jest.fn().mockResolvedValue({ userId: 'captain1', memberRole: 'captain', status: 'active' }) };
+            (mockUserRepo.manager.getRepository as jest.Mock).mockReturnValue(mockGroupMemberRepo);
+
+            await expect(service.requestDeletion('captain1', '서비스 불만족'))
+                .rejects.toThrow('리더십을 위임하거나 여행을 종료한 후 삭제해 주세요');
+        });
+
+        it('should set deletion_requested_at and reason when no active trip', async () => {
+            const mockGroupMemberRepo = { findOne: jest.fn().mockResolvedValue(null) };
+            (mockUserRepo.manager.getRepository as jest.Mock).mockReturnValue(mockGroupMemberRepo);
+            mockUserRepo.update.mockResolvedValue({});
+
+            const result = await service.requestDeletion('user1', '개인정보 보호 우려');
+            expect(result.message).toContain('7일 후 최종 삭제');
+            expect(mockUserRepo.update).toHaveBeenCalledWith('user1', expect.objectContaining({
+                deletionReason: '개인정보 보호 우려',
                 isActive: false,
             }));
-
-            expect(result.message).toContain('7일 후 최종 삭제됩니다');
         });
     });
 

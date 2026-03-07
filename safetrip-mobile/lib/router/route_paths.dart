@@ -54,4 +54,5 @@ class RoutePaths {
   static const tripDetail = '/trip/:tripId';
   static const tripSchedule = '/trip/:tripId/schedule';
   static const tripMembers = '/trip/:tripId/members';
+  static const movementHistory = '/trip/:tripId/members/:userId/movement-history';
 }

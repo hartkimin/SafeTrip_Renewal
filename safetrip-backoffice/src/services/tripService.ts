@@ -1,53 +1,58 @@
 import api from '@/lib/apiClient';
 import { API } from '@/lib/apiEndpoints';
 
+export interface Trip {
+    trip_id: string;
+    trip_name: string;
+    destination: string;
+    status: 'planning' | 'active' | 'completed';
+    start_date: string;
+    end_date: string;
+    captain_id: string;
+    member_count: number;
+    created_at: string;
+}
+
+export interface TripStats {
+    totalTrips: number;
+    activeTrips: number;
+    completedTrips: number;
+    planningTrips: number;
+}
+
 /**
  * Trip Service — Backoffice trip & group management
  */
 export const tripService = {
     /** [Admin] List all trips (GET /trips/admin/list) */
-    async getTrips(params = {}) {
+    getTrips: async (params = {}) => {
         return api.get(API.TRIPS.ADMIN_LIST, params);
     },
 
     /** [Admin] Get trip statistics */
-    async getTripStats() {
-        return api.get(API.TRIPS.ADMIN_STATS);
+    getTripStats: async (): Promise<TripStats> => {
+        const res = await api.get(API.TRIPS.ADMIN_STATS);
+        return res?.data || res || { totalTrips: 0, activeTrips: 0, completedTrips: 0, planningTrips: 0 };
     },
 
     /** Get trip by ID (GET /trips/:id) */
-    async getTripById(tripId) {
+    getTripById: async (tripId: string) => {
         return api.get(API.TRIPS.BY_ID(tripId));
     },
 
     /** Get trip members (GET /groups/:tripId/members) */
-    async getTripMembers(tripId) {
+    getTripMembers: async (tripId: string) => {
         return api.get(API.GROUPS.MEMBERS(tripId));
     },
 
     /** Get trip schedules (GET /trips/:id/schedules) */
-    async getTripSchedules(tripId) {
+    getTripSchedules: async (tripId: string) => {
         return api.get(API.TRIPS.SCHEDULES(tripId));
     },
 
     /** Get trip guardians (GET /trips/:id/guardians) */
-    async getTripGuardians(tripId) {
+    getTripGuardians: async (tripId: string) => {
         return api.get(API.GUARDIANS.LIST(tripId));
-    },
-
-    /** Get group detail (GET /groups/:id) */
-    async getGroupById(groupId) {
-        return api.get(API.GROUPS.BY_ID(groupId));
-    },
-
-    /** Get invite codes for a group (GET /groups/:id/invite-codes) */
-    async getInviteCodes(groupId) {
-        return api.get(API.GROUPS.INVITE_CODES(groupId));
-    },
-
-    /** Get leadership transfer history (GET /groups/:id/transfer-history) */
-    async getTransferHistory(groupId) {
-        return api.get(API.GROUPS.TRANSFER_HISTORY(groupId));
     },
 };
 

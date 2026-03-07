@@ -140,19 +140,21 @@ CREATE TABLE tb_invite_code (
     invite_code_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     group_id        UUID REFERENCES tb_group(group_id),
     trip_id         UUID REFERENCES tb_trip(trip_id),
-    code            VARCHAR(7) UNIQUE,
-    target_role     VARCHAR(30),
+    code            VARCHAR(7) UNIQUE NOT NULL,
+    target_role     VARCHAR(30) NOT NULL,
     max_uses        INTEGER DEFAULT 1,
-    used_count      INTEGER DEFAULT 0,
-    expires_at      TIMESTAMPTZ,
+    current_uses    INTEGER DEFAULT 0,
+    expires_at      TIMESTAMPTZ NOT NULL,
     created_by      VARCHAR(128) REFERENCES tb_user(user_id),
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     is_active       BOOLEAN DEFAULT TRUE,
-    b2b_batch_id    UUID
+    b2b_batch_id    UUID,
+    model_type      VARCHAR(20) DEFAULT 'direct'
 );
 
 CREATE INDEX idx_invite_code_group ON tb_invite_code(group_id);
 CREATE INDEX idx_invite_code_code  ON tb_invite_code(code) WHERE is_active = TRUE;
+CREATE INDEX idx_invite_code_batch ON tb_invite_code(b2b_batch_id) WHERE b2b_batch_id IS NOT NULL;
 
 -- 4.7 TB_TRIP_SETTINGS (여행 설정)
 CREATE TABLE tb_trip_settings (

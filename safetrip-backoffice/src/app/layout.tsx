@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Providers } from "@/components/Providers";
 import { Toaster } from "@/components/ui/sonner";
-import { Sidebar, Topbar } from '@/components/AdminShell';
+import { AdminLayout } from '@/components/AdminShell';
 import './globals.css';
 
 export default function RootLayout({
@@ -16,20 +16,19 @@ export default function RootLayout({
 
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <title>SafeTrip Admin</title>
+        <meta name="description" content="SafeTrip Backoffice Administration Platform" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      </head>
       <body className="antialiased font-sans">
         <Providers>
           {isLoginPage ? (
             <main>{children}</main>
           ) : (
-            <div className="admin-container">
-              <Sidebar />
-              <div className="main-content">
-                <Topbar />
-                <div className="content-wrapper">
-                  {children}
-                </div>
-              </div>
-            </div>
+            <AdminLayout>{children}</AdminLayout>
           )}
           <Toaster position="top-right" richColors closeButton />
         </Providers>

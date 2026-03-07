@@ -10,6 +10,9 @@ class ApiService {
   late final Dio _dio;
   final String baseUrl;
 
+  /// 외부에서 커스텀 API 호출 시 사용 (인증 인터셉터 포함)
+  Dio get dio => _dio;
+
   ApiService({String? baseUrl})
     : baseUrl =
           baseUrl ??
@@ -102,6 +105,7 @@ class ApiService {
     String? profilePhotoUrl,
     String? emergencyContact,
     String? privacyLevel,
+    String? avatarId,
   }) async {
     try {
       final data = <String, dynamic>{'display_name': displayName};
@@ -111,6 +115,7 @@ class ApiService {
         data['emergency_contact'] = emergencyContact;
       }
       if (privacyLevel != null) data['privacy_level'] = privacyLevel;
+      if (avatarId != null) data['avatar_id'] = avatarId;
 
       final response = await _dio.put('/api/v1/users/$userId', data: data);
       return response.data['data'];
@@ -118,6 +123,65 @@ class ApiService {
       debugPrint('[ApiService] updateUserProfile Error: $e');
       rethrow;
     }
+  }
+
+  /// 내 긴급연락처 목록 조회
+  Future<List<Map<String, dynamic>>> getMyEmergencyContacts() async {
+    try {
+      final response = await _dio.get('/api/v1/users/me/emergency-contacts');
+      final data = response.data['data'] as List? ?? [];
+      return data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('[ApiService] getMyEmergencyContacts error: $e');
+      return [];
+    }
+  }
+
+  /// 긴급연락처 추가
+  Future<Map<String, dynamic>?> createEmergencyContact({
+    required String contactName,
+    required String phoneNumber,
+    String? relationship,
+    int? contactOrder,
+  }) async {
+    final response = await _dio.post('/api/v1/users/me/emergency-contacts', data: {
+      'contact_name': contactName,
+      'phone_number': phoneNumber,
+      if (relationship != null) 'relationship': relationship,
+      if (contactOrder != null) 'contact_order': contactOrder,
+    });
+    return response.data['data'];
+  }
+
+  /// 긴급연락처 삭제
+  Future<void> deleteEmergencyContact(String contactId) async {
+    await _dio.delete('/api/v1/users/me/emergency-contacts/$contactId');
+  }
+
+  /// 닉네임 중복 검사
+  Future<bool> checkNicknameAvailable(String nickname) async {
+    try {
+      final response = await _dio.get('/api/v1/users/check-nickname',
+          queryParameters: {'nickname': nickname});
+      return response.data['data']?['available'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 타인 프로필 조회 (역할별 필터링)
+  Future<Map<String, dynamic>?> getFilteredUserProfile(
+    String userId, {
+    String? tripId,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    if (tripId != null) queryParams['trip_id'] = tripId;
+
+    final response = await _dio.get(
+      '/api/v1/users/$userId/profile',
+      queryParameters: queryParams,
+    );
+    return response.data['data'];
   }
 
   // 약관 동의 저장
@@ -448,6 +512,22 @@ class ApiService {
     }
   }
 
+  /// 출석 체크 응답 목록 (GET /api/v1/trips/:tripId/attendances/:checkId/responses)
+  Future<List<Map<String, dynamic>>> getAttendanceResponses(
+      String tripId, String checkId) async {
+    try {
+      final response = await _dio
+          .get('/api/v1/trips/$tripId/attendances/$checkId/responses');
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getAttendanceResponses Error: $e');
+      return [];
+    }
+  }
+
   // ===== 그룹 (Group) =====
 
   Future<List<Map<String, dynamic>>> getGroups() async {
@@ -627,6 +707,7 @@ class ApiService {
     bool? geofenceTriggerOnExit,
     num? geofenceRadiusMeters,
     String? timezone,
+    String? scheduleDate,
   }) async {
     try {
       final data = <String, dynamic>{'title': title};
@@ -661,6 +742,7 @@ class ApiService {
         data['geofence_radius_meters'] = geofenceRadiusMeters;
       }
       if (timezone != null) data['timezone'] = timezone;
+      if (scheduleDate != null) data['schedule_date'] = scheduleDate;
       final response = await _dio.post('/api/v1/schedules', data: data);
       if (response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>?;
@@ -691,6 +773,7 @@ class ApiService {
     bool? geofenceTriggerOnExit,
     num? geofenceRadiusMeters,
     String? timezone,
+    String? scheduleDate,
   }) async {
     try {
       final data = <String, dynamic>{};
@@ -717,6 +800,7 @@ class ApiService {
         data['geofence_radius_meters'] = geofenceRadiusMeters;
       }
       if (timezone != null) data['timezone'] = timezone;
+      if (scheduleDate != null) data['schedule_date'] = scheduleDate;
       final response = await _dio.put(
         '/api/v1/schedules/$scheduleId',
         data: data,
@@ -763,18 +847,18 @@ class ApiService {
   // ===== 초대 코드 (Invite Code) =====
 
   Future<Map<String, dynamic>?> createInviteCode({
-    required String groupId,
+    required String tripId,
     String? targetRole,
     int? maxUses,
-    int? expiresInDays,
+    int? expiresHours,
   }) async {
     try {
-      final data = <String, dynamic>{'group_id': groupId};
+      final data = <String, dynamic>{};
       if (targetRole != null) data['target_role'] = targetRole;
       if (maxUses != null) data['max_uses'] = maxUses;
-      if (expiresInDays != null) data['expires_in_days'] = expiresInDays;
+      if (expiresHours != null) data['expires_hours'] = expiresHours;
       final response = await _dio.post(
-        '/api/v1/groups/$groupId/invite-codes',
+        '/api/v1/trips/$tripId/invite-codes',
         data: data,
       );
       if (response.data['success'] == true) {
@@ -787,27 +871,27 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getInviteCodesByGroup(
-    String groupId,
+  Future<List<Map<String, dynamic>>> getInviteCodesByTrip(
+    String tripId,
   ) async {
     try {
-      final response = await _dio.get('/api/v1/groups/$groupId/invite-codes');
+      final response = await _dio.get('/api/v1/trips/$tripId/invite-codes');
       if (response.data['success'] == true && response.data['data'] != null) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
       return [];
     } catch (e) {
-      debugPrint('[ApiService] getInviteCodesByGroup Error: $e');
+      debugPrint('[ApiService] getInviteCodesByTrip Error: $e');
       return [];
     }
   }
 
   Future<bool> deactivateInviteCode({
-    String? groupId,
+    required String tripId,
     required String codeId,
   }) async {
     try {
-      final response = await _dio.delete('/api/v1/invite-codes/$codeId');
+      final response = await _dio.patch('/api/v1/trips/$tripId/invite-codes/$codeId/deactivate');
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] deactivateInviteCode Error: $e');
@@ -1065,10 +1149,12 @@ class ApiService {
     }
   }
 
-  /// GET /api/v1/trips/invite/:inviteCode
+  /// POST /api/v1/invite-codes/validate
   Future<Map<String, dynamic>?> previewInviteCode(String code) async {
     try {
-      final response = await _dio.get('/api/v1/trips/invite/$code');
+      final response = await _dio.post('/api/v1/invite-codes/validate', data: {
+        'code': code,
+      });
       if (response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>;
       }
@@ -1079,11 +1165,11 @@ class ApiService {
     }
   }
 
-  /// POST /api/v1/trips/invite/accept
+  /// POST /api/v1/invite-codes/use
   Future<Map<String, dynamic>?> acceptInvite(String code) async {
     try {
-      final response = await _dio.post('/api/v1/trips/invite/accept', data: {
-        'inviteCode': code,
+      final response = await _dio.post('/api/v1/invite-codes/use', data: {
+        'code': code,
       });
       if (response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>;
@@ -1206,6 +1292,66 @@ class ApiService {
     }
   }
 
+  /// POST /api/v1/trips/:tripId/guardians/release-requests — 미성년자 가디언 해제 요청
+  Future<Map<String, dynamic>?> requestGuardianRelease(
+    String tripId,
+    String linkId,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/trips/$tripId/guardians/release-requests',
+        data: {'link_id': linkId},
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] requestGuardianRelease Error: $e');
+      return null;
+    }
+  }
+
+  /// PATCH /api/v1/trips/:tripId/guardians/release-requests/:requestId — 가디언 해제 요청 승인/거부
+  Future<Map<String, dynamic>?> respondToGuardianRelease(
+    String tripId,
+    String requestId,
+    String action,
+  ) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/trips/$tripId/guardians/release-requests/$requestId',
+        data: {'action': action},
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] respondToGuardianRelease Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/trips/:tripId/guardians/:linkId/schedule-summary — 가디언 일정 요약
+  Future<List<Map<String, dynamic>>> getGuardianScheduleSummary(
+    String tripId,
+    String linkId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/trips/$tripId/guardians/$linkId/schedule-summary',
+      );
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getGuardianScheduleSummary Error: $e');
+      return [];
+    }
+  }
+
   /// PATCH /api/v1/users/me — 계정 삭제 요청
   Future<bool> requestAccountDeletion() async {
     try {
@@ -1216,6 +1362,365 @@ class ApiService {
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] requestAccountDeletion Error: $e');
+      return false;
+    }
+  }
+
+  // ===== 채팅 (Chat) =====
+
+  /// GET /api/v1/chats/trip/:tripId/rooms — 채팅방 목록 조회
+  Future<List<Map<String, dynamic>>> getChatRooms(String tripId) async {
+    try {
+      final response = await _dio.get('/api/v1/chats/trip/$tripId/rooms');
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getChatRooms Error: $e');
+      return [];
+    }
+  }
+
+  /// GET /api/v1/chats/rooms/:roomId/messages — 메시지 조회 (커서 기반)
+  Future<List<Map<String, dynamic>>> getChatMessages(
+    String roomId, {
+    String? cursor,
+    int limit = 50,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'limit': limit};
+      if (cursor != null) queryParams['cursor'] = cursor;
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/messages',
+        queryParameters: queryParams,
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getChatMessages Error: $e');
+      return [];
+    }
+  }
+
+  /// POST /api/v1/chats/rooms/:roomId/messages — 메시지 전송
+  Future<Map<String, dynamic>?> sendChatMessage({
+    required String roomId,
+    required String content,
+    String messageType = 'text',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/rooms/$roomId/messages',
+        data: {
+          'content': content,
+          'message_type': messageType,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ?? response.data;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] sendChatMessage Error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/chats/rooms/:roomId/read — 읽음 처리
+  Future<bool> markChatRead({
+    required String roomId,
+    required String lastReadMessageId,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/v1/chats/rooms/$roomId/read',
+        data: {'lastReadMessageId': lastReadMessageId},
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] markChatRead Error: $e');
+      return false;
+    }
+  }
+
+  // ----- 채팅 확장: 공지 고정 (Pin) -----
+
+  /// PATCH /api/v1/chats/messages/:messageId/pin — 메시지 공지 고정
+  Future<Map<String, dynamic>?> pinChatMessage(String messageId) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/chats/messages/$messageId/pin',
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] pinChatMessage Error: $e');
+      return null;
+    }
+  }
+
+  /// DELETE /api/v1/chats/messages/:messageId/pin — 공지 고정 해제
+  Future<bool> unpinChatMessage(String messageId) async {
+    try {
+      await _dio.delete('/api/v1/chats/messages/$messageId/pin');
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] unpinChatMessage Error: $e');
+      return false;
+    }
+  }
+
+  /// GET /api/v1/chats/rooms/:roomId/pinned — 고정 공지 목록 조회 (최대 3건)
+  Future<List<Map<String, dynamic>>> getPinnedMessages(String roomId) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/pinned',
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getPinnedMessages Error: $e');
+      return [];
+    }
+  }
+
+  // ----- 채팅 확장: 메시지 삭제 -----
+
+  /// DELETE /api/v1/chats/messages/:messageId — 메시지 삭제 (소프트 삭제)
+  Future<bool> deleteChatMessage(String messageId) async {
+    try {
+      await _dio.delete('/api/v1/chats/messages/$messageId');
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] deleteChatMessage Error: $e');
+      return false;
+    }
+  }
+
+  // ----- 채팅 확장: 확장 메시지 전송 -----
+
+  /// POST /api/v1/chats/rooms/:roomId/messages — 확장된 메시지 전송 (위치 카드, 일정 카드 등)
+  Future<Map<String, dynamic>?> sendChatMessageExtended({
+    required String roomId,
+    required String content,
+    String messageType = 'text',
+    Map<String, dynamic>? locationData,
+    Map<String, dynamic>? cardData,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'content': content,
+        'message_type': messageType,
+      };
+      if (locationData != null) body['location_data'] = locationData;
+      if (cardData != null) body['card_data'] = cardData;
+
+      final response = await _dio.post(
+        '/api/v1/chats/rooms/$roomId/messages',
+        data: body,
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] sendChatMessageExtended Error: $e');
+      return null;
+    }
+  }
+
+  // ----- 채팅 확장: 투표 (Poll) — Phase 2 -----
+
+  /// POST /api/v1/chats/rooms/:roomId/polls — 투표 생성
+  Future<Map<String, dynamic>?> createChatPoll({
+    required String roomId,
+    required String title,
+    required List<Map<String, dynamic>> options,
+    String? closesAt,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'title': title,
+        'options': options,
+      };
+      if (closesAt != null) body['closes_at'] = closesAt;
+
+      final response = await _dio.post(
+        '/api/v1/chats/rooms/$roomId/polls',
+        data: body,
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] createChatPoll Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/chats/polls/:pollId — 투표 상세 조회
+  Future<Map<String, dynamic>?> getChatPoll(String pollId) async {
+    try {
+      final response = await _dio.get('/api/v1/chats/polls/$pollId');
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getChatPoll Error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/chats/polls/:pollId/vote — 투표 응답
+  Future<Map<String, dynamic>?> castChatVote(
+    String pollId,
+    int optionId,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/polls/$pollId/vote',
+        data: {'option_id': optionId},
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] castChatVote Error: $e');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/chats/polls/:pollId/close — 투표 수동 종료
+  Future<Map<String, dynamic>?> closeChatPoll(String pollId) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/polls/$pollId/close',
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] closeChatPoll Error: $e');
+      return null;
+    }
+  }
+
+  // ----- 채팅 확장: 검색 / 미디어 / 리액션 — Phase 3 -----
+
+  /// GET /api/v1/chats/rooms/:roomId/messages/search — 메시지 검색
+  Future<List<Map<String, dynamic>>> searchChatMessages(
+    String roomId,
+    String query, {
+    String? cursor,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'q': query,
+        'limit': limit,
+      };
+      if (cursor != null) queryParams['cursor'] = cursor;
+
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/messages/search',
+        queryParameters: queryParams,
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] searchChatMessages Error: $e');
+      return [];
+    }
+  }
+
+  /// GET /api/v1/chats/rooms/:roomId/media — 미디어 모아보기
+  Future<List<Map<String, dynamic>>> getChatMedia(
+    String roomId, {
+    String? cursor,
+    int limit = 30,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'limit': limit};
+      if (cursor != null) queryParams['cursor'] = cursor;
+
+      final response = await _dio.get(
+        '/api/v1/chats/rooms/$roomId/media',
+        queryParameters: queryParams,
+      );
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(response.data);
+      }
+      if (response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiService] getChatMedia Error: $e');
+      return [];
+    }
+  }
+
+  /// POST /api/v1/chats/messages/:messageId/reactions — 리액션 추가
+  Future<Map<String, dynamic>?> addChatReaction(
+    String messageId,
+    String emoji,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/chats/messages/$messageId/reactions',
+        data: {'emoji': emoji},
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data['data'] as Map<String, dynamic>? ??
+            response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] addChatReaction Error: $e');
+      return null;
+    }
+  }
+
+  /// DELETE /api/v1/chats/messages/:messageId/reactions/:emoji — 리액션 제거
+  Future<bool> removeChatReaction(String messageId, String emoji) async {
+    try {
+      await _dio.delete(
+        '/api/v1/chats/messages/$messageId/reactions/$emoji',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] removeChatReaction Error: $e');
       return false;
     }
   }
@@ -1233,13 +1738,10 @@ class ApiService {
     }
   }
 
-  /// PATCH /api/v1/users/me — 계정 삭제 요청 취소
+  /// POST /api/v1/auth/cancel-deletion — 계정 삭제 요청 취소
   Future<bool> cancelAccountDeletion() async {
     try {
-      final response = await _dio.patch(
-        '/api/v1/users/me',
-        data: {'deletionRequestedAt': null},
-      );
+      final response = await _dio.post('/api/v1/auth/cancel-deletion');
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] cancelAccountDeletion Error: $e');
@@ -1311,6 +1813,102 @@ class ApiService {
       return null;
     } catch (e) {
       debugPrint('[ApiService] getSafetyGuide Error: $e');
+      return null;
+    }
+  }
+
+  // ===== 안전가이드 통합 API (DOC-T3-SFG-021 §3.2) =====
+
+  /// GET /api/v1/guides/:countryCode — 전체 6탭 통합
+  Future<Map<String, dynamic>?> getSafetyGuideAll(String countryCode) async {
+    try {
+      final response = await _dio.get('/api/v1/guides/$countryCode');
+      if (response.data != null) {
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : {'data': response.data};
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideAll Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/overview
+  Future<Map<String, dynamic>?> getSafetyGuideOverview(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/overview');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideOverview Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/safety
+  Future<Map<String, dynamic>?> getSafetyGuideSafety(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/safety');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideSafety Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/medical
+  Future<Map<String, dynamic>?> getSafetyGuideMedical(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/medical');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideMedical Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/entry
+  Future<Map<String, dynamic>?> getSafetyGuideEntry(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/entry');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideEntry Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/emergency — 긴급연락처 (§3.2.5)
+  Future<Map<String, dynamic>?> getSafetyGuideEmergency(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/emergency');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideEmergency Error: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/guides/:countryCode/local-life
+  Future<Map<String, dynamic>?> getSafetyGuideLocalLife(
+      String countryCode) async {
+    try {
+      final response =
+          await _dio.get('/api/v1/guides/$countryCode/local-life');
+      return response.data is Map<String, dynamic> ? response.data : null;
+    } catch (e) {
+      debugPrint('[ApiService] getSafetyGuideLocalLife Error: $e');
       return null;
     }
   }

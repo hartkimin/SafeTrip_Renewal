@@ -6,6 +6,7 @@ import { UsersService } from './users.service';
 import { RegisterTestUserDto } from './dto/register-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
+import { CreateEmergencyContactDto, UpdateEmergencyContactDto } from './dto/emergency-contact.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth('firebase-auth')
@@ -74,6 +75,20 @@ export class UsersController {
         };
     }
 
+    @Get('check-nickname')
+    @ApiOperation({ summary: '닉네임 중복 검사' })
+    @ApiQuery({ name: 'nickname', required: true })
+    async checkNickname(
+        @CurrentUser() userId: string,
+        @Query('nickname') nickname: string,
+    ) {
+        if (!nickname || nickname.length < 2) {
+            throw new BadRequestException('닉네임은 2자 이상 입력해 주세요');
+        }
+        await this.usersService.checkNicknameDuplicate(nickname, userId);
+        return { success: true, data: { available: true } };
+    }
+
     @Get('me')
     @ApiOperation({ summary: '내 프로필 조회' })
     async getMyProfile(@CurrentUser() userId: string) {
@@ -95,6 +110,8 @@ export class UsersController {
         if (body.profileImageUrl !== undefined) updateData.profileImageUrl = body.profileImageUrl;
         if (body.dateOfBirth !== undefined) updateData.dateOfBirth = body.dateOfBirth;
         if (body.locationSharingMode !== undefined) updateData.locationSharingMode = body.locationSharingMode;
+        if (body.avatarId !== undefined) updateData.avatarId = body.avatarId;
+        if (body.privacyLevel !== undefined) updateData.privacyLevel = body.privacyLevel;
 
         if (Object.keys(updateData).length === 0) {
             const user = await this.usersService.getProfile(userId);
@@ -159,6 +176,53 @@ export class UsersController {
         };
     }
 
+    // ── Emergency Contacts ──
+
+    @Get('me/emergency-contacts')
+    @ApiOperation({ summary: '내 긴급연락처 목록 조회' })
+    async getMyEmergencyContacts(@CurrentUser() userId: string) {
+        const contacts = await this.usersService.getEmergencyContacts(userId);
+        return { success: true, data: contacts };
+    }
+
+    @Post('me/emergency-contacts')
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({ summary: '긴급연락처 추가 (최대 2명)' })
+    async createEmergencyContact(
+        @CurrentUser() userId: string,
+        @Body() body: CreateEmergencyContactDto,
+    ) {
+        const contact = await this.usersService.createEmergencyContact(userId, {
+            contactName: body.contactName,
+            phoneNumber: body.phoneNumber,
+            phoneCountryCode: body.phoneCountryCode,
+            relationship: body.relationship,
+            contactOrder: body.contactOrder,
+        });
+        return { success: true, data: contact };
+    }
+
+    @Put('me/emergency-contacts/:contactId')
+    @ApiOperation({ summary: '긴급연락처 수정' })
+    async updateEmergencyContact(
+        @CurrentUser() userId: string,
+        @Param('contactId') contactId: string,
+        @Body() body: UpdateEmergencyContactDto,
+    ) {
+        const contact = await this.usersService.updateEmergencyContact(userId, contactId, body);
+        return { success: true, data: contact };
+    }
+
+    @Delete('me/emergency-contacts/:contactId')
+    @ApiOperation({ summary: '긴급연락처 삭제 (미성년자 차단)' })
+    async deleteEmergencyContact(
+        @CurrentUser() userId: string,
+        @Param('contactId') contactId: string,
+    ) {
+        await this.usersService.deleteEmergencyContact(userId, contactId);
+        return { success: true, data: { message: '긴급 연락처가 삭제되었습니다' } };
+    }
+
     // ── Admin Endpoints (반드시 :userId 파라미터 라우트 앞에 위치) ──
 
     @Get('admin/list')
@@ -180,6 +244,20 @@ export class UsersController {
         @Body() body: { reason?: string; isBanned: boolean },
     ) {
         return this.usersService.banUser(userId, body);
+    }
+
+    @Get(':userId/profile')
+    @ApiOperation({ summary: '타인 프로필 조회 (역할별 필터링)' })
+    @ApiQuery({ name: 'trip_id', required: false })
+    async getUserProfile(
+        @CurrentUser() requesterId: string,
+        @Param('userId') targetUserId: string,
+        @Query('trip_id') tripId?: string,
+    ) {
+        const profile = await this.usersService.getFilteredProfile(
+            requesterId, targetUserId, tripId || null,
+        );
+        return { success: true, data: profile };
     }
 
     @Public()

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 /**
  * TB_GUARDIAN -- 가디언 기본 정보 (도메인 C)
@@ -282,4 +282,39 @@ export class GuardianSnapshot {
 
     @Column({ name: 'accuracy', type: 'float', nullable: true, select: false })
     accuracy: number | null;
+}
+
+/**
+ * TB_GUARDIAN_RELEASE_REQUEST -- 미성년자 가디언 해제 요청 (도메인 C)
+ * DOC-T3-MBR-019 §10.2
+ */
+@Entity('tb_guardian_release_request')
+@Index('idx_guardian_release_request_trip', ['tripId', 'status'])
+export class GuardianReleaseRequest {
+    @PrimaryGeneratedColumn('uuid', { name: 'request_id' })
+    requestId: string;
+
+    @Column({ name: 'link_id', type: 'uuid' })
+    linkId: string;
+
+    @Column({ name: 'trip_id', type: 'uuid' })
+    tripId: string;
+
+    @Column({ name: 'requested_by', type: 'varchar', length: 128 })
+    requestedBy: string;
+
+    @Column({ name: 'status', type: 'varchar', length: 20, default: 'pending' })
+    status: string; // 'pending' | 'approved' | 'rejected'
+
+    @Column({ name: 'captain_id', type: 'varchar', length: 128, nullable: true })
+    captainId: string | null;
+
+    @Column({ name: 'responded_at', type: 'timestamptz', nullable: true })
+    respondedAt: Date | null;
+
+    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+    updatedAt: Date;
 }

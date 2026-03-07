@@ -379,4 +379,335 @@ export class LocationsService {
             count: locations.length
         };
     }
+
+    // ── 멤버별 이동기록 (§7~§9 접근 제어 적용) ──
+
+    async getMemberMovementHistory(
+        tripId: string,
+        targetUserId: string,
+        date: string,
+        access: { role: string; isGuardian: boolean; isPaid?: boolean },
+    ) {
+        // §9 가디언 접근 범위 필터링
+        let timeFilter: { start: Date; end: Date } | null = null;
+
+        if (access.isGuardian && !access.isPaid) {
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const requestedDate = new Date(date + 'T00:00:00Z');
+
+            if (requestedDate < twentyFourHoursAgo) {
+                return { sessions: [], date, total: 0, upgrade_required: true };
+            }
+            timeFilter = { start: twentyFourHoursAgo, end: now };
+        }
+
+        const query = this.sessionRepo.createQueryBuilder('ms')
+            .where('ms.userId = :userId', { userId: targetUserId })
+            .andWhere('DATE(ms.startTime) = :date', { date })
+            .orderBy('ms.startTime', 'ASC');
+
+        if (timeFilter) {
+            query.andWhere('ms.startTime >= :start', { start: timeFilter.start });
+        }
+
+        const [sessions, total] = await query.getManyAndCount();
+
+        const sessionsWithStats = await Promise.all(
+            sessions.map(async (session) => {
+                const locationCount = await this.locationRepo.count({
+                    where: { movementSessionId: session.sessionId },
+                });
+                return { ...session, location_count: locationCount };
+            }),
+        );
+
+        return { sessions: sessionsWithStats, date, total };
+    }
+
+    async getMemberTimeline(
+        tripId: string,
+        targetUserId: string,
+        date: string,
+        access: { role: string; isGuardian: boolean; isPaid?: boolean },
+    ) {
+        if (access.isGuardian && !access.isPaid) {
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const requestedDate = new Date(date + 'T00:00:00Z');
+            if (requestedDate < twentyFourHoursAgo) {
+                return { events: [], date, upgrade_required: true };
+            }
+        }
+
+        const dayStart = new Date(date + 'T00:00:00Z');
+        const dayEnd = new Date(date + 'T23:59:59.999Z');
+
+        const locations = await this.locationRepo.find({
+            where: {
+                userId: targetUserId,
+                recordedAt: Between(dayStart, dayEnd),
+            },
+            order: { recordedAt: 'ASC' },
+        });
+
+        const stayPoints = await this.stayPointRepo.find({
+            where: {
+                userId: targetUserId,
+                tripId,
+                arrivedAt: Between(dayStart, dayEnd),
+            },
+            order: { arrivedAt: 'ASC' },
+        });
+
+        const events = this.buildTimelineEvents(locations, stayPoints);
+
+        return { events, date, location_count: locations.length, stay_point_count: stayPoints.length };
+    }
+
+    private buildTimelineEvents(locations: any[], stayPoints: any[]) {
+        const events: any[] = [];
+
+        let currentSessionId: string | null = null;
+        for (const loc of locations) {
+            if (loc.movementSessionId && loc.movementSessionId !== currentSessionId) {
+                events.push({
+                    type: 'movement_start',
+                    time: loc.recordedAt,
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                    session_id: loc.movementSessionId,
+                });
+                currentSessionId = loc.movementSessionId;
+            }
+        }
+
+        const sessionIds = [...new Set(locations.filter(l => l.movementSessionId).map(l => l.movementSessionId))];
+        for (const sid of sessionIds) {
+            const sessionLocs = locations.filter(l => l.movementSessionId === sid);
+            if (sessionLocs.length > 0) {
+                const lastLoc = sessionLocs[sessionLocs.length - 1];
+                events.push({
+                    type: 'movement_end',
+                    time: lastLoc.recordedAt,
+                    latitude: lastLoc.latitude,
+                    longitude: lastLoc.longitude,
+                    session_id: sid,
+                });
+            }
+        }
+
+        for (const sp of stayPoints) {
+            events.push({
+                type: 'stay_point',
+                time: sp.arrivedAt,
+                end_time: sp.leftAt,
+                latitude: sp.latitude,
+                longitude: sp.longitude,
+                duration_minutes: sp.durationMinutes,
+                place_name: sp.placeName,
+            });
+        }
+
+        events.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+        return events;
+    }
+
+    async getMovementSessionStats(userId: string, sessionId: string) {
+        const session = await this.sessionRepo.findOne({ where: { sessionId, userId } });
+        if (!session) return null;
+
+        const locations = await this.locationRepo.find({
+            where: { movementSessionId: sessionId },
+            order: { recordedAt: 'ASC' },
+        });
+
+        if (locations.length === 0) return { session_id: sessionId, total_distance_km: 0, avg_speed: 0, max_speed: 0, duration_minutes: 0, location_count: 0 };
+
+        let totalDistance = 0;
+        let maxSpeed = 0;
+        const speeds: number[] = [];
+
+        for (let i = 1; i < locations.length; i++) {
+            const dist = this.haversineDistance(
+                locations[i - 1].latitude, locations[i - 1].longitude,
+                locations[i].latitude, locations[i].longitude,
+            );
+            totalDistance += dist;
+
+            if (locations[i].speed != null) {
+                speeds.push(locations[i].speed!);
+                if (locations[i].speed! > maxSpeed) maxSpeed = locations[i].speed!;
+            }
+        }
+
+        const durationMs = session.endTime && session.startTime
+            ? new Date(session.endTime).getTime() - new Date(session.startTime).getTime()
+            : new Date(locations[locations.length - 1].recordedAt).getTime() - new Date(locations[0].recordedAt).getTime();
+
+        return {
+            session_id: sessionId,
+            total_distance_km: Math.round(totalDistance * 100) / 100,
+            avg_speed: speeds.length > 0 ? Math.round((speeds.reduce((a, b) => a + b, 0) / speeds.length) * 10) / 10 : 0,
+            max_speed: Math.round(maxSpeed * 10) / 10,
+            duration_minutes: Math.round(durationMs / 60000),
+            location_count: locations.length,
+        };
+    }
+
+    private haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    async detectStayPoints(userId: string, tripId: string, sessionId: string) {
+        const locations = await this.locationRepo.find({
+            where: { movementSessionId: sessionId, userId },
+            order: { recordedAt: 'ASC' },
+        });
+
+        if (locations.length < 3) return [];
+
+        const stayPoints: any[] = [];
+        let clusterStart = 0;
+
+        for (let i = 1; i < locations.length; i++) {
+            const dist = this.haversineDistance(
+                locations[clusterStart].latitude, locations[clusterStart].longitude,
+                locations[i].latitude, locations[i].longitude,
+            ) * 1000;
+
+            if (dist > 100) {
+                const clusterLocs = locations.slice(clusterStart, i);
+                const durationMs = new Date(clusterLocs[clusterLocs.length - 1].recordedAt).getTime()
+                                 - new Date(clusterLocs[0].recordedAt).getTime();
+                const durationMinutes = durationMs / 60000;
+
+                if (clusterLocs.length >= 3 && durationMinutes >= 5) {
+                    const centerLat = clusterLocs.reduce((s, l) => s + l.latitude, 0) / clusterLocs.length;
+                    const centerLng = clusterLocs.reduce((s, l) => s + l.longitude, 0) / clusterLocs.length;
+
+                    const sp = this.stayPointRepo.create({
+                        userId,
+                        tripId,
+                        latitude: centerLat,
+                        longitude: centerLng,
+                        arrivedAt: clusterLocs[0].recordedAt,
+                        leftAt: clusterLocs[clusterLocs.length - 1].recordedAt,
+                        durationMinutes: Math.round(durationMinutes),
+                    });
+                    stayPoints.push(sp);
+                }
+                clusterStart = i;
+            }
+        }
+
+        const lastCluster = locations.slice(clusterStart);
+        if (lastCluster.length >= 3) {
+            const durationMs = new Date(lastCluster[lastCluster.length - 1].recordedAt).getTime()
+                             - new Date(lastCluster[0].recordedAt).getTime();
+            if (durationMs / 60000 >= 5) {
+                const centerLat = lastCluster.reduce((s, l) => s + l.latitude, 0) / lastCluster.length;
+                const centerLng = lastCluster.reduce((s, l) => s + l.longitude, 0) / lastCluster.length;
+                stayPoints.push(this.stayPointRepo.create({
+                    userId, tripId,
+                    latitude: centerLat, longitude: centerLng,
+                    arrivedAt: lastCluster[0].recordedAt,
+                    leftAt: lastCluster[lastCluster.length - 1].recordedAt,
+                    durationMinutes: Math.round(durationMs / 60000),
+                }));
+            }
+        }
+
+        if (stayPoints.length > 0) {
+            await this.stayPointRepo.save(stayPoints);
+        }
+
+        return stayPoints;
+    }
+
+    // §13 개인 이동기록 인사이트
+    async getMemberInsights(tripId: string, userId: string, date: string) {
+        const dayStart = new Date(date + 'T00:00:00Z');
+        const dayEnd = new Date(date + 'T23:59:59.999Z');
+
+        const locations = await this.locationRepo.find({
+            where: { userId, recordedAt: Between(dayStart, dayEnd) },
+            order: { recordedAt: 'ASC' },
+        });
+
+        let totalDistance = 0;
+        for (let i = 1; i < locations.length; i++) {
+            totalDistance += this.haversineDistance(
+                locations[i - 1].latitude, locations[i - 1].longitude,
+                locations[i].latitude, locations[i].longitude,
+            );
+        }
+
+        const activityDistribution: Record<string, number> = {};
+        for (const loc of locations) {
+            const type = loc.activityType || loc.motionState || 'unknown';
+            activityDistribution[type] = (activityDistribution[type] || 0) + 1;
+        }
+
+        const stayPoints = await this.stayPointRepo.find({
+            where: { userId, tripId, arrivedAt: Between(dayStart, dayEnd) },
+            order: { durationMinutes: 'DESC' },
+            take: 3,
+        });
+
+        return {
+            date,
+            daily_distance_km: Math.round(totalDistance * 100) / 100,
+            location_count: locations.length,
+            activity_distribution: activityDistribution,
+            top_stay_points: stayPoints.map(sp => ({
+                place_name: sp.placeName,
+                latitude: sp.latitude,
+                longitude: sp.longitude,
+                duration_minutes: sp.durationMinutes,
+            })),
+            longest_stay: stayPoints[0] ? {
+                place_name: stayPoints[0].placeName,
+                duration_minutes: stayPoints[0].durationMinutes,
+            } : null,
+        };
+    }
+
+    // §13.2 그룹 인사이트
+    async getGroupInsights(tripId: string) {
+        const latestLocations = await this.getGroupLocations(tripId);
+
+        if (latestLocations.length === 0) return { members: [], farthest_member: null };
+
+        const centerLat = latestLocations.reduce((s, l) => s + l.latitude, 0) / latestLocations.length;
+        const centerLng = latestLocations.reduce((s, l) => s + l.longitude, 0) / latestLocations.length;
+
+        const memberDistances = latestLocations.map(loc => ({
+            user_id: loc.userId,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            distance_from_center_km: this.haversineDistance(centerLat, centerLng, loc.latitude, loc.longitude),
+            is_straggler: false,
+        }));
+
+        for (const md of memberDistances) {
+            md.is_straggler = md.distance_from_center_km > 0.5;
+        }
+
+        memberDistances.sort((a, b) => b.distance_from_center_km - a.distance_from_center_km);
+
+        return {
+            group_center: { latitude: centerLat, longitude: centerLng },
+            members: memberDistances,
+            farthest_member: memberDistances[0] || null,
+            stragglers: memberDistances.filter(m => m.is_straggler),
+        };
+    }
 }

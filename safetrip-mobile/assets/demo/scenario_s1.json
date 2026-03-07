@@ -100,6 +100,7 @@
     {"time_offset_minutes": 120, "type": "geofence_out", "description": "정민수 학생이 일정 구역을 벗어났습니다", "member_id": "m_crew01"},
     {"time_offset_minutes": 125, "type": "notification", "description": "가디언 알림: 정민수 학생 이탈 감지"},
     {"time_offset_minutes": 130, "type": "geofence_in", "description": "정민수 학생이 구역으로 복귀했습니다", "member_id": "m_crew01"},
+    {"time_offset_minutes": 135, "type": "member_left", "description": "장우진 학생이 그룹에서 일시적으로 이탈했습니다", "member_id": "m_crew05"},
     {"time_offset_minutes": 240, "type": "sos_drill", "description": "SOS 모의 훈련 시작", "member_id": "m_chief1"},
     {"time_offset_minutes": 245, "type": "sos_resolved", "description": "SOS 모의 훈련 종료"},
     {"time_offset_minutes": 480, "type": "daily_summary", "description": "1일차 요약: 전원 안전, 이탈 1건 복귀 완료"},

@@ -463,10 +463,18 @@ class OfflineSyncService {
     Map<String, dynamic> chat,
   ) async {
     try {
-      // TODO: 실제 채팅 API 엔드포인트 연결 시 구현
-      debugPrint('[OfflineSync] 채팅 동기화: ${chat['local_id']}');
-      return true;
+      final tripId = chat['trip_id'] as String;
+      final content = chat['content'] as String;
+      final messageType = chat['message_type'] as String? ?? 'text';
+      // trip_id를 roomId로 사용 (그룹 채팅은 trip 단위)
+      final result = await apiService.sendChatMessage(
+        roomId: tripId,
+        content: content,
+        messageType: messageType,
+      );
+      return result != null;
     } catch (e) {
+      debugPrint('[OfflineSync] 채팅 업로드 실패: $e');
       return false;
     }
   }

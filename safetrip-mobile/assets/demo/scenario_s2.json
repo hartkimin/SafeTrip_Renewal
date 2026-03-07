@@ -92,6 +92,7 @@
     {"time_offset_minutes": 0, "type": "trip_start", "description": "도쿄 여행이 시작되었습니다!"},
     {"time_offset_minutes": 60, "type": "geofence_in", "description": "시부야 일정 구역 도착", "member_id": "m_captain"},
     {"time_offset_minutes": 180, "type": "chat_message", "description": "이수현: 시부야 인크레더블! 사진 많이 찍었어"},
+    {"time_offset_minutes": 300, "type": "schedule_changed", "description": "크루장이 일정을 변경했습니다: 시부야 → 하라주쿠"},
     {"time_offset_minutes": 360, "type": "geofence_out", "description": "박도윤님이 자유시간 중 1km 이상 이동", "member_id": "m_crew01"},
     {"time_offset_minutes": 480, "type": "notification", "description": "자유시간 종료 30분 전 알림"},
     {"time_offset_minutes": 720, "type": "daily_summary", "description": "1일차 완료: 전원 안전"},

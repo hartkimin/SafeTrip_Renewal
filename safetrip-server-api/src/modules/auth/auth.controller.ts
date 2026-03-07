@@ -83,8 +83,11 @@ export class AuthController {
     @ApiBearerAuth('firebase-auth')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: '계정 삭제 요청 (7일 유예)' })
-    async deleteAccount(@CurrentUser() userId: string) {
-        return this.authService.requestDeletion(userId);
+    async deleteAccount(
+        @CurrentUser() userId: string,
+        @Body() body?: { deletion_reason?: string },
+    ) {
+        return this.authService.requestDeletion(userId, body?.deletion_reason);
     }
 
     @Post('cancel-deletion')

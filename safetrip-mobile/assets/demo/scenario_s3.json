@@ -94,6 +94,7 @@
     {"time_offset_minutes": 0, "type": "trip_start", "description": "방콕 출장이 시작되었습니다"},
     {"time_offset_minutes": 60, "type": "geofence_in", "description": "호텔 도착 확인", "member_id": "m_captain"},
     {"time_offset_minutes": 120, "type": "all_arrived", "description": "전원 호텔 도착 확인"},
+    {"time_offset_minutes": 200, "type": "member_left", "description": "크루 1명이 업무 회의로 일시 이탈했습니다", "member_id": "m_crew01"},
     {"time_offset_minutes": 480, "type": "geofence_out", "description": "정사원님이 자유시간 중 이동", "member_id": "m_crew03"},
     {"time_offset_minutes": 720, "type": "daily_summary", "description": "1일차 완료: 전원 안전"},
     {"time_offset_minutes": 1440, "type": "geofence_out", "description": "권대리님이 왓포에서 이탈", "member_id": "m_crew13"},
