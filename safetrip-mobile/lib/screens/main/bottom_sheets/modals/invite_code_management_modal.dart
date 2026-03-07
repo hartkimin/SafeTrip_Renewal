@@ -189,7 +189,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
               ),
               const SizedBox(height: AppTokens.spacing8),
               DropdownButtonFormField<String>(
-                value: selectedRole,
+                initialValue: selectedRole,
                 decoration: InputDecoration(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -215,7 +215,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
               ),
               const SizedBox(height: AppTokens.spacing8),
               DropdownButtonFormField<int>(
-                value: maxUses,
+                initialValue: maxUses,
                 decoration: InputDecoration(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -241,7 +241,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
               ),
               const SizedBox(height: AppTokens.spacing8),
               DropdownButtonFormField<int>(
-                value: expiresInDays,
+                initialValue: expiresInDays,
                 decoration: InputDecoration(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -475,7 +475,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
     final codeId = codeData['invite_code_id'] as String? ?? '';
     final role = codeData['target_role'] as String?;
     final maxUses = codeData['max_uses'] as int? ?? 0;
-    final usedCount = codeData['used_count'] as int? ?? 0;
+    final usedCount = codeData['current_uses'] as int? ?? 0;
     final isExpired = codeData['is_expired'] == true;
     final expiresAt = codeData['expires_at'] as String?;
 
