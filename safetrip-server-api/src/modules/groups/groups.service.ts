@@ -71,6 +71,16 @@ export class GroupsService {
     }
 
     async addMember(groupId: string, tripId: string, userId: string, role = 'crew') {
+        // §17#3: 동일 여행 내 동일 유저 중복 멤버 방지
+        const existingMember = await this.memberRepo.findOne({
+            where: { tripId, userId, status: 'active' },
+        });
+        if (existingMember) {
+            throw new BadRequestException(
+                `이미 이 여행에 참여 중입니다 (현재 역할: ${existingMember.memberRole}). (비즈니스 원칙 §17#3)`,
+            );
+        }
+
         // §02.2: 일정 겹침 체크 (captain/crew_chief/crew 대상)
         if (['captain', 'crew_chief', 'crew'].includes(role)) {
             await this.checkDateOverlap(userId, tripId);
@@ -211,7 +221,7 @@ export class GroupsService {
             throw new NotFoundException('Invalid, expired, or used-up invite code');
         }
 
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) {
+        if (invite.maxUses && invite.currentUses >= invite.maxUses) {
             throw new NotFoundException('Invalid, expired, or used-up invite code');
         }
 
@@ -238,7 +248,7 @@ export class GroupsService {
 
         return {
             target_role: invite.targetRole,
-            uses_remaining: invite.maxUses ? invite.maxUses - invite.usedCount : null,
+            uses_remaining: invite.maxUses ? invite.maxUses - invite.currentUses : null,
             trip: tripInfo
         };
     }
@@ -256,7 +266,7 @@ export class GroupsService {
         if (invite.expiresAt && new Date() > invite.expiresAt) throw new BadRequestException('ERR_CODE_EXPIRED');
 
         // Step 4: Uses remaining
-        if (invite.maxUses && invite.usedCount >= invite.maxUses) throw new BadRequestException('ERR_CODE_EXHAUSTED');
+        if (invite.maxUses && invite.currentUses >= invite.maxUses) throw new BadRequestException('ERR_CODE_EXHAUSTED');
 
         const group = await this.groupRepo.findOne({ where: { groupId: invite.groupId } });
         if (!group) throw new NotFoundException('Group not found');
@@ -292,7 +302,7 @@ export class GroupsService {
         const role = invite.targetRole;
         const newMember = await this.addMember(group.groupId, trip.tripId, userId, role);
 
-        invite.usedCount += 1;
+        invite.currentUses += 1;
         await this.inviteCodeRepo.save(invite);
 
         return {
