@@ -27,7 +27,7 @@ class _DemoTimeSliderState extends ConsumerState<DemoTimeSlider> {
     final durationDays = scenario.durationDays;
     // Range: -7 to durationDays + 3, clamped at 15 total days from trip start
     final maxDay = (durationDays + 3).clamp(0, 15);
-    final minDay = -7;
+    const minDay = -7;
     final totalRange = maxDay - minDay; // total slider range in days
 
     // Calculate current position from simStartTime / currentSimTime
@@ -146,7 +146,7 @@ class _DemoTimeSliderState extends ConsumerState<DemoTimeSlider> {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                '최대 15일까지 시뮬레이션 가능합니다',
+                '여행은 최대 15일까지 설정 가능합니다. 분할 생성해 주세요',
                 style: AppTypography.bodySmall.copyWith(
                   color: AppColors.textWarning,
                   fontWeight: FontWeight.w500,
@@ -164,7 +164,7 @@ class _DemoTimeSliderState extends ConsumerState<DemoTimeSlider> {
     final hour = hourFraction.round().clamp(0, 23);
 
     if (day < 0) {
-      return 'D${day} ${hour.toString().padLeft(2, '0')}:00';
+      return 'D$day ${hour.toString().padLeft(2, '0')}:00';
     } else if (day == 0) {
       return 'D-Day ${hour.toString().padLeft(2, '0')}:00';
     } else {

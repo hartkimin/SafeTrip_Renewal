@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../data/demo_analytics.dart';
 import '../../providers/demo_state_provider.dart';
+import 'demo_conversion_modal.dart';
 
 /// §3.3: 가디언 무료/유료 비교 뷰 — 캡틴 역할일 때만 표시
 class DemoGuardianCompare extends ConsumerWidget {
@@ -63,7 +64,7 @@ class DemoGuardianCompare extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
 
               // Comparison cards side by side
-              Row(
+              const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Free tier
@@ -73,17 +74,17 @@ class DemoGuardianCompare extends ConsumerWidget {
                       price: '무료',
                       priceSubtext: '최대 2명',
                       color: AppColors.textTertiary,
-                      features: const [
+                      features: [
                         _Feature('당일 위치 확인', true),
                         _Feature('기본 알림', true),
                         _Feature('24시간 이력', true),
                         _Feature('전체 이동기록', false),
                         _Feature('확장 알림', false),
-                        _Feature('히스토리 분석', false),
+                        _Feature('히스토리 조회', false),
                       ],
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: AppSpacing.sm),
                   // Paid tier
                   Expanded(
                     child: _TierCard(
@@ -92,13 +93,13 @@ class DemoGuardianCompare extends ConsumerWidget {
                       priceSubtext: '/여행 (3~5번째)',
                       color: AppColors.primaryTeal,
                       isHighlighted: true,
-                      features: const [
+                      features: [
                         _Feature('당일 위치 확인', true),
                         _Feature('기본 알림', true),
                         _Feature('24시간 이력', true),
                         _Feature('전체 이동기록', true),
                         _Feature('확장 알림', true),
-                        _Feature('히스토리 분석', true),
+                        _Feature('히스토리 조회', true),
                       ],
                     ),
                   ),
@@ -173,8 +174,11 @@ class DemoGuardianCompare extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              DemoConversionModal.show(context);
+            },
+            child: const Text('실제 앱 시작하기'),
           ),
           FilledButton(
             onPressed: () {

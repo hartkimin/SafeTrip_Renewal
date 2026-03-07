@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -81,49 +82,83 @@ class DemoConversionModal extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // CTA: 여행 만들기
-            SizedBox(
-              width: double.infinity,
-              height: AppSpacing.buttonHeight,
-              child: ElevatedButton(
-                onPressed: () => _exitAndNavigate(context, ref, RoutePaths.authPhone),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryTeal,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radius12),
-                  ),
-                ),
-                child: Text(
-                  '여행 만들기',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
+            // §8: 오프라인 가드 적용 CTA
+            FutureBuilder<List<ConnectivityResult>>(
+              future: Connectivity().checkConnectivity(),
+              builder: (context, snapshot) {
+                final isOffline = snapshot.hasData &&
+                    snapshot.data!.contains(ConnectivityResult.none);
 
-            // CTA: 초대코드로 참여
-            SizedBox(
-              width: double.infinity,
-              height: AppSpacing.buttonHeight,
-              child: OutlinedButton(
-                onPressed: () => _exitAndNavigate(context, ref, RoutePaths.tripJoin),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primaryTeal),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radius12),
-                  ),
-                ),
-                child: Text(
-                  '초대코드로 참여',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: AppColors.primaryTeal,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // CTA: 여행 만들기
+                    SizedBox(
+                      width: double.infinity,
+                      height: AppSpacing.buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: isOffline
+                            ? null
+                            : () => _exitAndNavigate(
+                                context, ref, RoutePaths.authPhone),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryTeal,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radius12),
+                          ),
+                        ),
+                        child: Text(
+                          '여행 만들기',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // CTA: 초대코드로 참여
+                    SizedBox(
+                      width: double.infinity,
+                      height: AppSpacing.buttonHeight,
+                      child: OutlinedButton(
+                        onPressed: isOffline
+                            ? null
+                            : () => _exitAndNavigate(
+                                context, ref, RoutePaths.tripJoin),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primaryTeal),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radius12),
+                          ),
+                        ),
+                        child: Text(
+                          '초대코드로 참여',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.primaryTeal,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // §8: 오프라인 안내
+                    if (isOffline) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        '온라인 연결 후 이용 가능합니다',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textWarning,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.sm),
 
@@ -166,9 +201,9 @@ class DemoConversionModal extends ConsumerWidget {
     ref.read(demoStateProvider.notifier).endDemo();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('is_demo_mode');
-    await prefs.remove('user_id');
-    await prefs.remove('user_name');
-    await prefs.remove('group_id');
-    await prefs.remove('user_role');
+    await prefs.remove('demo_user_id');
+    await prefs.remove('demo_user_name');
+    await prefs.remove('demo_group_id');
+    await prefs.remove('demo_user_role');
   }
 }

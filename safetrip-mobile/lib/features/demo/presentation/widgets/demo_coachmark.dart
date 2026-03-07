@@ -7,7 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../providers/demo_state_provider.dart';
 import 'demo_coachmark_data.dart';
 
-/// §3.7: Coachmark overlay with tooltip, arrow, and semi-transparent backdrop.
+/// §3.7: Coachmark overlay with tooltip, arrow triangle, and semi-transparent backdrop.
 /// Shows once per coachmark per demo session. "Skip All" dismisses all.
 class DemoCoachmarkOverlay extends ConsumerWidget {
   const DemoCoachmarkOverlay({
@@ -27,13 +27,17 @@ class DemoCoachmarkOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final screenSize = MediaQuery.of(context).size;
 
-    // Position tooltip relative to target
-    final tooltipTop = coachmark.arrowDirection == ArrowDirection.down
-        ? targetRect.top - 100
-        : targetRect.bottom + 12;
+    // Position tooltip relative to target based on arrow direction
+    final bool tooltipAbove = coachmark.arrowDirection == ArrowDirection.down;
+    final tooltipTop = tooltipAbove
+        ? targetRect.top - 120
+        : targetRect.bottom + 20; // space for arrow
 
     final tooltipLeft =
         (targetRect.center.dx - 140).clamp(16.0, screenSize.width - 296);
+
+    // Arrow position
+    final arrowCenterX = targetRect.center.dx.clamp(32.0, screenSize.width - 32.0);
 
     return GestureDetector(
       onTap: () {
@@ -49,6 +53,56 @@ class DemoCoachmarkOverlay extends ConsumerWidget {
               size: screenSize,
               painter: _BackdropPainter(targetRect: targetRect),
             ),
+
+            // Arrow triangle (§3.7: 포인팅 화살표 포함)
+            if (coachmark.arrowDirection == ArrowDirection.down)
+              Positioned(
+                top: targetRect.top - 12,
+                left: arrowCenterX - 8,
+                child: CustomPaint(
+                  size: const Size(16, 10),
+                  painter: _ArrowPainter(
+                    direction: ArrowDirection.down,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            else if (coachmark.arrowDirection == ArrowDirection.up)
+              Positioned(
+                top: targetRect.bottom + 2,
+                left: arrowCenterX - 8,
+                child: CustomPaint(
+                  size: const Size(16, 10),
+                  painter: _ArrowPainter(
+                    direction: ArrowDirection.up,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            else if (coachmark.arrowDirection == ArrowDirection.left)
+              Positioned(
+                top: targetRect.center.dy - 5,
+                left: targetRect.right + 2,
+                child: CustomPaint(
+                  size: const Size(10, 16),
+                  painter: _ArrowPainter(
+                    direction: ArrowDirection.left,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            else if (coachmark.arrowDirection == ArrowDirection.right)
+              Positioned(
+                top: targetRect.center.dy - 5,
+                left: targetRect.left - 12,
+                child: CustomPaint(
+                  size: const Size(10, 16),
+                  painter: _ArrowPainter(
+                    direction: ArrowDirection.right,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
 
             // Tooltip bubble
             Positioned(
@@ -156,4 +210,46 @@ class _BackdropPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _BackdropPainter old) =>
       old.targetRect != targetRect;
+}
+
+/// §3.7: 포인팅 화살표 삼각형
+class _ArrowPainter extends CustomPainter {
+  _ArrowPainter({required this.direction, required this.color});
+  final ArrowDirection direction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = Path();
+
+    switch (direction) {
+      case ArrowDirection.up:
+        path.moveTo(0, size.height);
+        path.lineTo(size.width / 2, 0);
+        path.lineTo(size.width, size.height);
+      case ArrowDirection.down:
+        path.moveTo(0, 0);
+        path.lineTo(size.width / 2, size.height);
+        path.lineTo(size.width, 0);
+      case ArrowDirection.left:
+        // Arrow points left (from right to left)
+        path.moveTo(size.width, 0);
+        path.lineTo(0, size.height / 2);
+        path.lineTo(size.width, size.height);
+      case ArrowDirection.right:
+        // Arrow points right (from left to right)
+        path.moveTo(0, 0);
+        path.lineTo(size.width, size.height / 2);
+        path.lineTo(0, size.height);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArrowPainter old) =>
+      old.direction != direction || old.color != color;
 }

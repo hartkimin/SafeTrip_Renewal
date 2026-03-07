@@ -14,6 +14,7 @@ import 'demo_event_toast.dart';
 import 'demo_conversion_modal.dart';
 import 'demo_grade_compare.dart';
 import 'demo_guardian_compare.dart';
+import 'demo_lock_overlay.dart';
 import 'demo_role_panel.dart';
 import 'demo_time_slider.dart';
 
@@ -49,23 +50,75 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
     );
     _eventSimulator!.start(scenario.simulationEvents);
 
-    // Show first coachmark after demo loads (§3.7)
+    // Show first coachmark after demo loads (§3.7 — 체이닝 트리거)
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
-      final demoState = ref.read(demoStateProvider);
-      if (!demoState.viewedCoachmarks.contains('map_tab')) {
-        final screenSize = MediaQuery.of(context).size;
-        final mapRect = Rect.fromCenter(
+      _showNextUnviewedCoachmark(0);
+    });
+  }
+
+  /// §3.7: 다음 미조회 코치마크를 자동 표시 (체이닝)
+  void _showNextUnviewedCoachmark(int startIndex) {
+    if (!mounted) return;
+    final demoState = ref.read(demoStateProvider);
+
+    for (int i = startIndex; i < kDemoCoachmarks.length; i++) {
+      final cm = kDemoCoachmarks[i];
+      if (!demoState.viewedCoachmarks.contains(cm.id)) {
+        final targetRect = _getCoachmarkTargetRect(i);
+        _showCoachmark(cm, targetRect, i);
+        return;
+      }
+    }
+  }
+
+  /// 코치마크별 타겟 영역 계산
+  Rect _getCoachmarkTargetRect(int index) {
+    final screenSize = MediaQuery.of(context).size;
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    switch (index) {
+      case 0: // map_tab — 지도 중앙
+        return Rect.fromCenter(
           center: Offset(screenSize.width / 2, screenSize.height * 0.35),
           width: screenSize.width - 32,
           height: 200,
         );
-        _showCoachmark(kDemoCoachmarks[0], mapRect);
-      }
-    });
+      case 1: // role_panel — 우측 상단
+        return Rect.fromLTWH(
+          screenSize.width - 120,
+          topPadding + 30,
+          100,
+          36,
+        );
+      case 2: // guardian_compare — 좌측 상단
+        return Rect.fromLTWH(AppSpacing.md, topPadding + 30, 110, 32);
+      case 3: // time_slider — 하단
+        return Rect.fromLTWH(
+          16,
+          screenSize.height - 280,
+          screenSize.width - 32,
+          40,
+        );
+      case 4: // sos_button — 우하단
+        return Rect.fromLTWH(
+          screenSize.width - 80,
+          screenSize.height - 180,
+          56,
+          56,
+        );
+      case 5: // grade_compare — 좌측
+        return Rect.fromLTWH(AppSpacing.md, topPadding + 66, 100, 32);
+      default:
+        return Rect.fromCenter(
+          center: Offset(screenSize.width / 2, screenSize.height / 2),
+          width: 100,
+          height: 100,
+        );
+    }
   }
 
-  void _showCoachmark(CoachmarkDef coachmark, Rect targetRect) {
+  void _showCoachmark(CoachmarkDef coachmark, Rect targetRect, int index) {
     _coachmarkOverlay?.remove();
     _coachmarkOverlay = OverlayEntry(
       builder: (_) => DemoCoachmarkOverlay(
@@ -74,6 +127,10 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
         onDismiss: () {
           _coachmarkOverlay?.remove();
           _coachmarkOverlay = null;
+          // §3.7: 체이닝 — 다음 코치마크 자동 표시
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _showNextUnviewedCoachmark(index + 1);
+          });
         },
         onSkipAll: () {
           _coachmarkOverlay?.remove();
@@ -115,7 +172,6 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
     });
 
     final topPadding = MediaQuery.of(context).padding.top;
-    final isCaptain = demoState.currentRole == DemoRole.captain;
 
     return Stack(
       children: [
@@ -145,19 +201,21 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
           child: DemoTimeSlider(),
         ),
 
-        // Layer 4: 가디언 비교 버튼 (캡틴 전용, §3.3)
-        if (isCaptain)
-          Positioned(
-            top: topPadding + 30,
-            left: AppSpacing.md,
+        // Layer 4: 가디언 비교 버튼 (§3.3, §3.4 역할별 잠금)
+        Positioned(
+          top: topPadding + 30,
+          left: AppSpacing.md,
+          child: DemoLockOverlay(
+            feature: 'guardian_billing',
             child: _GuardianCompareButton(
               onTap: () => DemoGuardianCompare.show(context),
             ),
           ),
+        ),
 
         // Layer 4b: 등급 비교 버튼 (전체 역할, §3.5 + §4)
         Positioned(
-          top: topPadding + (isCaptain ? 66 : 30),
+          top: topPadding + 66,
           left: AppSpacing.md,
           child: _GradeCompareButton(
             onTap: () => DemoGradeCompare.show(context),

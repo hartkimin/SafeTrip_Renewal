@@ -43,15 +43,15 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
 
     // Update SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_role', roleStr);
+    await prefs.setString('demo_user_role', roleStr);
 
     // Find the first member with this role
     final member = scenario.members.firstWhere(
       (m) => m.role == roleStr,
       orElse: () => scenario.members.first,
     );
-    await prefs.setString('user_id', member.id);
-    await prefs.setString('user_name', member.name);
+    await prefs.setString('demo_user_id', member.id);
+    await prefs.setString('demo_user_name', member.name);
 
     // Update trip provider
     ref.read(tripProvider.notifier).setCurrentTripDetails(
@@ -62,7 +62,7 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
           destinationTimezone: scenario.destination.timezone,
           countryCode: scenario.destination.countryCode,
           countryName: scenario.destination.countryName,
-          totalMemberCount: scenario.memberCount,
+          totalMemberCount: scenario.members.length,
           guardianCount: scenario.guardianCount,
         );
   }
