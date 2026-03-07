@@ -7,6 +7,9 @@ import { GroupMember } from '../../entities/group-member.entity';
 import { Trip } from '../../entities/trip.entity';
 import { CreateInviteCodeDto } from './dto/create-invite-code.dto';
 
+/** §05 Step 8: 역할별 최대 인원 (tb_trip_settings에 컬럼이 없으므로 상수로 관리) */
+const MAX_CREW_CHIEFS_PER_GROUP = 5;
+
 @Injectable()
 export class InviteCodesService {
     constructor(
@@ -72,12 +75,22 @@ export class InviteCodesService {
             );
         }
 
-        // §03.2: Defaults — direct 타입에서 max_uses=NULL 불허
+        // §03.2 + §03.3: Defaults — direct 타입에서 max_uses=NULL 불허
         if (dto.max_uses === null || dto.max_uses === 0) {
             throw new BadRequestException('max_uses must be a positive number for direct model');
         }
-        const maxUses = dto.max_uses ?? 1;
-        const expiresHours = dto.expires_hours ?? 72;
+
+        // §04.1: 크루장은 고급 설정 불가 — max_uses=1, expires_hours=72 강제
+        let maxUses: number;
+        let expiresHours: number;
+        if (role === 'crew_chief') {
+            maxUses = 1;
+            expiresHours = 72;
+        } else {
+            maxUses = dto.max_uses ?? 1;
+            expiresHours = dto.expires_hours ?? 72;
+        }
+
         const expiresAt = new Date();
         expiresAt.setTime(expiresAt.getTime() + expiresHours * 60 * 60 * 1000);
 
@@ -110,6 +123,7 @@ export class InviteCodesService {
             max_uses: saved.maxUses,
             expires_at: saved.expiresAt,
             model_type: saved.modelType,
+            qr_url: `https://api.safetrip.app/qr/${saved.code}`,  // §14.2
         };
     }
 
@@ -126,12 +140,12 @@ export class InviteCodesService {
         if (!invite.isActive) throw new BadRequestException('ERR_CODE_INACTIVE');
 
         // §05 Step 3: Not expired
-        if (invite.expiresAt && new Date() >= invite.expiresAt) {
+        if (new Date() >= invite.expiresAt) {
             throw new BadRequestException('ERR_CODE_EXPIRED');
         }
 
         // §05 Step 4: Uses remaining
-        if (invite.maxUses !== null && invite.usedCount >= invite.maxUses) {
+        if (invite.maxUses !== null && invite.currentUses >= invite.maxUses) {
             throw new BadRequestException('ERR_CODE_EXHAUSTED');
         }
 
@@ -145,7 +159,7 @@ export class InviteCodesService {
 
         return {
             target_role: invite.targetRole,
-            uses_remaining: invite.maxUses !== null ? invite.maxUses - invite.usedCount : null,
+            uses_remaining: invite.maxUses !== null ? invite.maxUses - invite.currentUses : null,
             trip: {
                 trip_id: trip.tripId,
                 group_id: trip.groupId,
@@ -179,12 +193,12 @@ export class InviteCodesService {
             if (!invite.isActive) throw new BadRequestException('ERR_CODE_INACTIVE');
 
             // §05 Step 3: Not expired
-            if (invite.expiresAt && new Date() >= invite.expiresAt) {
+            if (new Date() >= invite.expiresAt) {
                 throw new BadRequestException('ERR_CODE_EXPIRED');
             }
 
             // §05 Step 4: Uses remaining
-            if (invite.maxUses !== null && invite.usedCount >= invite.maxUses) {
+            if (invite.maxUses !== null && invite.currentUses >= invite.maxUses) {
                 throw new BadRequestException('ERR_CODE_EXHAUSTED');
             }
 
@@ -217,6 +231,17 @@ export class InviteCodesService {
             if (!['crew_chief', 'crew', 'guardian'].includes(invite.targetRole)) {
                 throw new BadRequestException('ERR_ROLE_UNAVAILABLE');
             }
+
+            // §05 Step 8: 크루장 정원 검증
+            if (invite.targetRole === 'crew_chief') {
+                const crewChiefCount = await queryRunner.manager.count(GroupMember, {
+                    where: { groupId, memberRole: 'crew_chief', status: 'active' },
+                });
+                if (crewChiefCount >= MAX_CREW_CHIEFS_PER_GROUP) {
+                    throw new BadRequestException('ERR_ROLE_UNAVAILABLE');
+                }
+            }
+
             // Guardian-member overlap check (§12.1 #11)
             if (invite.targetRole === 'guardian') {
                 const isMemberAny = await queryRunner.manager.findOne(GroupMember, {
@@ -282,9 +307,9 @@ export class InviteCodesService {
             });
             const savedMember = await queryRunner.manager.save(GroupMember, newMember);
 
-            // §11.1: Atomic used_count increment
+            // §11.1: Atomic current_uses increment
             await queryRunner.query(
-                `UPDATE tb_invite_code SET used_count = used_count + 1 WHERE invite_code_id = $1`,
+                `UPDATE tb_invite_code SET current_uses = current_uses + 1 WHERE invite_code_id = $1`,
                 [invite.inviteCodeId],
             );
 
@@ -311,7 +336,7 @@ export class InviteCodesService {
         }
     }
 
-    /** §04.1: List invite codes for a trip */
+    /** §04.1: List active invite codes for a trip */
     async listCodes(tripId: string, userId: string) {
         const trip = await this.tripRepo.findOne({ where: { tripId } });
         if (!trip) throw new NotFoundException('Trip not found');
@@ -328,8 +353,8 @@ export class InviteCodesService {
             throw new ForbiddenException('Only captain or crew_chief can view invite codes');
         }
 
-        // §04.1: Captain sees all, crew_chief sees own
-        const where: any = { groupId };
+        // §04.1: Captain sees all, crew_chief sees own. §14.1: 활성 코드만 반환
+        const where: any = { groupId, isActive: true };
         if (role === 'crew_chief') {
             where.createdBy = userId;
         }
@@ -344,13 +369,13 @@ export class InviteCodesService {
             code: c.code,
             target_role: c.targetRole,
             max_uses: c.maxUses,
-            used_count: c.usedCount,
+            current_uses: c.currentUses,
             expires_at: c.expiresAt,
             is_active: c.isActive,
             model_type: c.modelType,
             created_by: c.createdBy,
             created_at: c.createdAt,
-            is_expired: c.expiresAt ? new Date() >= c.expiresAt : false,
+            is_expired: new Date() >= c.expiresAt,
         }));
     }
 
