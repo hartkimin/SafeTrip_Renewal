@@ -2,12 +2,16 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestj
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { GroupsService } from './groups.service';
+import { InviteCodesService } from '../invite-codes/invite-codes.service';
 
 @ApiTags('Groups')
 @ApiBearerAuth('firebase-auth')
 @Controller('groups')
 export class GroupsController {
-    constructor(private readonly groupsService: GroupsService) { }
+    constructor(
+        private readonly groupsService: GroupsService,
+        private readonly inviteCodesService: InviteCodesService,
+    ) { }
 
     @Post()
     @ApiOperation({ summary: '그룹 생성' })
@@ -26,7 +30,7 @@ export class GroupsController {
     @Get('preview-by-code/:code')
     @ApiOperation({ summary: '초대 코드 미리보기' })
     previewByCode(@Param('code') code: string) {
-        return this.groupsService.previewByCode(code);
+        return this.inviteCodesService.validateCode(code);
     }
 
     // ── Parameterized routes ──
@@ -103,7 +107,7 @@ export class GroupsController {
         @Param('code') code: string,
         @CurrentUser() userId: string,
     ) {
-        return this.groupsService.joinByCode(code, userId);
+        return this.inviteCodesService.useCode(code, userId);
     }
 
     // legacy
@@ -118,31 +122,39 @@ export class GroupsController {
 
     @Post(':groupId/invite-codes')
     @ApiOperation({ summary: '역할별 초대코드 생성' })
-    createInviteCode(
+    async createInviteCode(
         @Param('groupId') groupId: string,
         @CurrentUser() userId: string,
         @Body() body: { target_role: string; max_uses?: number; expires_in_days?: number },
     ) {
-        return this.groupsService.createInviteCode(groupId, userId, body);
+        // Convert groupId -> tripId for new service
+        const tripId = await this.groupsService.getTripIdForGroup(groupId);
+        return this.inviteCodesService.createCode(tripId, userId, {
+            target_role: body.target_role,
+            max_uses: body.max_uses,
+            expires_hours: body.expires_in_days ? body.expires_in_days * 24 : undefined,
+        });
     }
 
     @Get(':groupId/invite-codes')
     @ApiOperation({ summary: '그룹 내 초대코드 목록 조회' })
-    getInviteCodes(
+    async getInviteCodes(
         @Param('groupId') groupId: string,
         @CurrentUser() userId: string,
     ) {
-        return this.groupsService.getInviteCodes(groupId, userId);
+        const tripId = await this.groupsService.getTripIdForGroup(groupId);
+        return this.inviteCodesService.listCodes(tripId, userId);
     }
 
     @Delete(':groupId/invite-codes/:codeId')
     @ApiOperation({ summary: '초대코드 비활성화' })
-    deactivateInviteCode(
+    async deactivateInviteCode(
         @Param('groupId') groupId: string,
         @Param('codeId') codeId: string,
         @CurrentUser() userId: string,
     ) {
-        return this.groupsService.deactivateInviteCode(groupId, codeId, userId);
+        const tripId = await this.groupsService.getTripIdForGroup(groupId);
+        return this.inviteCodesService.deactivateCode(tripId, codeId, userId);
     }
 
     // ── 리더십 양도 (Leadership Transfer) ──

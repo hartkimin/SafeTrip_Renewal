@@ -8,11 +8,11 @@ class InviteModal extends StatefulWidget {
 
   const InviteModal({
     super.key,
-    this.groupId,
+    this.tripId,
     this.inviteCode,
     this.inviteLink,
   });
-  final String? groupId;
+  final String? tripId;
   final String? inviteCode;
   final String? inviteLink;
 
@@ -59,7 +59,7 @@ class _InviteModalState extends State<InviteModal> {
   }
 
   Future<void> _generateInviteCode() async {
-    if (widget.groupId == null) return;
+    if (widget.tripId == null) return;
 
     setState(() {
       _isGenerating = true;
@@ -68,7 +68,7 @@ class _InviteModalState extends State<InviteModal> {
 
     try {
       final result = await _apiService.createInviteCode(
-        groupId: widget.groupId!,
+        tripId: widget.tripId!,
         targetRole: _selectedRole,
       );
 
@@ -144,7 +144,7 @@ class _InviteModalState extends State<InviteModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 역할 기반 초대코드 생성
-                  if (widget.groupId != null) ...[
+                  if (widget.tripId != null) ...[
                     Text(
                       '역할별 초대코드 생성',
                       style: AppTokens.textStyle(

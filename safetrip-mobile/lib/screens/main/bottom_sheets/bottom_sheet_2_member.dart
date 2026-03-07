@@ -414,7 +414,7 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddMemberModal(groupId: groupId),
+      builder: (_) => AddMemberModal(groupId: groupId, tripId: state.tripId ?? ''),
     ).then((result) {
       if (result == true) {
         // 멤버 추가 후 목록 새로고침

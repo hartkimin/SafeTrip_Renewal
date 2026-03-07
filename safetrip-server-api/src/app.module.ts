@@ -38,6 +38,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { GuardianChatsModule } from './modules/guardian-chats/guardian-chats.module';
+import { InviteCodesModule } from './modules/invite-codes/invite-codes.module';
 
 @Module({
     imports: [
@@ -110,6 +111,7 @@ import { GuardianChatsModule } from './modules/guardian-chats/guardian-chats.mod
         SchedulesModule,
         AttendanceModule,
         GuardianChatsModule,
+        InviteCodesModule,
     ],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },

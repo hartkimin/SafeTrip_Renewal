@@ -9,10 +9,10 @@ class InviteCodeManagementModal extends StatefulWidget {
 
   const InviteCodeManagementModal({
     super.key,
-    required this.groupId,
+    required this.tripId,
     this.isEmbedded = false,
   });
-  final String groupId;
+  final String tripId;
   final bool isEmbedded;
 
   @override
@@ -36,7 +36,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
   Future<void> _loadCodes() async {
     setState(() => _isLoading = true);
     try {
-      final codes = await _apiService.getInviteCodesByGroup(widget.groupId);
+      final codes = await _apiService.getInviteCodesByTrip(widget.tripId);
       if (mounted) {
         setState(() {
           _codes = codes;
@@ -103,7 +103,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
     if (confirmed != true || !mounted) return;
 
     final success = await _apiService.deactivateInviteCode(
-      groupId: widget.groupId,
+      tripId: widget.tripId,
       codeId: codeId,
     );
 
@@ -129,10 +129,10 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
     setState(() => _isCreating = true);
     try {
       final result = await _apiService.createInviteCode(
-        groupId: widget.groupId,
+        tripId: widget.tripId,
         targetRole: role,
         maxUses: maxUses,
-        expiresInDays: expiresInDays,
+        expiresHours: expiresInDays != null ? expiresInDays * 24 : null,
       );
       if (mounted) {
         setState(() => _isCreating = false);
@@ -189,7 +189,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
               ),
               const SizedBox(height: AppTokens.spacing8),
               DropdownButtonFormField<String>(
-                initialValue: selectedRole,
+                value: selectedRole,
                 decoration: InputDecoration(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -215,7 +215,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
               ),
               const SizedBox(height: AppTokens.spacing8),
               DropdownButtonFormField<int>(
-                initialValue: maxUses,
+                value: maxUses,
                 decoration: InputDecoration(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -241,7 +241,7 @@ class _InviteCodeManagementModalState extends State<InviteCodeManagementModal> {
               ),
               const SizedBox(height: AppTokens.spacing8),
               DropdownButtonFormField<int>(
-                initialValue: expiresInDays,
+                value: expiresInDays,
                 decoration: InputDecoration(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

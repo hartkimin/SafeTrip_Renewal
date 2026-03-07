@@ -22,10 +22,10 @@ class ScreenTripJoinCode extends StatefulWidget {
 
 class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   final List<TextEditingController> _controllers = List.generate(
-    6,
+    7,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final List<FocusNode> _focusNodes = List.generate(7, (_) => FocusNode());
 
   bool _isLoading = false;
 
@@ -45,8 +45,8 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
           _controllers[i].text = code[i];
         }
         setState(() {});
-        // Auto-submit if code is complete
-        if (code.length == 6) {
+        // Auto-submit if code is complete (§03.1: 7-char codes)
+        if (code.length == 7) {
           _onJoin();
         } else {
           // DOC-T3-WLC-029 §6.1: Deep link code incomplete — show manual input hint
@@ -79,7 +79,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
   }
 
   String get _fullCode => _controllers.map((c) => c.text).join().toUpperCase();
-  bool get _isComplete => _fullCode.length == 6;
+  bool get _isComplete => _fullCode.length == 7;
 
   Future<void> _onJoin() async {
     if (!_isComplete) return;
@@ -152,7 +152,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '캡틴에게 받은 6자리\n코드를 입력해주세요',
+                      '캡틴에게 받은 7자리\n코드를 입력해주세요',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.textTertiary,
@@ -161,10 +161,10 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                     const SizedBox(height: AppSpacing.xxl),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(6, (index) {
+                      children: List.generate(7, (index) {
                         return SizedBox(
                           width:
-                              (MediaQuery.of(context).size.width - 48 - 30) / 6,
+                              (MediaQuery.of(context).size.width - 48 - 36) / 7,
                           height: 56,
                           child: TextField(
                             controller: _controllers[index],
@@ -193,7 +193,7 @@ class _ScreenTripJoinCodeState extends State<ScreenTripJoinCode> {
                             ),
                             onChanged: (value) {
                               if (value.isNotEmpty) {
-                                if (index < 5) {
+                                if (index < 6) {
                                   _focusNodes[index + 1].requestFocus();
                                 } else {
                                   _focusNodes[index].unfocus();

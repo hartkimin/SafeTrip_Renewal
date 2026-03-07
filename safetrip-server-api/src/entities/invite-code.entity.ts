@@ -43,4 +43,7 @@ export class InviteCode {
 
     @Column({ name: 'b2b_batch_id', type: 'uuid', nullable: true })
     b2bBatchId: string | null;
+
+    @Column({ name: 'model_type', type: 'varchar', length: 20, default: 'direct' })
+    modelType: string; // 'direct' | 'system'
 }

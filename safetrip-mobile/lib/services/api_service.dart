@@ -847,18 +847,18 @@ class ApiService {
   // ===== 초대 코드 (Invite Code) =====
 
   Future<Map<String, dynamic>?> createInviteCode({
-    required String groupId,
+    required String tripId,
     String? targetRole,
     int? maxUses,
-    int? expiresInDays,
+    int? expiresHours,
   }) async {
     try {
-      final data = <String, dynamic>{'group_id': groupId};
+      final data = <String, dynamic>{};
       if (targetRole != null) data['target_role'] = targetRole;
       if (maxUses != null) data['max_uses'] = maxUses;
-      if (expiresInDays != null) data['expires_in_days'] = expiresInDays;
+      if (expiresHours != null) data['expires_hours'] = expiresHours;
       final response = await _dio.post(
-        '/api/v1/groups/$groupId/invite-codes',
+        '/api/v1/trips/$tripId/invite-codes',
         data: data,
       );
       if (response.data['success'] == true) {
@@ -871,27 +871,27 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getInviteCodesByGroup(
-    String groupId,
+  Future<List<Map<String, dynamic>>> getInviteCodesByTrip(
+    String tripId,
   ) async {
     try {
-      final response = await _dio.get('/api/v1/groups/$groupId/invite-codes');
+      final response = await _dio.get('/api/v1/trips/$tripId/invite-codes');
       if (response.data['success'] == true && response.data['data'] != null) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
       return [];
     } catch (e) {
-      debugPrint('[ApiService] getInviteCodesByGroup Error: $e');
+      debugPrint('[ApiService] getInviteCodesByTrip Error: $e');
       return [];
     }
   }
 
   Future<bool> deactivateInviteCode({
-    String? groupId,
+    required String tripId,
     required String codeId,
   }) async {
     try {
-      final response = await _dio.delete('/api/v1/invite-codes/$codeId');
+      final response = await _dio.patch('/api/v1/trips/$tripId/invite-codes/$codeId/deactivate');
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] deactivateInviteCode Error: $e');
@@ -1149,10 +1149,12 @@ class ApiService {
     }
   }
 
-  /// GET /api/v1/trips/invite/:inviteCode
+  /// POST /api/v1/invite-codes/validate
   Future<Map<String, dynamic>?> previewInviteCode(String code) async {
     try {
-      final response = await _dio.get('/api/v1/trips/invite/$code');
+      final response = await _dio.post('/api/v1/invite-codes/validate', data: {
+        'code': code,
+      });
       if (response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>;
       }
@@ -1163,11 +1165,11 @@ class ApiService {
     }
   }
 
-  /// POST /api/v1/trips/invite/accept
+  /// POST /api/v1/invite-codes/use
   Future<Map<String, dynamic>?> acceptInvite(String code) async {
     try {
-      final response = await _dio.post('/api/v1/trips/invite/accept', data: {
-        'inviteCode': code,
+      final response = await _dio.post('/api/v1/invite-codes/use', data: {
+        'code': code,
       });
       if (response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>;

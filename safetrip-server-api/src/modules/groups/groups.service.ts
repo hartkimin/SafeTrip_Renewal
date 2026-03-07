@@ -496,7 +496,7 @@ export class GroupsService {
 
     // ── §6.D Schedule CRUD (group_id 기반) ──
 
-    private async getTripIdForGroup(groupId: string): Promise<string> {
+    async getTripIdForGroup(groupId: string): Promise<string> {
         const trip = await this.tripRepo.findOne({ where: { groupId }, select: ['tripId'] });
         if (!trip) throw new NotFoundException('No trip found for this group');
         return trip.tripId;

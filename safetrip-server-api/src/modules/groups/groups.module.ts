@@ -7,9 +7,13 @@ import { GroupMember } from '../../entities/group-member.entity';
 import { InviteCode } from '../../entities/invite-code.entity';
 import { Trip } from '../../entities/trip.entity';
 import { Schedule } from '../../entities/schedule.entity';
+import { InviteCodesModule } from '../invite-codes/invite-codes.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Group, GroupMember, InviteCode, Trip, Schedule])],
+    imports: [
+        TypeOrmModule.forFeature([Group, GroupMember, InviteCode, Trip, Schedule]),
+        InviteCodesModule,
+    ],
     controllers: [GroupsController],
     providers: [GroupsService],
     exports: [GroupsService],
