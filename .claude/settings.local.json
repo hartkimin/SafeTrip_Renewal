@@ -26,7 +26,8 @@
       "Bash(flutter analyze:*)",
       "Bash(cmd.exe /c \"cd /d D:\\\\Project\\\\15_SafeTrip_New\\\\safetrip-mobile && flutter analyze lib/services/api_service.dart lib/screens/main/screen_main.dart lib/screens/main/bottom_sheets/modals/invite_modal.dart lib/screens/trip/screen_trip_join_code.dart lib/managers/firebase_location_manager.dart lib/screens/main/screen_attendance_check.dart lib/models/user.dart lib/utils/guardian_filter.dart 2>&1\")",
       "Bash(/c/Users/hartk/fvm/default/bin/flutter analyze:*)",
-      "Bash(powershell.exe -Command \"\\(Get-Command flutter -ErrorAction SilentlyContinue\\).Source\")"
+      "Bash(powershell.exe -Command \"\\(Get-Command flutter -ErrorAction SilentlyContinue\\).Source\")",
+      "Bash(find:*)"
     ]
   }
 }

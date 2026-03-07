@@ -134,6 +134,7 @@ export const API = {
     // ─── B2B ───
     B2B: {
         ORGANIZATIONS: '/b2b/organizations',
+        STATS: '/b2b/stats',
         ORGANIZATION: (orgId) => `/b2b/organizations/${orgId}`,
         CONTRACTS: (orgId) => `/b2b/organizations/${orgId}/contracts`,
         ADMINS: (orgId) => `/b2b/organizations/${orgId}/admins`,
