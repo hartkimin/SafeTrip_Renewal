@@ -13,6 +13,7 @@ import '../../../features/trip/providers/attendance_provider.dart';
 import '../../../models/attendance.dart';
 import '../../../models/trip_member.dart';
 import '../../../models/user.dart';
+import '../../../features/demo/providers/demo_state_provider.dart';
 import '../../../services/api_service.dart';
 import '../../../widgets/member_card.dart';
 import '../../../widgets/avatar_widget.dart';
@@ -65,15 +66,25 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
   Future<void> _initializeMembers() async {
     if (_initialized) return;
 
-    final tripState = ref.read(tripProvider);
-    final groupId = tripState.currentGroup?.groupId;
-    final tripId = tripState.currentTrip?.tripId;
+    // 데모 모드에서는 API 서버가 없으므로 멤버 API 호출 skip
+    if (ref.read(isDemoModeProvider)) {
+      _initialized = true;
+      return;
+    }
 
-    // SharedPreferences에서 userId, role 읽기
+    final tripState = ref.read(tripProvider);
+
+    // SharedPreferences에서 userId, role, groupId, tripId 읽기
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
     final userRoleStr = prefs.getString('user_role') ?? 'crew';
     final userRole = UserRoleExtension.fromMemberRole(userRoleStr);
+
+    // tripProvider.currentGroup이 설정되어 있으면 사용, 아니면 SharedPreferences에서 읽기
+    final groupId =
+        tripState.currentGroup?.groupId ?? prefs.getString('group_id');
+    final tripId =
+        tripState.currentTrip?.tripId ?? prefs.getString('trip_id');
 
     if (groupId == null || groupId.isEmpty) {
       debugPrint('[BottomSheetMember] groupId is null, skipping initialize');
@@ -110,51 +121,63 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
     final memberState = ref.watch(memberTabProvider);
     final attendState = ref.watch(attendanceProvider);
 
-    // --- Loading ---
+    // --- Loading --- scrollController 반드시 연결 (DraggableScrollableSheet 드래그 동작 필수)
     if (memberState.isLoading && memberState.allMembers.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xxl),
-          child: CircularProgressIndicator(color: AppColors.primaryTeal),
-        ),
+      return ListView(
+        controller: widget.scrollController,
+        children: const [
+          SizedBox(height: 120),
+          Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.xxl),
+              child: CircularProgressIndicator(color: AppColors.primaryTeal),
+            ),
+          ),
+        ],
       );
     }
 
     // --- Error ---
     if (memberState.error != null && memberState.allMembers.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.semanticError),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                memberState.error ?? '멤버 정보를 불러올 수 없습니다.',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              OutlinedButton.icon(
-                onPressed: () {
-                  ref.read(memberTabProvider.notifier).fetchMembers();
-                },
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('재시도'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryTeal,
-                  side: const BorderSide(color: AppColors.primaryTeal),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radius8),
+      return ListView(
+        controller: widget.scrollController,
+        children: [
+          const SizedBox(height: 80),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: AppColors.semanticError),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    memberState.error ?? '멤버 정보를 불러올 수 없습니다.',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ref.read(memberTabProvider.notifier).fetchMembers();
+                    },
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('재시도'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryTeal,
+                      side: const BorderSide(color: AppColors.primaryTeal),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radius8),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       );
     }
 
@@ -251,6 +274,8 @@ class _BottomSheetMemberState extends ConsumerState<BottomSheetMember> {
               guardianCount: memberState.guardianSlots.length,
               isCaptain: memberState.isCaptain,
               onManageTap: () => _showGuardianManageSheet(context),
+              freeCount: memberState.guardianSlots.where((s) => !s.isPaid && s.status == 'accepted').length,
+              paidCount: memberState.guardianSlots.where((s) => s.isPaid && s.status == 'accepted').length,
             ),
             const SizedBox(height: AppSpacing.sm),
             ...memberState.guardianSlots.map(
@@ -935,11 +960,15 @@ class _GuardianSectionHeader extends StatelessWidget {
     required this.guardianCount,
     required this.isCaptain,
     this.onManageTap,
+    this.freeCount = 0,
+    this.paidCount = 0,
   });
 
   final int guardianCount;
   final bool isCaptain;
   final VoidCallback? onManageTap;
+  final int freeCount;
+  final int paidCount;
 
   @override
   Widget build(BuildContext context) {
@@ -969,6 +998,13 @@ class _GuardianSectionHeader extends StatelessWidget {
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          '\u{1F193} $freeCount/2  \u{1F48E} $paidCount/3',
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textTertiary,
           ),
         ),
         const Spacer(),
