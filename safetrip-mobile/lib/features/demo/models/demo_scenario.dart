@@ -19,6 +19,7 @@ class DemoScenario {
     required this.schedules,
     required this.simulationEvents,
     required this.locationTracks,
+    this.geofences = const [],
   });
 
   final DemoScenarioId id;
@@ -32,6 +33,7 @@ class DemoScenario {
   final List<DemoScheduleDay> schedules;
   final List<DemoSimEvent> simulationEvents;
   final Map<String, List<DemoLocationPoint>> locationTracks;
+  final List<DemoGeofence> geofences;
 
   factory DemoScenario.fromJson(Map<String, dynamic> json) {
     return DemoScenario(
@@ -61,6 +63,9 @@ class DemoScenario {
           (v as List).map((e) => DemoLocationPoint.fromJson(e)).toList(),
         ),
       ),
+      geofences: (json['geofences'] as List? ?? [])
+          .map((e) => DemoGeofence.fromJson(e))
+          .toList(),
     );
   }
 
@@ -127,6 +132,12 @@ class DemoMember {
     required this.name,
     required this.role,
     this.avatar,
+    this.isMinor = false,
+    this.b2bRoleName,
+    this.battery,
+    this.isOnline = true,
+    this.locationText,
+    this.groupRef,
   });
 
   final String id;
@@ -134,12 +145,36 @@ class DemoMember {
   final String role; // captain, crew_chief, crew, guardian
   final String? avatar;
 
+  /// 그룹 참조 ID (멀티그룹 시나리오에서 소속 그룹 식별)
+  final String? groupRef;
+
+  /// 미성년자 여부 (§10.2 — safety_first 강제, 가디언 해제 캡틴 승인)
+  final bool isMinor;
+
+  /// B2B 커스텀 역할명 (§01.4 — 학교/여행사/기업)
+  final String? b2bRoleName;
+
+  /// 초기 배터리 레벨 (null이면 어댑터가 자동 생성)
+  final int? battery;
+
+  /// 초기 온라인 상태
+  final bool isOnline;
+
+  /// 초기 위치 텍스트 (null이면 어댑터가 스케줄 기반 생성)
+  final String? locationText;
+
   factory DemoMember.fromJson(Map<String, dynamic> json) {
     return DemoMember(
       id: json['id'] as String,
       name: json['name'] as String,
       role: json['role'] as String,
       avatar: json['avatar'] as String?,
+      isMinor: json['is_minor'] as bool? ?? false,
+      b2bRoleName: json['b2b_role_name'] as String?,
+      battery: json['battery'] as int?,
+      isOnline: json['is_online'] as bool? ?? true,
+      locationText: json['location_text'] as String?,
+      groupRef: json['group_ref'] as String?,
     );
   }
 }
@@ -231,6 +266,56 @@ class DemoSimEvent {
       description: json['description'] as String,
       memberId: json['member_id'] as String?,
       data: json['data'] as Map<String, dynamic>?,
+    );
+  }
+}
+
+class DemoGeofence {
+  const DemoGeofence({
+    required this.id,
+    required this.name,
+    required this.lat,
+    required this.lng,
+    required this.radiusM,
+    required this.scheduleDays,
+    this.activeFrom,
+    this.activeTo,
+    this.color,
+  });
+
+  final String id;
+  final String name;
+  final double lat;
+  final double lng;
+  final int radiusM;
+  final List<int> scheduleDays;
+  final String? activeFrom;
+  final String? activeTo;
+  final String? color;
+
+  LatLng get latLng => LatLng(lat, lng);
+
+  factory DemoGeofence.fromJson(Map<String, dynamic> json) {
+    final rawDay = json['schedule_day'];
+    final List<int> days;
+    if (rawDay is List) {
+      days = rawDay.cast<int>();
+    } else if (rawDay is int) {
+      days = [rawDay];
+    } else {
+      days = [1];
+    }
+
+    return DemoGeofence(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+      radiusM: json['radius_m'] as int,
+      scheduleDays: days,
+      activeFrom: json['active_from'] as String?,
+      activeTo: json['active_to'] as String?,
+      color: json['color'] as String?,
     );
   }
 }
