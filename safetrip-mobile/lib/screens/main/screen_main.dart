@@ -17,6 +17,7 @@ import '../../features/trip/providers/trip_provider.dart';
 import '../../managers/firebase_location_manager.dart';
 import '../../managers/marker_manager.dart';
 import '../../models/location.dart' as location_model;
+import '../../models/user.dart';
 import '../../router/auth_notifier.dart';
 import '../../services/api_service.dart';
 import '../../services/device_status_service.dart';
@@ -26,7 +27,6 @@ import '../../services/offline_sync_service.dart';
 import '../../services/sos_service.dart';
 import '../../widgets/components/battery_warning_banner.dart';
 import '../../widgets/components/offline_banner.dart';
-import '../../widgets/components/privacy_banner.dart';
 import '../../widgets/components/schedule_conflict_dialog.dart';
 import '../../widgets/components/sos_button.dart';
 import '../../widgets/components/sos_overlay.dart';
@@ -45,6 +45,10 @@ import 'bottom_sheets/bottom_sheet_1_trip.dart';
 import 'bottom_sheets/bottom_sheet_2_member.dart';
 import 'bottom_sheets/bottom_sheet_3_chat.dart';
 import '../../features/schedule/providers/schedule_provider.dart';
+import '../../features/member/providers/member_tab_provider.dart';
+import '../../features/demo/data/demo_data_adapter.dart';
+import '../../features/demo/models/demo_scenario.dart';
+import '../../features/demo/providers/demo_state_provider.dart';
 import '../../features/safety_guide/presentation/safety_guide_bottom_sheet.dart';
 import 'bottom_sheets/bottom_sheet_layer_settings.dart';
 import 'bottom_sheets/snapping_bottom_sheet.dart';
@@ -99,6 +103,13 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Map<String, dynamic>? _selectedMarkerUserData;
 
   bool _isInitialLoading = true;
+
+  /// Demo mode data holders for MarkerManager callback substitution
+  List<Map<String, dynamic>>? _demoUsers;
+  Map<String, location_model.Location>? _demoLocations;
+
+  /// Demo state listener subscription
+  void Function()? _demoStateListenerDispose;
 
   /// §3.1: 긴급 데이터 캐싱 완료 플래그 (세션 1회)
   bool _emergencyCached = false;
@@ -184,17 +195,17 @@ class _MainScreenState extends ConsumerState<MainScreen>
         debugPrint('[MainScreen] Zoom changed: $zoom');
       },
       onMarkerUpdateRequested: () {
-        _updateMarkers(_firebaseLocationManager.userLocations);
+        _updateMarkers(_demoLocations ?? _firebaseLocationManager.userLocations);
       },
       isMounted: () => mounted,
       getMapController: () => _mapController,
-      getUsers: () => _firebaseLocationManager.users,
-      getUserLocations: () => _firebaseLocationManager.userLocations,
+      getUsers: () => _demoUsers ?? _firebaseLocationManager.users,
+      getUserLocations: () => _demoLocations ?? _firebaseLocationManager.userLocations,
       getSelectedUserId: () => null,
       calculateDistance: (p1, p2) =>
           const Distance().as(LengthUnit.Meter, p1, p2),
       onMarkerTap: (userId) {
-        final users = _firebaseLocationManager.users;
+        final users = _demoUsers ?? _firebaseLocationManager.users;
         final user = users.firstWhere(
           (u) => (u['user_id'] as String?) == userId,
           orElse: () => <String, dynamic>{},
@@ -295,14 +306,12 @@ class _MainScreenState extends ConsumerState<MainScreen>
       final groupId = prefs.getString('group_id');
       final userRole = prefs.getString('user_role') ?? 'crew';
 
-      // Demo mode: skip Firebase/location services, use pre-seeded tripProvider
+      // Demo mode: skip Firebase/location services, seed providers with demo data
       if (isDemoMode) {
+        // 이전 세션의 백그라운드 위치 추적 강제 중지 (라이선스 경고 방지)
+        await _locationService.forceStopBackground();
         if (mounted) {
-          final notifier = ref.read(mainScreenProvider.notifier);
-          notifier.setSheetLevel(BottomSheetLevel.half);
-          notifier.setNoTrip(false);
-          _animateSheetTo(BottomSheetLevel.half);
-          setState(() => _isInitialLoading = false);
+          _initializeDemoMode();
         }
         return;
       }
@@ -365,6 +374,287 @@ class _MainScreenState extends ConsumerState<MainScreen>
         setState(() => _isInitialLoading = false);
       }
     }
+  }
+
+  /// Demo mode initialization: seed providers, set up markers, move camera.
+  void _initializeDemoMode() {
+    final demoState = ref.read(demoStateProvider);
+    final scenario = demoState.currentScenario;
+    if (scenario == null) return;
+
+    final tripState = ref.read(tripProvider);
+    final tripStartDate = tripState.tripStartDate ?? DateTime.now();
+    final tripEndDate = tripState.tripEndDate ??
+        DateTime.now().add(Duration(days: scenario.durationDays));
+    final privacyLevel = scenario.privacyGradeString;
+    final currentUser = demoState.currentUser;
+    final currentUserId = currentUser?.id ?? scenario.members.first.id;
+    final currentUserRole = demoState.roleString;
+
+    // 5a. Seed ScheduleProvider
+    final dayNumber = 1;
+    final schedules = DemoDataAdapter.toSchedules(
+      scenario: scenario,
+      dayNumber: dayNumber,
+      tripStartDate: tripStartDate,
+    );
+    final scheduleDates = DemoDataAdapter.toScheduleDates(
+      scenario: scenario,
+      tripStartDate: tripStartDate,
+    );
+    ref.read(scheduleProvider.notifier).seedDemoSchedules(
+          schedules: schedules,
+          scheduleDates: scheduleDates,
+          tripStartDate: tripStartDate,
+          tripEndDate: tripEndDate,
+          privacyLevel: privacyLevel,
+          userRole: currentUserRole,
+          tripStatus: 'active',
+        );
+
+    // 5a. Seed MemberTabProvider
+    final currentSimMinutes = 0;
+    final members = DemoDataAdapter.toTripMembers(
+      scenario: scenario,
+      currentSimMinutes: currentSimMinutes,
+      privacyLevel: privacyLevel,
+    );
+    final allGuardianSlots = members.expand((m) => m.guardianLinks).toList();
+    // Detect B2B trip: any member has b2bRoleName set
+    final isB2bTrip = scenario.members.any((m) => m.b2bRoleName != null);
+    // Paid trip: 6+ members (§8.1 출석 체크 조건)
+    final isPaidTrip = scenario.memberCount >= 6;
+    ref.read(memberTabProvider.notifier).seedDemoMembers(
+          members: members,
+          currentUserId: currentUserId,
+          currentUserRole: UserRoleExtension.fromMemberRole(currentUserRole),
+          guardianSlots: allGuardianSlots,
+          groupId: 'demo_${scenario.id.name}',
+          isB2bTrip: isB2bTrip,
+          isPaidTrip: isPaidTrip,
+        );
+
+    // 5b. Set marker data for MarkerManager callbacks
+    _demoUsers = DemoDataAdapter.toUserMaps(
+      scenario: scenario,
+      currentSimMinutes: currentSimMinutes,
+    );
+    _demoLocations = DemoDataAdapter.toLocationMap(
+      scenario: scenario,
+      currentSimMinutes: currentSimMinutes,
+    );
+
+    // 5b. Feed original positions to MarkerManager
+    final originalPositions = DemoDataAdapter.toOriginalPositions(
+      scenario: scenario,
+      currentSimMinutes: currentSimMinutes,
+    );
+    _markerManager.updateOriginalPositions(originalPositions);
+
+    // 5b. Build and display user markers
+    _markerManager.buildUserMarkers().then((markers) {
+      if (mounted) {
+        _userMarkersNotifier.value = markers;
+      }
+    });
+
+    // 5d. Update schedule markers on the map
+    final scheduleMarkerData = DemoDataAdapter.toScheduleMarkerData(schedules);
+    _scheduleMarkerManager.updateSchedules(scheduleMarkerData);
+
+    // 5d-2. 데모 지오펜스 렌더링
+    final demoGeofences = DemoDataAdapter.toGeofenceData(
+      scenario: scenario,
+      currentSimMinutes: currentSimMinutes,
+    );
+    if (demoGeofences.isNotEmpty) {
+      _geofenceMapRenderer.updateGeofencesOnMap(demoGeofences);
+    }
+
+    // 5e. Move camera to destination
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _mapController.move(scenario.destination.latLng, 13.0);
+      }
+    });
+
+    // 5f. Build movement track polylines
+    _buildDemoTrackPolylines(scenario, currentSimMinutes);
+
+    // Task 6: Register demo state reactive listener
+    _setupDemoStateListener();
+
+    // UI state
+    final notifier = ref.read(mainScreenProvider.notifier);
+    notifier.setSheetLevel(BottomSheetLevel.half);
+    notifier.setNoTrip(false);
+    _animateSheetTo(BottomSheetLevel.half);
+    setState(() => _isInitialLoading = false);
+  }
+
+  /// Task 6: Listen to DemoState changes (time slider, role switch)
+  /// and propagate to markers, members, schedules.
+  void _setupDemoStateListener() {
+    final subscription = ref.listenManual<DemoState>(
+      demoStateProvider,
+      (previous, next) {
+        if (!mounted) return;
+        final scenario = next.currentScenario;
+        if (scenario == null) return;
+
+        final tripState = ref.read(tripProvider);
+        final tripStartDate = tripState.tripStartDate ?? DateTime.now();
+        final privacyLevel = scenario.privacyGradeString;
+
+        // Calculate current simulation minutes from simStartTime
+        final simStart = next.simStartTime ?? DateTime.now();
+        final currentSimMinutes = next.currentSimTime != null
+            ? next.currentSimTime!.difference(simStart).inMinutes
+            : 0;
+
+        // Detect what changed
+        final timeChanged = previous?.currentSimTime != next.currentSimTime;
+        final roleChanged = previous?.currentRole != next.currentRole;
+
+        // Time change → update marker positions + member positions + tracks
+        if (timeChanged) {
+          _demoUsers = DemoDataAdapter.toUserMaps(
+            scenario: scenario,
+            currentSimMinutes: currentSimMinutes,
+          );
+          _demoLocations = DemoDataAdapter.toLocationMap(
+            scenario: scenario,
+            currentSimMinutes: currentSimMinutes,
+          );
+
+          final originalPositions = DemoDataAdapter.toOriginalPositions(
+            scenario: scenario,
+            currentSimMinutes: currentSimMinutes,
+          );
+          _markerManager.updateOriginalPositions(originalPositions);
+          _markerManager.buildUserMarkers().then((markers) {
+            if (mounted) _userMarkersNotifier.value = markers;
+          });
+
+          // Update member positions in provider
+          final updatedMembers = DemoDataAdapter.toTripMembers(
+            scenario: scenario,
+            currentSimMinutes: currentSimMinutes,
+            privacyLevel: privacyLevel,
+          );
+          ref
+              .read(memberTabProvider.notifier)
+              .updateDemoMemberPositions(updatedMembers);
+
+          // Detect day change → re-seed schedules
+          final prevDay = _simMinutesToDay(
+            previous?.currentSimTime?.difference(simStart).inMinutes ?? 0,
+          );
+          final newDay = _simMinutesToDay(currentSimMinutes);
+          if (prevDay != newDay || previous?.currentSimTime == null) {
+            final dayNumber = newDay.clamp(1, scenario.durationDays);
+            final schedules = DemoDataAdapter.toSchedules(
+              scenario: scenario,
+              dayNumber: dayNumber,
+              tripStartDate: tripStartDate,
+            );
+            ref.read(scheduleProvider.notifier).seedDemoSchedulesForDate(
+                  schedules: schedules,
+                  date: tripStartDate.add(Duration(days: dayNumber - 1)),
+                );
+
+            final scheduleMarkerData =
+                DemoDataAdapter.toScheduleMarkerData(schedules);
+            _scheduleMarkerManager.updateSchedules(scheduleMarkerData);
+          }
+
+          // 데모 지오펜스 갱신 (day/시간 변경 시)
+          final demoGeofences = DemoDataAdapter.toGeofenceData(
+            scenario: scenario,
+            currentSimMinutes: currentSimMinutes,
+          );
+          _geofenceMapRenderer.updateGeofencesOnMap(demoGeofences);
+
+          // Update polylines
+          _rebuildDemoPolylines(scenario, currentSimMinutes);
+        }
+
+        // Role change → update member provider current user
+        if (roleChanged) {
+          final newUser = next.currentUser;
+          if (newUser != null) {
+            ref.read(memberTabProvider.notifier).seedDemoMembers(
+                  members: ref.read(memberTabProvider).allMembers,
+                  currentUserId: newUser.id,
+                  currentUserRole:
+                      UserRoleExtension.fromMemberRole(next.roleString),
+                  guardianSlots: ref.read(memberTabProvider).guardianSlots,
+                  groupId: ref.read(memberTabProvider).groupId,
+                );
+          }
+        }
+      },
+    );
+
+    _demoStateListenerDispose = subscription.close;
+  }
+
+  /// Convert simulation minutes to day number (1-based).
+  int _simMinutesToDay(int simMinutes) {
+    return (simMinutes ~/ (24 * 60)) + 1;
+  }
+
+  /// Rebuild demo track polylines (called on time change).
+  void _rebuildDemoPolylines(DemoScenario scenario, int currentSimMinutes) {
+    final polylines = <Polyline>[];
+    for (final member in scenario.members) {
+      if (member.role == 'guardian') continue;
+      final track = DemoDataAdapter.getTrackUpTo(
+        scenario: scenario,
+        memberId: member.id,
+        currentSimMinutes: currentSimMinutes,
+      );
+      if (track.length >= 2) {
+        polylines.add(Polyline(
+          points: track,
+          color: AppColors.primaryTeal.withValues(alpha: 0.3),
+          strokeWidth: 2,
+        ));
+      }
+    }
+
+    // Keep schedule polylines (from ScheduleMarkerManager) + add demo tracks
+    final scheduleState = ref.read(scheduleProvider);
+    final scheduleMarkerData =
+        DemoDataAdapter.toScheduleMarkerData(scheduleState.schedules);
+    // Re-update schedule markers to rebuild their polylines,
+    // then append demo track polylines
+    _scheduleMarkerManager.updateSchedules(scheduleMarkerData);
+    final currentLines = _scheduleLinesNotifier.value;
+    _scheduleLinesNotifier.value = [...currentLines, ...polylines];
+  }
+
+  /// Build polylines showing member movement tracks for demo mode.
+  void _buildDemoTrackPolylines(DemoScenario scenario, int currentSimMinutes) {
+    final polylines = <Polyline>[];
+    for (final member in scenario.members) {
+      if (member.role == 'guardian') continue;
+      final track = DemoDataAdapter.getTrackUpTo(
+        scenario: scenario,
+        memberId: member.id,
+        currentSimMinutes: currentSimMinutes,
+      );
+      if (track.length >= 2) {
+        polylines.add(Polyline(
+          points: track,
+          color: AppColors.primaryTeal.withValues(alpha: 0.3),
+          strokeWidth: 2,
+        ));
+      }
+    }
+    // Append to existing schedule lines
+    final scheduleLines = _scheduleLinesNotifier.value;
+    _scheduleLinesNotifier.value = [...scheduleLines, ...polylines];
   }
 
   void _updateMarkers(Map<String, location_model.Location> locations) async {
@@ -452,6 +742,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   @override
   void dispose() {
+    _demoStateListenerDispose?.call();
     _syncSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _firebaseLocationManager.dispose();
@@ -565,7 +856,6 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final tripStatus = tripState.currentTripStatus;
     final isCompleted = tripStatus == 'completed';
     final isActive = tripStatus == 'active';
-    final privacyLevel = tripState.currentTrip?.privacyLevel ?? 'standard';
 
     // SOS는 active 상태 + 비가디언일 때만 표시
     final showSos = isActive && tripState.currentUserRole != 'guardian';
@@ -605,73 +895,98 @@ class _MainScreenState extends ConsumerState<MainScreen>
               ValueListenableBuilder<List<Marker>>(
                 valueListenable: _userMarkersNotifier,
                 builder: (context, userMarkers, _) {
-                  return FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: const LatLng(37.5665, 126.9780),
-                      initialZoom: 13.0,
-                      onTap: (_, __) {
-                        // §5.4: 빈 영역 탭 → 미니카드 닫기
-                        setState(() {
-                          _selectedMarkerUserId = null;
-                          _selectedMarkerUserData = null;
-                        });
-                      },
-                    ),
-                    children: [
-                      // Layer 0: 지도 타일
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.urock.safe.trip',
-                        evictErrorTileStrategy: EvictErrorTileStrategy.dispose,
+                  return AnimatedBuilder(
+                    animation: _sheetController,
+                    builder: (context, child) {
+                      // fallback to sheetLevel fraction if controller isn't attached yet
+                      final currentFraction = _sheetController.isAttached
+                          ? _sheetController.size
+                          : mainState.sheetLevel.fraction;
+
+                      // Calculate the bottom inset based on the sheet's fraction of screen height
+                      final screenHeight = MediaQuery.of(context).size.height;
+                      final bottomInset = screenHeight * currentFraction;
+
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: bottomInset),
+                        child: child,
+                      );
+                    },
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: const LatLng(37.5665, 126.9780),
+                        initialZoom: 13.0,
+                        minZoom: 3.0,
+                        maxZoom: 18.0,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                        ),
+                        onTap: (_, __) {
+                          // §5.4: 빈 영역 탭 → 미니카드 닫기
+                          setState(() {
+                            _selectedMarkerUserId = null;
+                            _selectedMarkerUserData = null;
+                          });
+                        },
                       ),
-                      // Layer 1: 안전시설 마커
-                      if (layerState.layer1SafetyFacilities)
-                        ValueListenableBuilder<List<Marker>>(
-                          valueListenable: _safetyMarkersNotifier,
-                          builder: (_, markers, __) =>
-                              MarkerLayer(markers: markers),
+                      children: [
+                        // Layer 0: 지도 타일 (CartoDB Light)
+                        TileLayer(
+                          urlTemplate:
+                              'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
+                          userAgentPackageName: 'com.urock.safe.trip',
+                          maxZoom: 19,
+                          keepBuffer: 3,
                         ),
-                      // Layer 2: 멤버 위치 마커
-                      if (layerState.layer2MemberMarkers)
-                        MarkerLayer(markers: userMarkers),
-                      // Layer 3: 일정 폴리라인
-                      if (layerState.layer3SchedulePlaces)
-                        ValueListenableBuilder<List<Polyline>>(
-                          valueListenable: _scheduleLinesNotifier,
-                          builder: (_, lines, __) =>
-                              PolylineLayer(polylines: lines),
-                        ),
-                      // Layer 3: 일정 장소 마커
-                      if (layerState.layer3SchedulePlaces)
-                        ValueListenableBuilder<List<Marker>>(
-                          valueListenable: _scheduleMarkersNotifier,
-                          builder: (_, markers, __) =>
-                              MarkerLayer(markers: markers),
-                        ),
-                      // Layer 4: 지오펜스 영역 (CircleLayer)
-                      if (layerState.layer4EventAlerts)
-                        ValueListenableBuilder<List<CircleMarker>>(
-                          valueListenable: _geofenceCirclesNotifier,
-                          builder: (_, circles, __) =>
-                              CircleLayer(circles: circles),
-                        ),
-                      // Layer 4: 지오펜스 탭 감지 마커
-                      if (layerState.layer4EventAlerts)
-                        ValueListenableBuilder<List<Marker>>(
-                          valueListenable: _geofenceTapMarkersNotifier,
-                          builder: (_, markers, __) =>
-                              MarkerLayer(markers: markers),
-                        ),
-                      // Layer 4: 이벤트/알림 마커
-                      if (layerState.layer4EventAlerts)
-                        ValueListenableBuilder<List<Marker>>(
-                          valueListenable: _eventMarkersNotifier,
-                          builder: (_, markers, __) =>
-                              MarkerLayer(markers: markers),
-                        ),
-                    ],
+                        // Layer 1: 안전시설 마커
+                        if (layerState.layer1SafetyFacilities)
+                          ValueListenableBuilder<List<Marker>>(
+                            valueListenable: _safetyMarkersNotifier,
+                            builder: (_, markers, __) =>
+                                MarkerLayer(markers: markers),
+                          ),
+                        // Layer 2: 멤버 위치 마커
+                        if (layerState.layer2MemberMarkers)
+                          MarkerLayer(markers: userMarkers),
+                        // Layer 3: 일정 폴리라인
+                        if (layerState.layer3SchedulePlaces)
+                          ValueListenableBuilder<List<Polyline>>(
+                            valueListenable: _scheduleLinesNotifier,
+                            builder: (_, lines, __) =>
+                                PolylineLayer(polylines: lines),
+                          ),
+                        // Layer 3: 일정 장소 마커
+                        if (layerState.layer3SchedulePlaces)
+                          ValueListenableBuilder<List<Marker>>(
+                            valueListenable: _scheduleMarkersNotifier,
+                            builder: (_, markers, __) =>
+                                MarkerLayer(markers: markers),
+                          ),
+                        // Layer 4: 지오펜스 영역 (CircleLayer)
+                        if (layerState.layer4EventAlerts)
+                          ValueListenableBuilder<List<CircleMarker>>(
+                            valueListenable: _geofenceCirclesNotifier,
+                            builder: (_, circles, __) =>
+                                CircleLayer(circles: circles),
+                          ),
+                        // Layer 4: 지오펜스 탭 감지 마커
+                        if (layerState.layer4EventAlerts)
+                          ValueListenableBuilder<List<Marker>>(
+                            valueListenable: _geofenceTapMarkersNotifier,
+                            builder: (_, markers, __) =>
+                                MarkerLayer(markers: markers),
+                          ),
+                        // Layer 4: 이벤트/알림 마커
+                        if (layerState.layer4EventAlerts)
+                          ValueListenableBuilder<List<Marker>>(
+                            valueListenable: _eventMarkersNotifier,
+                            builder: (_, markers, __) =>
+                                MarkerLayer(markers: markers),
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -730,13 +1045,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   if (isNoTrip) {
                     return _buildNoTripContent();
                   }
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(opacity: animation, child: child);
-                    },
-                    child: _buildTabContent(scrollController),
-                  );
+                  // AnimatedSwitcher 사용 불가:
+                  // 크로스페이드 중 이전/새 자식이 동시에 같은 scrollController를
+                  // 사용하여 "ScrollController attached to multiple scroll views" 발생.
+                  // DraggableScrollableSheet의 scrollController는 단일 스크롤 뷰 전용.
+                  return _buildTabContent(scrollController);
                 },
               ),
 
@@ -822,18 +1135,6 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   left: 0,
                   right: 0,
                   child: BatteryWarningBanner(batteryLevel: batteryLevel),
-                ),
-
-              // ── Privacy Banner (active 상태에서만) ────────────
-              if (isActive)
-                Positioned(
-                  top:
-                      MediaQuery.of(context).padding.top +
-                      (!networkStatus.isOnline ? 32 : 0) +
-                      (showBatteryWarning ? 32 : 0),
-                  left: 0,
-                  right: 0,
-                  child: PrivacyBanner(privacyLevel: privacyLevel),
                 ),
 
               // ── Completed 상태 읽기 전용 뱃지 ─────────────────
