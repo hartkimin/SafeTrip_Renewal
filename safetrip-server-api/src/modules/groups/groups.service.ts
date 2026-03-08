@@ -162,9 +162,84 @@ export class GroupsService {
     }
 
     async getMembers(tripId: string) {
-        return this.memberRepo.find({
-            where: { tripId, status: 'active' },
-        });
+        // 1. PostgreSQL: 멤버 + 유저 프로필 JOIN
+        const members = await this.dataSource.query(`
+            SELECT
+                gm.user_id,
+                COALESCE(u.display_name, '') AS user_name,
+                u.profile_image_url,
+                gm.member_role,
+                gm.location_sharing_enabled AS is_schedule_on,
+                u.privacy_level,
+                u.date_of_birth,
+                u.minor_status
+            FROM tb_group_member gm
+            LEFT JOIN tb_user u ON gm.user_id = u.user_id
+            WHERE gm.trip_id = $1 AND gm.status = 'active'
+            ORDER BY
+                CASE gm.member_role
+                    WHEN 'captain' THEN 0
+                    WHEN 'crew_chief' THEN 1
+                    WHEN 'crew' THEN 2
+                END,
+                u.display_name ASC
+        `, [tripId]);
+
+        // 2. 각 멤버별 가디언 링크 조회
+        const guardianLinks = await this.dataSource.query(`
+            SELECT
+                gl.link_id,
+                gl.member_id AS member_user_id,
+                gl.guardian_id AS guardian_user_id,
+                COALESCE(gu.display_name, '') AS guardian_name,
+                gu.profile_image_url AS guardian_profile_image_url,
+                gl.is_paid,
+                gl.status,
+                gl.payment_id,
+                gp.resume_at AS paused_until
+            FROM tb_guardian_link gl
+            LEFT JOIN tb_user gu ON gl.guardian_id = gu.user_id
+            LEFT JOIN tb_guardian_pause gp
+                ON gp.link_id = gl.link_id AND gp.is_active = true
+            WHERE gl.trip_id = $1
+              AND gl.status != 'rejected'
+        `, [tripId]);
+
+        // 3. 가디언 링크를 member_user_id로 그룹핑
+        const guardianMap = new Map<string, any[]>();
+        for (const gl of guardianLinks) {
+            const key = gl.member_user_id;
+            if (!guardianMap.has(key)) guardianMap.set(key, []);
+            guardianMap.get(key)!.push({
+                link_id: gl.link_id,
+                guardian_user_id: gl.guardian_user_id,
+                guardian_name: gl.guardian_name,
+                guardian_profile_image_url: gl.guardian_profile_image_url,
+                is_paid: gl.is_paid,
+                status: gl.status,
+                payment_id: gl.payment_id,
+                paused_until: gl.paused_until,
+            });
+        }
+
+        // 4. 멤버 데이터 조합 (미성년자 판별 포함)
+        return members.map(m => ({
+            user_id: m.user_id,
+            user_name: m.user_name,
+            profile_image_url: m.profile_image_url,
+            member_role: m.member_role,
+            is_online: false,
+            is_sos_active: false,
+            battery_level: null,
+            last_location_text: null,
+            last_location_updated_at: null,
+            latitude: null,
+            longitude: null,
+            privacy_level: m.privacy_level || 'standard',
+            is_schedule_on: m.is_schedule_on ?? true,
+            is_minor: m.minor_status !== 'adult',
+            guardian_links: guardianMap.get(m.user_id) || [],
+        }));
     }
 
     async removeMember(tripId: string, userId: string, removedBy: string) {

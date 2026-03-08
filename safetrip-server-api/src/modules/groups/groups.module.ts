@@ -9,11 +9,12 @@ import { Trip } from '../../entities/trip.entity';
 import { Schedule } from '../../entities/schedule.entity';
 import { GuardianLink } from '../../entities/guardian.entity';
 import { LocationSharing } from '../../entities/location.entity';
+import { User } from '../../entities/user.entity';
 import { InviteCodesModule } from '../invite-codes/invite-codes.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Group, GroupMember, InviteCode, Trip, Schedule, GuardianLink, LocationSharing]),
+        TypeOrmModule.forFeature([Group, GroupMember, InviteCode, Trip, Schedule, GuardianLink, LocationSharing, User]),
         InviteCodesModule,
     ],
     controllers: [GroupsController],
