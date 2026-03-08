@@ -100,12 +100,12 @@ export class TripsService {
                 countryCode: data.country_code,
                 countryName: data.country_name || null,
                 tripType: data.trip_type || null,
+                status: 'planning',
                 startDate: start,
                 endDate: end,
                 sharingMode: finalSharingMode,
                 privacyLevel: finalPrivacyLevel,
                 b2bContractId: data.b2b_contract_id || null,
-                createdBy: userId,
             });
             savedTrip = await queryRunner.manager.save(trip);
 
