@@ -8,6 +8,8 @@ import { Trip } from '../../entities/trip.entity';
 import { Schedule } from '../../entities/schedule.entity';
 import { GuardianLink } from '../../entities/guardian.entity';
 import { LocationSharing } from '../../entities/location.entity';
+import { FIREBASE_APP } from '../../config/firebase/firebase.module';
+import * as admin from 'firebase-admin';
 
 @Injectable()
 export class GroupsService {
@@ -19,7 +21,8 @@ export class GroupsService {
         @InjectRepository(Schedule) private scheduleRepo: Repository<Schedule>,
         @InjectRepository(GuardianLink) private guardianLinkRepo: Repository<GuardianLink>,
         @InjectRepository(LocationSharing) private locationSharingRepo: Repository<LocationSharing>,
-        private dataSource: DataSource
+        private dataSource: DataSource,
+        @Inject(FIREBASE_APP) private firebaseApp: admin.app.App
     ) { }
 
     async create(userId: string, groupName: string, groupType = 'personal') {
@@ -222,24 +225,39 @@ export class GroupsService {
             });
         }
 
-        // 4. 멤버 데이터 조합 (미성년자 판별 포함)
-        return members.map(m => ({
-            user_id: m.user_id,
-            user_name: m.user_name,
-            profile_image_url: m.profile_image_url,
-            member_role: m.member_role,
-            is_online: false,
-            is_sos_active: false,
-            battery_level: null,
-            last_location_text: null,
-            last_location_updated_at: null,
-            latitude: null,
-            longitude: null,
-            privacy_level: m.privacy_level || 'standard',
-            is_schedule_on: m.is_schedule_on ?? true,
-            is_minor: m.minor_status !== 'adult',
-            guardian_links: guardianMap.get(m.user_id) || [],
-        }));
+        // 4. RTDB에서 실시간 상태 일괄 조회
+        let rtdbData: Record<string, any> = {};
+        try {
+            const rtdbRef = this.firebaseApp.database()
+                .ref(`trips/${tripId}/members`);
+            const snapshot = await rtdbRef.once('value');
+            rtdbData = snapshot.val() || {};
+        } catch (e) {
+            // RTDB 실패해도 기본 데이터는 반환 (graceful degradation)
+            console.warn(`[getMembers] RTDB read failed for trip ${tripId}:`, e);
+        }
+
+        // 5. 멤버 데이터 조합 (RTDB 병합 + 미성년자 판별)
+        return members.map(m => {
+            const rtdb = rtdbData[m.user_id] || {};
+            return {
+                user_id: m.user_id,
+                user_name: m.user_name,
+                profile_image_url: m.profile_image_url,
+                member_role: m.member_role,
+                is_online: rtdb.online ?? false,
+                is_sos_active: rtdb.sos_active ?? false,
+                battery_level: rtdb.battery ?? null,
+                last_location_text: rtdb.location_text ?? null,
+                last_location_updated_at: rtdb.location_updated_at ?? null,
+                latitude: rtdb.latitude ?? null,
+                longitude: rtdb.longitude ?? null,
+                privacy_level: m.privacy_level || 'standard',
+                is_schedule_on: m.is_schedule_on ?? true,
+                is_minor: m.minor_status !== 'adult',
+                guardian_links: guardianMap.get(m.user_id) || [],
+            };
+        });
     }
 
     async removeMember(tripId: string, userId: string, removedBy: string) {
