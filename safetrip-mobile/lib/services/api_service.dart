@@ -221,27 +221,22 @@ class ApiService {
     String? privacyLevel,
     String? sharingMode,
   }) async {
-    try {
-      final data = <String, dynamic>{
-        'title': title,
-        'country_code': countryCode,
-        'trip_type': tripType,
-        'start_date': startDate,
-        'end_date': endDate,
-      };
-      if (countryName != null) data['country_name'] = countryName;
-      if (privacyLevel != null) data['privacy_level'] = privacyLevel;
-      if (sharingMode != null) data['sharing_mode'] = sharingMode;
+    final data = <String, dynamic>{
+      'title': title,
+      'country_code': countryCode,
+      'trip_type': tripType,
+      'start_date': startDate,
+      'end_date': endDate,
+    };
+    if (countryName != null) data['country_name'] = countryName;
+    if (privacyLevel != null) data['privacy_level'] = privacyLevel;
+    if (sharingMode != null) data['sharing_mode'] = sharingMode;
 
-      final response = await _dio.post('/api/v1/trips', data: data);
-      if (response.data['success'] == true && response.data['data'] != null) {
-        return response.data['data'] as Map<String, dynamic>;
-      }
-      return null;
-    } catch (e) {
-      debugPrint('[ApiService] createTrip Error: $e');
-      return null;
+    final response = await _dio.post('/api/v1/trips', data: data);
+    if (response.data['success'] == true && response.data['data'] != null) {
+      return response.data['data'] as Map<String, dynamic>;
     }
+    return null;
   }
 
   // 사용자 조회
@@ -1145,6 +1140,40 @@ class ApiService {
       return response.data['success'] == true;
     } catch (e) {
       debugPrint('[ApiService] saveConsentRecord error: $e');
+      return false;
+    }
+  }
+
+  /// POST /api/v1/auth/minor-consent-otp — 법정대리인 동의 OTP 발송
+  Future<bool> sendMinorConsentOtp(String phone) async {
+    try {
+      final response = await _dio.post('/api/v1/auth/minor-consent-otp', data: {
+        'phone': phone,
+      });
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] sendMinorConsentOtp error: $e');
+      return false;
+    }
+  }
+
+  /// POST /api/v1/auth/submit-parental-consent — 법정대리인 동의 제출
+  Future<bool> submitParentalConsent({
+    required String parentName,
+    required String parentPhone,
+    required String relationship,
+    required String otp,
+  }) async {
+    try {
+      final response = await _dio.post('/api/v1/auth/submit-parental-consent', data: {
+        'parentName': parentName,
+        'parentPhone': parentPhone,
+        'relationship': relationship,
+        'otp': otp,
+      });
+      return response.data['success'] == true;
+    } catch (e) {
+      debugPrint('[ApiService] submitParentalConsent error: $e');
       return false;
     }
   }

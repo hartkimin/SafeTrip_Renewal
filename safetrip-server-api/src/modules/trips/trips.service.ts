@@ -75,59 +75,78 @@ export class TripsService {
 
         const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-        // 3) 그룹 생성
-        const group = this.groupRepo.create({
-            groupName: data.title,
-            groupType: data.trip_type,
-            createdBy: userId,
-            inviteCode
-        });
-        const savedGroup = await this.groupRepo.save(group);
+        // 3~7) 트랜잭션으로 Group, Trip, Member, ChatRoom 생성
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        // 4) 여행 생성
-        const trip = this.tripRepo.create({
-            groupId: savedGroup.groupId,
-            tripName: data.title,
-            destination: data.country_name || data.country_code,
-            destinationCountryCode: data.country_code,
-            startDate: start,
-            endDate: end,
-            sharingMode: finalSharingMode,
-            privacyLevel: finalPrivacyLevel,
-            b2bContractId: data.b2b_contract_id || null,
-        });
-        const savedTrip = await this.tripRepo.save(trip);
+        let savedTrip: Trip;
+        try {
+            // 3) 그룹 생성
+            const group = this.groupRepo.create({
+                groupName: data.title,
+                groupType: data.trip_type,
+                createdBy: userId,
+                inviteCode
+            });
+            const savedGroup = await queryRunner.manager.save(group);
 
-        // B2B인 경우 카운트 증가
-        if (data.b2b_contract_id) {
-            await this.b2bService.incrementTripCount(data.b2b_contract_id);
+            // 4) 여행 생성
+            const trip = this.tripRepo.create({
+                groupId: savedGroup.groupId,
+                tripName: data.title,
+                destination: data.country_name || data.country_code,
+                destinationCountryCode: data.country_code,
+                countryCode: data.country_code,
+                countryName: data.country_name || null,
+                tripType: data.trip_type || null,
+                startDate: start,
+                endDate: end,
+                sharingMode: finalSharingMode,
+                privacyLevel: finalPrivacyLevel,
+                b2bContractId: data.b2b_contract_id || null,
+                createdBy: userId,
+            });
+            savedTrip = await queryRunner.manager.save(trip);
+
+            // B2B인 경우 카운트 증가
+            if (data.b2b_contract_id) {
+                await this.b2bService.incrementTripCount(data.b2b_contract_id);
+            }
+
+            // 5) captain 등록
+            const member = this.memberRepo.create({
+                groupId: savedGroup.groupId,
+                userId,
+                tripId: savedTrip.tripId,
+                memberRole: 'captain',
+                isAdmin: true,
+                canEditSchedule: true,
+                canManageMembers: true,
+                canSendNotifications: true,
+                canViewLocation: true,
+                canManageGeofences: true,
+            });
+            await queryRunner.manager.save(member);
+
+            // 6) §10.2: 미성년자 보호 로직 적용 (캡틴이 미성년자인 경우)
+            await this.checkAndEnforceMinorProtection(savedTrip.tripId, userId, queryRunner);
+
+            // 7) 채팅방 자동 생성
+            const chatRoom = this.chatRoomRepo.create({
+                tripId: savedTrip.tripId,
+                roomType: 'group',
+                roomName: data.title,
+            });
+            await queryRunner.manager.save(chatRoom);
+
+            await queryRunner.commitTransaction();
+        } catch (err) {
+            await queryRunner.rollbackTransaction();
+            throw err;
+        } finally {
+            await queryRunner.release();
         }
-
-        // 5) captain 등록
-        const member = this.memberRepo.create({
-            groupId: savedGroup.groupId,
-            userId,
-            tripId: savedTrip.tripId,
-            memberRole: 'captain',
-            isAdmin: true,
-            canEditSchedule: true,
-            canManageMembers: true,
-            canSendNotifications: true,
-            canViewLocation: true,
-            canManageGeofences: true,
-        });
-        await this.memberRepo.save(member);
-
-        // 6) §10.2: 미성년자 보호 로직 적용 (캡틴이 미성년자인 경우)
-        await this.checkAndEnforceMinorProtection(savedTrip.tripId, userId);
-
-        // 7) 채팅방 자동 생성
-        const chatRoom = this.chatRoomRepo.create({
-            tripId: savedTrip.tripId,
-            roomType: 'group',
-            roomName: data.title,
-        });
-        await this.chatRoomRepo.save(chatRoom);
 
         // Refresh trip data to include updated privacy_level if changed
         const finalTrip = await this.tripRepo.findOne({ where: { tripId: savedTrip.tripId } });
@@ -137,17 +156,24 @@ export class TripsService {
     /**
      * §10.2 미성년자 보호 로직
      * 미성년자(만 18세 미만) 멤버 포함 시 safety_first 등급 강제
+     * @param queryRunner - 트랜잭션 내에서 호출 시 전달 (선택)
      */
-    private async checkAndEnforceMinorProtection(tripId: string, userId: string) {
+    private async checkAndEnforceMinorProtection(tripId: string, userId: string, queryRunner?: import('typeorm').QueryRunner) {
         const user = await this.userRepo.findOne({ where: { userId }, select: ['minorStatus'] });
         if (!user) return;
 
         if (user.minorStatus === 'minor') {
-            await this.tripRepo.update(tripId, {
+            const updateData = {
                 privacyLevel: 'safety_first',
                 hasMinorMembers: true,
                 updatedAt: new Date(),
-            });
+            };
+
+            if (queryRunner) {
+                await queryRunner.manager.update(Trip, tripId, updateData);
+            } else {
+                await this.tripRepo.update(tripId, updateData);
+            }
         }
     }
 
@@ -491,30 +517,74 @@ export class TripsService {
               AND deleted_at IS NULL
         `);
 
-        // 2) 멤버 여행 카드 데이터
-        const memberTrips = await this.dataSource.query(`
-            SELECT
-                v.trip_id, v.trip_name, v.status, v.start_date, v.end_date,
-                v.trip_days, v.privacy_level, v.sharing_mode, v.schedule_type,
-                v.country_code, v.country_name, v.destination_city,
-                v.has_minor_members, v.reactivation_count,
-                v.d_day, v.current_day, v.member_count, v.can_reactivate,
-                v.group_id, v.reactivated_at, v.updated_at,
-                gm.member_role AS user_role,
-                gm.is_admin
-            FROM tb_trip_card_view v
-            JOIN tb_group_member gm ON gm.trip_id = v.trip_id
-            WHERE gm.user_id = $1
-              AND gm.status = 'active'
-              AND gm.member_role IN ('captain', 'crew_chief', 'crew')
-            ORDER BY
-                CASE v.status
-                    WHEN 'active' THEN 1
-                    WHEN 'planning' THEN 2
-                    WHEN 'completed' THEN 3
-                END,
-                v.start_date DESC
-        `, [userId]);
+        // 2) 멤버 여행 카드 데이터 (tb_trip_card_view fallback 포함)
+        let memberTrips: any[] = [];
+        try {
+            memberTrips = await this.dataSource.query(`
+                SELECT
+                    v.trip_id, v.trip_name, v.status, v.start_date, v.end_date,
+                    v.trip_days, v.privacy_level, v.sharing_mode, v.schedule_type,
+                    v.country_code, v.country_name, v.destination_city,
+                    v.has_minor_members, v.reactivation_count,
+                    v.d_day, v.current_day, v.member_count, v.can_reactivate,
+                    v.group_id, v.reactivated_at, v.updated_at,
+                    gm.member_role AS user_role,
+                    gm.is_admin
+                FROM tb_trip_card_view v
+                JOIN tb_group_member gm ON gm.trip_id = v.trip_id
+                WHERE gm.user_id = $1
+                  AND gm.status = 'active'
+                  AND gm.member_role IN ('captain', 'crew_chief', 'crew')
+                ORDER BY
+                    CASE v.status
+                        WHEN 'active' THEN 1
+                        WHEN 'planning' THEN 2
+                        WHEN 'completed' THEN 3
+                    END,
+                    v.start_date DESC
+            `, [userId]);
+        } catch (viewErr) {
+            console.warn('getCardView: tb_trip_card_view failed, using fallback query:', viewErr.message);
+            memberTrips = await this.dataSource.query(`
+                SELECT
+                    t.trip_id, t.trip_name, t.status,
+                    TO_CHAR(t.start_date, 'YYYY-MM-DD') AS start_date,
+                    TO_CHAR(t.end_date, 'YYYY-MM-DD') AS end_date,
+                    (t.end_date - t.start_date) AS trip_days,
+                    t.privacy_level, t.sharing_mode, t.schedule_type,
+                    t.country_code, t.country_name, t.destination_city,
+                    t.has_minor_members, t.reactivation_count,
+                    CASE
+                        WHEN t.status = 'active' THEN 0
+                        WHEN t.status = 'planning' THEN (t.start_date - CURRENT_DATE)
+                        ELSE NULL
+                    END AS d_day,
+                    CASE
+                        WHEN t.status = 'active' THEN (CURRENT_DATE - t.start_date + 1)
+                        ELSE NULL
+                    END AS current_day,
+                    (SELECT COUNT(*) FROM tb_group_member gm2
+                     WHERE gm2.trip_id = t.trip_id AND gm2.status = 'active'
+                       AND gm2.member_role IN ('captain','crew_chief','crew')) AS member_count,
+                    FALSE AS can_reactivate,
+                    t.group_id, t.reactivated_at, t.updated_at,
+                    gm.member_role AS user_role,
+                    gm.is_admin
+                FROM tb_trip t
+                JOIN tb_group_member gm ON gm.trip_id = t.trip_id
+                WHERE gm.user_id = $1
+                  AND gm.status = 'active'
+                  AND gm.member_role IN ('captain', 'crew_chief', 'crew')
+                  AND t.deleted_at IS NULL
+                ORDER BY
+                    CASE t.status
+                        WHEN 'active' THEN 1
+                        WHEN 'planning' THEN 2
+                        WHEN 'completed' THEN 3
+                    END,
+                    t.start_date DESC
+            `, [userId]);
+        }
 
         // 3) 가디언 여행 카드 데이터 (§05)
         //    tb_guardian_link.guardian_id = guardian's user_id

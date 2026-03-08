@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../constants/asian_countries.dart';
+import '../../features/trip_card/providers/trip_card_provider.dart';
+import '../../features/trip/providers/trip_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/country_search_bottom_sheet.dart';
+import '../../router/auth_notifier.dart';
 import '../../router/route_paths.dart';
 
-class ScreenTripCreate extends StatefulWidget {
-  const ScreenTripCreate({super.key});
+class ScreenTripCreate extends ConsumerStatefulWidget {
+  const ScreenTripCreate({super.key, required this.authNotifier});
+
+  final AuthNotifier authNotifier;
 
   @override
-  State<ScreenTripCreate> createState() => _ScreenTripCreateState();
+  ConsumerState<ScreenTripCreate> createState() => _ScreenTripCreateState();
 }
 
-class _ScreenTripCreateState extends State<ScreenTripCreate> {
+class _ScreenTripCreateState extends ConsumerState<ScreenTripCreate> {
   final _nameController = TextEditingController();
   final _cityController = TextEditingController();
   
@@ -51,14 +57,34 @@ class _ScreenTripCreateState extends State<ScreenTripCreate> {
       final trip = await _apiService.createTrip(
         title: _nameController.text.trim(),
         countryCode: _selectedCountryCode!,
-        tripType: 'leisure',
+        tripType: 'group',
         startDate: DateFormat('yyyy-MM-dd').format(_startDate!),
         endDate: DateFormat('yyyy-MM-dd').format(_endDate!),
+        countryName: _selectedCountryName,
       );
 
       if (trip != null && mounted) {
-        // 성공 시 메인으로 이동 (실제로는 여기서 멤버 초대 화면 등으로 갈 수 있음)
-        context.go(RoutePaths.main);
+        // group_id 저장 및 AuthNotifier 활성 여행 갱신 → 라우터 redirect가 main으로 이동
+        final groupId = trip['groupId'] as String?;
+        if (groupId != null) {
+          await widget.authNotifier.setActiveTrip(groupId);
+        }
+        await ref.read(tripCardProvider.notifier).fetchCardView();
+        // tripProvider 초기화 — 메인 화면 바텀시트에서 사용
+        ref.read(tripProvider.notifier).setCurrentTripDetails(
+          tripName: trip['tripName'] as String? ?? _nameController.text.trim(),
+          tripStatus: trip['status'] as String? ?? 'planning',
+          userRole: 'captain',
+          tripStartDate: _startDate,
+          tripEndDate: _endDate,
+          countryCode: _selectedCountryCode,
+          countryName: _selectedCountryName,
+        );
+        if (mounted) context.go(RoutePaths.main);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('여행 생성에 실패했습니다. 다시 시도해주세요.')),
+        );
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('여행 생성에 실패했습니다.')));
