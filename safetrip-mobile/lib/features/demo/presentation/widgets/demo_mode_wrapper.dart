@@ -14,12 +14,12 @@ import 'demo_event_toast.dart';
 import 'demo_conversion_modal.dart';
 import 'demo_grade_compare.dart';
 import 'demo_guardian_compare.dart';
-import 'demo_lock_overlay.dart';
 import 'demo_role_panel.dart';
 import 'demo_time_slider.dart';
 
 /// 데모 모드에서 MainScreen을 감싸는 래퍼
-/// DemoBadge + DemoRolePanel + TimeSlider + 전환 FAB + 이벤트 시뮬레이터
+/// 상단 한 줄: 도구메뉴(좌) + 뱃지(중) + 역할패널(우)
+/// 하단: 타임슬라이더 + 이벤트 시뮬레이터
 class DemoModeWrapper extends ConsumerStatefulWidget {
   const DemoModeWrapper({super.key, required this.child});
   final Widget child;
@@ -72,7 +72,7 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
     }
   }
 
-  /// 코치마크별 타겟 영역 계산
+  /// 코치마크별 타겟 영역 계산 (3개: 지도, 역할, 슬라이더)
   Rect _getCoachmarkTargetRect(int index) {
     final screenSize = MediaQuery.of(context).size;
     final topPadding = MediaQuery.of(context).padding.top;
@@ -84,31 +84,20 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
           width: screenSize.width - 32,
           height: 200,
         );
-      case 1: // role_panel — 우측 상단
+      case 1: // role_panel — 우측 상단 (뱃지와 같은 줄)
         return Rect.fromLTWH(
           screenSize.width - 120,
-          topPadding + 30,
+          topPadding + 4,
           100,
-          36,
+          30,
         );
-      case 2: // guardian_compare — 좌측 상단
-        return Rect.fromLTWH(AppSpacing.md, topPadding + 30, 110, 32);
-      case 3: // time_slider — 하단
+      case 2: // time_slider — 하단
         return Rect.fromLTWH(
           16,
-          screenSize.height - 280,
+          screenSize.height - 290,
           screenSize.width - 32,
-          40,
+          80,
         );
-      case 4: // sos_button — 우하단
-        return Rect.fromLTWH(
-          screenSize.width - 80,
-          screenSize.height - 180,
-          56,
-          56,
-        );
-      case 5: // grade_compare — 좌측
-        return Rect.fromLTWH(AppSpacing.md, topPadding + 66, 100, 32);
       default:
         return Rect.fromCenter(
           center: Offset(screenSize.width / 2, screenSize.height / 2),
@@ -178,7 +167,16 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
         // Layer 0: 기존 MainScreen
         widget.child,
 
-        // Layer 1: 데모 뱃지 (top center, §2 D3)
+        // ── 상단 한 줄: 도구(좌) + 뱃지(중) + 역할(우) ──
+
+        // 도구 메뉴 (좌측 — 가디언 비교, 등급 비교, 실제 앱 전환)
+        Positioned(
+          top: topPadding + 4,
+          left: AppSpacing.md,
+          child: const _DemoToolsMenu(),
+        ),
+
+        // 데모 뱃지 (중앙, §2 D3)
         Positioned(
           top: topPadding + 4,
           left: 0,
@@ -186,143 +184,110 @@ class _DemoModeWrapperState extends ConsumerState<DemoModeWrapper> {
           child: const Center(child: DemoBadge()),
         ),
 
-        // Layer 2: 역할 전환 패널 (우측, §3.4)
+        // 역할 전환 패널 (우측, §3.4)
         Positioned(
-          top: topPadding + 30,
+          top: topPadding + 4,
           right: AppSpacing.md,
           child: const DemoRolePanel(),
         ),
 
-        // Layer 3: 타임 슬라이더 (§3.2, 바텀시트 위)
+        // ── 하단: 타임 슬라이더 ──
+
         const Positioned(
           left: 0,
           right: 0,
-          bottom: 220, // above bottom sheet
+          bottom: 200,
           child: DemoTimeSlider(),
-        ),
-
-        // Layer 4: 가디언 비교 버튼 (§3.3, §3.4 역할별 잠금)
-        Positioned(
-          top: topPadding + 30,
-          left: AppSpacing.md,
-          child: DemoLockOverlay(
-            feature: 'guardian_billing',
-            child: _GuardianCompareButton(
-              onTap: () => DemoGuardianCompare.show(context),
-            ),
-          ),
-        ),
-
-        // Layer 4b: 등급 비교 버튼 (전체 역할, §3.5 + §4)
-        Positioned(
-          top: topPadding + 66,
-          left: AppSpacing.md,
-          child: _GradeCompareButton(
-            onTap: () => DemoGradeCompare.show(context),
-          ),
-        ),
-
-        // Layer 5: "실제 앱으로 전환" FAB (D5, 항상 표시)
-        Positioned(
-          left: AppSpacing.md,
-          bottom: AppSpacing.navigationBarHeight + 28,
-          child: _ExitDemoFab(
-            onTap: () => DemoConversionModal.show(context),
-          ),
         ),
       ],
     );
   }
 }
 
-class _ExitDemoFab extends StatelessWidget {
-  const _ExitDemoFab({required this.onTap});
-  final VoidCallback onTap;
+// =============================================================================
+// 도구 팝업 메뉴 (가디언 비교 + 등급 비교 + 실제 앱 전환)
+// =============================================================================
+
+class _DemoToolsMenu extends ConsumerWidget {
+  const _DemoToolsMenu();
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.primaryTeal,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryTeal.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.login, size: 16, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              '실제 앱으로 전환',
-              style: AppTypography.labelSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final demoState = ref.watch(demoStateProvider);
+    final canAccessGuardian = demoState.canAccess('guardian_billing');
+
+    return Material(
+      type: MaterialType.transparency,
+      child: PopupMenuButton<String>(
+      offset: const Offset(0, 36),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radius12),
       ),
-    );
-  }
-}
-
-class _GuardianCompareButton extends StatelessWidget {
-  const _GuardianCompareButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppSpacing.radius12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.shield, size: 14, color: AppColors.guardian),
-            const SizedBox(width: 4),
-            Text(
-              '가디언 비교',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.guardian,
-                fontWeight: FontWeight.w600,
+      color: Colors.white,
+      elevation: 4,
+      onSelected: (value) {
+        switch (value) {
+          case 'guardian':
+            if (canAccessGuardian) DemoGuardianCompare.show(context);
+          case 'grade':
+            DemoGradeCompare.show(context);
+          case 'exit':
+            DemoConversionModal.show(context);
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'guardian',
+          enabled: canAccessGuardian,
+          child: Row(
+            children: [
+              Icon(
+                canAccessGuardian ? Icons.shield : Icons.lock,
+                size: 16,
+                color: canAccessGuardian
+                    ? AppColors.guardian
+                    : AppColors.textTertiary,
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                '가디언 비교',
+                style: AppTypography.bodySmall.copyWith(
+                  color: canAccessGuardian
+                      ? AppColors.textPrimary
+                      : AppColors.textTertiary,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _GradeCompareButton extends StatelessWidget {
-  const _GradeCompareButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+        PopupMenuItem<String>(
+          value: 'grade',
+          child: Row(
+            children: [
+              const Icon(Icons.tune, size: 16, color: AppColors.primaryTeal),
+              const SizedBox(width: 8),
+              Text('등급 비교', style: AppTypography.bodySmall),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'exit',
+          child: Row(
+            children: [
+              const Icon(Icons.login, size: 16, color: AppColors.primaryTeal),
+              const SizedBox(width: 8),
+              Text(
+                '실제 앱으로 전환',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.primaryTeal,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -339,18 +304,23 @@ class _GradeCompareButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.tune, size: 14, color: AppColors.primaryTeal),
+            const Icon(
+              Icons.more_horiz,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
             const SizedBox(width: 4),
             Text(
-              '등급 비교',
+              '도구',
               style: AppTypography.labelSmall.copyWith(
-                color: AppColors.primaryTeal,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }
