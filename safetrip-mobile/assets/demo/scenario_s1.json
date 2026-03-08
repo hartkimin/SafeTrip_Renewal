@@ -98,13 +98,17 @@
     {"time_offset_minutes": 30, "type": "geofence_in", "description": "성산일출봉 일정 구역에 도착했습니다", "member_id": "m_captain"},
     {"time_offset_minutes": 60, "type": "all_arrived", "description": "전원 성산일출봉 도착 확인"},
     {"time_offset_minutes": 120, "type": "geofence_out", "description": "정민수 학생이 일정 구역을 벗어났습니다", "member_id": "m_crew01"},
-    {"time_offset_minutes": 125, "type": "notification", "description": "가디언 알림: 정민수 학생 이탈 감지"},
+    {"time_offset_minutes": 125, "type": "notification", "description": "가디언 알림: 정민수 어머니에게 '정민수 학생 이탈 감지' 전송"},
     {"time_offset_minutes": 130, "type": "geofence_in", "description": "정민수 학생이 구역으로 복귀했습니다", "member_id": "m_crew01"},
     {"time_offset_minutes": 135, "type": "member_left", "description": "장우진 학생이 그룹에서 일시적으로 이탈했습니다", "member_id": "m_crew05"},
     {"time_offset_minutes": 240, "type": "sos_drill", "description": "SOS 모의 훈련 시작", "member_id": "m_chief1"},
     {"time_offset_minutes": 245, "type": "sos_resolved", "description": "SOS 모의 훈련 종료"},
     {"time_offset_minutes": 480, "type": "daily_summary", "description": "1일차 요약: 전원 안전, 이탈 1건 복귀 완료"},
+    {"time_offset_minutes": 600, "type": "chat_message", "description": "이반장: 15:30 중문관광단지 주차장으로 다 모여주세요!", "member_id": "m_chief1"},
+    {"time_offset_minutes": 630, "type": "all_arrived", "description": "전원 중문관광단지 주차장 집합 확인"},
     {"time_offset_minutes": 960, "type": "daily_summary", "description": "2일차 요약: 전원 안전, 이상 없음"},
+    {"time_offset_minutes": 1020, "type": "chat_message", "description": "박반장: 시장 넓으니까 1반은 왼쪽, 2반은 오른쪽으로!", "member_id": "m_chief2"},
+    {"time_offset_minutes": 1380, "type": "notification", "description": "가디언 알림: 학부모 전원에게 '여행이 안전하게 종료되었습니다' 전송"},
     {"time_offset_minutes": 1440, "type": "trip_end", "description": "여행이 종료되었습니다. 전원 안전 귀환!"}
   ],
   "location_tracks": {

@@ -1,0 +1,114 @@
+{
+  "scenario_id": "s5",
+  "title": "커플 여행",
+  "subtitle": "다낭 4일간 커플여행 · 프라이버시우선 모드",
+  "privacy_grade": "privacy_first",
+  "duration_days": 4,
+  "destination": {
+    "name": "다낭",
+    "country_code": "VN",
+    "country_name": "베트남",
+    "lat": 16.0544,
+    "lng": 108.2022,
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "members": [
+    {"id": "m_captain", "name": "박준혁", "role": "captain"},
+    {"id": "m_crew01", "name": "서윤아", "role": "crew"},
+    {"id": "g_guard01", "name": "서윤아 엄마", "role": "guardian"}
+  ],
+  "guardian_links": [
+    {"member_id": "m_crew01", "guardian_id": "g_guard01", "is_paid": false}
+  ],
+  "schedules": [
+    {
+      "day": 1,
+      "title": "다낭 도착 & 미케 비치",
+      "items": [
+        {"time": "13:00", "title": "다낭공항 도착", "lat": 16.0559, "lng": 108.1990},
+        {"time": "15:00", "title": "호텔 체크인 (미케비치)", "lat": 16.0640, "lng": 108.2480},
+        {"time": "16:30", "title": "미케 비치 산책", "lat": 16.0680, "lng": 108.2510},
+        {"time": "18:30", "title": "저녁 (해산물)", "lat": 16.0620, "lng": 108.2450}
+      ]
+    },
+    {
+      "day": 2,
+      "title": "바나힐즈",
+      "items": [
+        {"time": "08:00", "title": "호텔 출발", "lat": 16.0640, "lng": 108.2480},
+        {"time": "09:30", "title": "바나힐즈 도착", "lat": 15.9977, "lng": 107.9961},
+        {"time": "10:00", "title": "골든 브릿지", "lat": 16.0000, "lng": 107.9950},
+        {"time": "12:00", "title": "점심 (바나힐즈 내)", "lat": 15.9985, "lng": 107.9965},
+        {"time": "15:00", "title": "케이블카 하산", "lat": 15.9977, "lng": 107.9961},
+        {"time": "17:00", "title": "호텔 복귀", "lat": 16.0640, "lng": 108.2480}
+      ]
+    },
+    {
+      "day": 3,
+      "title": "호이안",
+      "items": [
+        {"time": "09:00", "title": "호이안 출발", "lat": 15.8801, "lng": 108.3380},
+        {"time": "10:00", "title": "호이안 올드타운", "lat": 15.8775, "lng": 108.3380},
+        {"time": "12:00", "title": "점심 (까오라우)", "lat": 15.8770, "lng": 108.3375},
+        {"time": "14:00", "title": "아오자이 체험", "lat": 15.8780, "lng": 108.3370},
+        {"time": "17:00", "title": "등불 시장", "lat": 15.8765, "lng": 108.3385},
+        {"time": "19:00", "title": "다낭 복귀", "lat": 16.0640, "lng": 108.2480}
+      ]
+    },
+    {
+      "day": 4,
+      "title": "한시장 & 귀국",
+      "items": [
+        {"time": "09:00", "title": "한시장 쇼핑", "lat": 16.0679, "lng": 108.2240},
+        {"time": "10:30", "title": "용다리", "lat": 16.0611, "lng": 108.2279},
+        {"time": "12:00", "title": "점심 (분짜)", "lat": 16.0650, "lng": 108.2260},
+        {"time": "14:00", "title": "다낭공항 출발", "lat": 16.0559, "lng": 108.1990}
+      ]
+    }
+  ],
+  "simulation_events": [
+    {"time_offset_minutes": 0, "type": "trip_start", "description": "다낭 커플여행이 시작되었습니다!"},
+    {"time_offset_minutes": 60, "type": "geofence_in", "description": "호텔 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 65, "type": "all_arrived", "description": "전원 도착 확인"},
+    {"time_offset_minutes": 120, "type": "chat_message", "description": "서윤아: 비치 너무 이쁘다! 사진 찍어줘", "member_id": "m_crew01"},
+    {"time_offset_minutes": 480, "type": "daily_summary", "description": "1일차 요약: 전원 안전"},
+    {"time_offset_minutes": 570, "type": "geofence_in", "description": "바나힐즈 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 630, "type": "chat_message", "description": "박준혁: 골든브릿지 도착! 줄 좀 서야 할 듯", "member_id": "m_captain"},
+    {"time_offset_minutes": 780, "type": "schedule_changed", "description": "박준혁이 일정 변경: 케이블카 하산 15:00→16:00 (더 구경하고 싶대)", "member_id": "m_captain"},
+    {"time_offset_minutes": 960, "type": "daily_summary", "description": "2일차 요약: 전원 안전"},
+    {"time_offset_minutes": 1080, "type": "geofence_in", "description": "호이안 올드타운 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 1350, "type": "geofence_out", "description": "서윤아가 아오자이 가게 찾아 올드타운 밖으로 이탈", "member_id": "m_crew01"},
+    {"time_offset_minutes": 1352, "type": "notification", "description": "가디언 알림: 서윤아 엄마에게 '서윤아가 일정 구역을 이탈했습니다' 전송"},
+    {"time_offset_minutes": 1355, "type": "chat_message", "description": "서윤아: 오빠 나 근처 예쁜 아오자이 가게 발견! 5분만!", "member_id": "m_crew01"},
+    {"time_offset_minutes": 1360, "type": "geofence_in", "description": "서윤아 복귀", "member_id": "m_crew01"},
+    {"time_offset_minutes": 1440, "type": "daily_summary", "description": "3일차 요약: 이탈 1건, 즉시 복귀"},
+    {"time_offset_minutes": 1500, "type": "chat_message", "description": "서윤아: 등불 시장 분위기 최고...", "member_id": "m_crew01"},
+    {"time_offset_minutes": 1560, "type": "chat_message", "description": "박준혁: 마지막 날이네... 한시장에서 선물 사자", "member_id": "m_captain"},
+    {"time_offset_minutes": 1920, "type": "notification", "description": "가디언 알림: 서윤아 엄마에게 '여행이 안전하게 종료되었습니다' 전송"},
+    {"time_offset_minutes": 1920, "type": "trip_end", "description": "다낭 커플여행 종료! 안전 귀국!"}
+  ],
+  "location_tracks": {
+    "m_captain": [
+      {"t": 0, "lat": 16.0559, "lng": 108.1990},
+      {"t": 30, "lat": 16.0600, "lng": 108.2200},
+      {"t": 60, "lat": 16.0640, "lng": 108.2480},
+      {"t": 90, "lat": 16.0680, "lng": 108.2510},
+      {"t": 120, "lat": 16.0640, "lng": 108.2480},
+      {"t": 150, "lat": 15.9977, "lng": 107.9961},
+      {"t": 180, "lat": 15.8775, "lng": 108.3380},
+      {"t": 210, "lat": 16.0559, "lng": 108.1990}
+    ],
+    "m_crew01": [
+      {"t": 0, "lat": 16.0559, "lng": 108.1990},
+      {"t": 30, "lat": 16.0602, "lng": 108.2202},
+      {"t": 60, "lat": 16.0642, "lng": 108.2482},
+      {"t": 90, "lat": 16.0682, "lng": 108.2512},
+      {"t": 120, "lat": 16.0642, "lng": 108.2482},
+      {"t": 150, "lat": 15.9979, "lng": 107.9963},
+      {"t": 175, "lat": 15.8775, "lng": 108.3380},
+      {"t": 180, "lat": 15.8810, "lng": 108.3420},
+      {"t": 185, "lat": 15.8775, "lng": 108.3380},
+      {"t": 210, "lat": 16.0559, "lng": 108.1990}
+    ]
+  }
+}

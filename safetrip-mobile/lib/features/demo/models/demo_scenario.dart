@@ -1,6 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
-enum DemoScenarioId { s1, s2, s3 }
+enum DemoScenarioId { s1, s2, s3, s4, s5 }
 
 enum DemoRole { captain, crewChief, crew, guardian }
 

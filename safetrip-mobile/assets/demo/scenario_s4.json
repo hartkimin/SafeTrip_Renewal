@@ -1,0 +1,143 @@
+{
+  "scenario_id": "s4",
+  "title": "가족 여행",
+  "subtitle": "오사카 5일간 가족여행 · 안전최우선 모드",
+  "privacy_grade": "safety_first",
+  "duration_days": 5,
+  "destination": {
+    "name": "오사카",
+    "country_code": "JP",
+    "country_name": "일본",
+    "lat": 34.6937,
+    "lng": 135.5023,
+    "timezone": "Asia/Tokyo"
+  },
+  "members": [
+    {"id": "m_captain", "name": "김아빠", "role": "captain"},
+    {"id": "m_chief1", "name": "이엄마", "role": "crew_chief"},
+    {"id": "m_crew01", "name": "김하준", "role": "crew"},
+    {"id": "m_crew02", "name": "김서아", "role": "crew"},
+    {"id": "g_guard01", "name": "김할머니", "role": "guardian"},
+    {"id": "g_guard02", "name": "이할아버지", "role": "guardian"}
+  ],
+  "guardian_links": [
+    {"member_id": "m_crew01", "guardian_id": "g_guard01", "is_paid": false},
+    {"member_id": "m_crew02", "guardian_id": "g_guard02", "is_paid": false}
+  ],
+  "schedules": [
+    {
+      "day": 1,
+      "title": "오사카 도착 & 도톤보리",
+      "items": [
+        {"time": "11:00", "title": "간사이공항 도착", "lat": 34.4347, "lng": 135.2440},
+        {"time": "13:30", "title": "호텔 체크인 (난바)", "lat": 34.6659, "lng": 135.5013},
+        {"time": "15:00", "title": "도톤보리 산책", "lat": 34.6687, "lng": 135.5032},
+        {"time": "17:00", "title": "저녁 (타코야키)", "lat": 34.6693, "lng": 135.5025}
+      ]
+    },
+    {
+      "day": 2,
+      "title": "유니버설 스튜디오",
+      "items": [
+        {"time": "08:30", "title": "USJ 도착", "lat": 34.6654, "lng": 135.4323},
+        {"time": "12:00", "title": "점심 (USJ 내)", "lat": 34.6660, "lng": 135.4330},
+        {"time": "15:00", "title": "해리포터 존", "lat": 34.6668, "lng": 135.4318},
+        {"time": "18:00", "title": "USJ 퇴장", "lat": 34.6654, "lng": 135.4323},
+        {"time": "19:00", "title": "저녁 (오코노미야키)", "lat": 34.6700, "lng": 135.5000}
+      ]
+    },
+    {
+      "day": 3,
+      "title": "오사카성 & 가이유칸",
+      "items": [
+        {"time": "09:00", "title": "오사카성", "lat": 34.6873, "lng": 135.5262},
+        {"time": "12:00", "title": "점심 (우동)", "lat": 34.6850, "lng": 135.5250},
+        {"time": "14:00", "title": "가이유칸 수족관", "lat": 34.6545, "lng": 135.4290},
+        {"time": "17:00", "title": "덴포잔 대관람차", "lat": 34.6525, "lng": 135.4320}
+      ]
+    },
+    {
+      "day": 4,
+      "title": "나라 당일치기",
+      "items": [
+        {"time": "09:00", "title": "나라역 도착", "lat": 34.6810, "lng": 135.8200},
+        {"time": "09:30", "title": "나라공원 (사슴)", "lat": 34.6851, "lng": 135.8430},
+        {"time": "12:00", "title": "점심", "lat": 34.6820, "lng": 135.8300},
+        {"time": "14:00", "title": "도다이지", "lat": 34.6890, "lng": 135.8399},
+        {"time": "16:00", "title": "오사카 복귀", "lat": 34.6937, "lng": 135.5023}
+      ]
+    },
+    {
+      "day": 5,
+      "title": "신사이바시 쇼핑 & 귀국",
+      "items": [
+        {"time": "09:00", "title": "신사이바시 쇼핑", "lat": 34.6750, "lng": 135.5014},
+        {"time": "12:00", "title": "점심 (라멘)", "lat": 34.6730, "lng": 135.5020},
+        {"time": "14:00", "title": "간사이공항 출발", "lat": 34.4347, "lng": 135.2440}
+      ]
+    }
+  ],
+  "simulation_events": [
+    {"time_offset_minutes": 0, "type": "trip_start", "description": "오사카 가족여행이 시작되었습니다!"},
+    {"time_offset_minutes": 60, "type": "geofence_in", "description": "호텔 도착 확인", "member_id": "m_captain"},
+    {"time_offset_minutes": 90, "type": "all_arrived", "description": "전원 호텔 도착 확인"},
+    {"time_offset_minutes": 150, "type": "geofence_out", "description": "김하준(12세)이 도톤보리에서 게임센터 쪽으로 이탈", "member_id": "m_crew01"},
+    {"time_offset_minutes": 152, "type": "notification", "description": "가디언 알림: 김할머니에게 '김하준이 일정 구역을 이탈했습니다' 전송"},
+    {"time_offset_minutes": 155, "type": "chat_message", "description": "이엄마: 하준아 어디야? 빨리 타코야키 가게 앞으로 와!", "member_id": "m_chief1"},
+    {"time_offset_minutes": 158, "type": "geofence_in", "description": "김하준이 구역으로 복귀했습니다", "member_id": "m_crew01"},
+    {"time_offset_minutes": 480, "type": "daily_summary", "description": "1일차 요약: 전원 안전, 미성년자 이탈 1건 즉시 복귀"},
+    {"time_offset_minutes": 540, "type": "geofence_in", "description": "USJ 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 570, "type": "all_arrived", "description": "전원 USJ 진입 확인"},
+    {"time_offset_minutes": 720, "type": "chat_message", "description": "김아빠: 해리포터 존 앞에서 만나요! 서아가 빨리 가고 싶대", "member_id": "m_captain"},
+    {"time_offset_minutes": 960, "type": "daily_summary", "description": "2일차 요약: 전원 안전, 이상 없음"},
+    {"time_offset_minutes": 1080, "type": "geofence_in", "description": "오사카성 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 1260, "type": "sos_drill", "description": "김서아(9세)가 수족관에서 잠시 부모를 놓침 — SOS 발동", "member_id": "m_crew02"},
+    {"time_offset_minutes": 1261, "type": "notification", "description": "가디언 알림: 이할아버지에게 '김서아 SOS 발동!' 전송"},
+    {"time_offset_minutes": 1263, "type": "chat_message", "description": "이엄마: 서아야! 상어 수조 앞에 있어! 움직이지 마!", "member_id": "m_chief1"},
+    {"time_offset_minutes": 1265, "type": "sos_resolved", "description": "SOS 해제 — 김서아 부모 합류 완료"},
+    {"time_offset_minutes": 1266, "type": "notification", "description": "가디언 알림: 이할아버지에게 'SOS 해제, 안전 확인' 전송"},
+    {"time_offset_minutes": 1440, "type": "daily_summary", "description": "3일차 요약: SOS 1건 발생, 5분 내 해결"},
+    {"time_offset_minutes": 1560, "type": "geofence_in", "description": "나라공원 도착", "member_id": "m_captain"},
+    {"time_offset_minutes": 1680, "type": "geofence_out", "description": "김하준이 사슴 쫓다가 이탈", "member_id": "m_crew01"},
+    {"time_offset_minutes": 1682, "type": "notification", "description": "가디언 알림: 김할머니에게 '김하준 이탈 감지' 전송"},
+    {"time_offset_minutes": 1685, "type": "chat_message", "description": "김아빠: 하준아, GPS 보니까 동대사 쪽이네. 거기서 기다려!", "member_id": "m_captain"},
+    {"time_offset_minutes": 1690, "type": "geofence_in", "description": "김하준 복귀", "member_id": "m_crew01"},
+    {"time_offset_minutes": 1920, "type": "daily_summary", "description": "4일차 요약: 미성년자 이탈 1건, 10분 내 복귀"},
+    {"time_offset_minutes": 2400, "type": "notification", "description": "가디언 알림: 전원에게 '여행이 안전하게 종료되었습니다' 전송"},
+    {"time_offset_minutes": 2400, "type": "trip_end", "description": "오사카 가족여행 종료! 전원 안전 귀환!"}
+  ],
+  "location_tracks": {
+    "m_captain": [
+      {"t": 0, "lat": 34.4347, "lng": 135.2440},
+      {"t": 30, "lat": 34.5500, "lng": 135.3700},
+      {"t": 60, "lat": 34.6659, "lng": 135.5013},
+      {"t": 90, "lat": 34.6687, "lng": 135.5032},
+      {"t": 120, "lat": 34.6693, "lng": 135.5025},
+      {"t": 150, "lat": 34.6659, "lng": 135.5013},
+      {"t": 180, "lat": 34.6654, "lng": 135.4323},
+      {"t": 210, "lat": 34.6873, "lng": 135.5262}
+    ],
+    "m_crew01": [
+      {"t": 0, "lat": 34.4347, "lng": 135.2440},
+      {"t": 30, "lat": 34.5502, "lng": 135.3702},
+      {"t": 60, "lat": 34.6660, "lng": 135.5015},
+      {"t": 90, "lat": 34.6690, "lng": 135.5035},
+      {"t": 95, "lat": 34.6720, "lng": 135.5060},
+      {"t": 100, "lat": 34.6690, "lng": 135.5035},
+      {"t": 120, "lat": 34.6695, "lng": 135.5027},
+      {"t": 150, "lat": 34.6660, "lng": 135.5015},
+      {"t": 180, "lat": 34.6656, "lng": 135.4325},
+      {"t": 210, "lat": 34.6875, "lng": 135.5264}
+    ],
+    "m_chief1": [
+      {"t": 0, "lat": 34.4347, "lng": 135.2440},
+      {"t": 30, "lat": 34.5498, "lng": 135.3698},
+      {"t": 60, "lat": 34.6658, "lng": 135.5011},
+      {"t": 90, "lat": 34.6685, "lng": 135.5030},
+      {"t": 120, "lat": 34.6691, "lng": 135.5023},
+      {"t": 150, "lat": 34.6658, "lng": 135.5011},
+      {"t": 180, "lat": 34.6652, "lng": 135.4321},
+      {"t": 210, "lat": 34.6871, "lng": 135.5260}
+    ]
+  }
+}

@@ -102,79 +102,101 @@ class _ScreenDemoScenarioSelectState
           onPressed: () => context.go(RoutePaths.onboardingWelcome),
         ),
       ),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppSpacing.xl),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 32), // 배지 공간 확보
-                        Text(
-                          '시나리오 선택',
-                          textAlign: TextAlign.center,
-                          style: AppTypography.headlineMedium
-                              .copyWith(color: AppColors.textPrimary),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'SafeTrip의 주요 기능을 체험해 보세요',
-                          textAlign: TextAlign.center,
-                          style: AppTypography.bodyLarge
-                              .copyWith(color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                        _ScenarioCard(
-                          icon: Icons.school,
-                          iconColor: AppColors.privacySafetyFirst,
-                          title: '학생 단체 여행',
-                          subtitle: '제주도 3일 수학여행',
-                          memberCount: 33,
-                          durationDays: 3,
-                          gradeBadge: '안전최우선',
-                          gradeColor: AppColors.privacySafetyFirst,
-                          onTap: () => _selectScenario(DemoScenarioId.s1),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _ScenarioCard(
-                          icon: Icons.people,
-                          iconColor: AppColors.privacyStandard,
-                          title: '친구들과 해외여행',
-                          subtitle: '도쿄 7일 자유여행',
-                          memberCount: 6,
-                          durationDays: 7,
-                          gradeBadge: '표준',
-                          gradeColor: AppColors.privacyStandard,
-                          onTap: () => _selectScenario(DemoScenarioId.s2),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _ScenarioCard(
-                          icon: Icons.business_center,
-                          iconColor: AppColors.privacyFirst,
-                          title: '해외 출장/패키지 투어',
-                          subtitle: '방콕 5일 패키지 투어',
-                          memberCount: 18,
-                          durationDays: 5,
-                          gradeBadge: '프라이버시우선',
-                          gradeColor: AppColors.privacyFirst,
-                          onTap: () => _selectScenario(DemoScenarioId.s3),
-                        ),
-                      ],
-                    ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 32), // 배지 공간 확보
+                      Text(
+                        '시나리오 선택',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.headlineMedium
+                            .copyWith(color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'SafeTrip의 주요 기능을 체험해 보세요',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyLarge
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      _ScenarioCard(
+                        icon: Icons.school,
+                        iconColor: AppColors.privacySafetyFirst,
+                        title: '학생 단체 여행',
+                        subtitle: '제주도 3일 수학여행',
+                        memberCount: 33,
+                        durationDays: 3,
+                        gradeBadge: '안전최우선',
+                        gradeColor: AppColors.privacySafetyFirst,
+                        onTap: () => _selectScenario(DemoScenarioId.s1),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _ScenarioCard(
+                        icon: Icons.people,
+                        iconColor: AppColors.privacyStandard,
+                        title: '친구들과 해외여행',
+                        subtitle: '도쿄 7일 자유여행',
+                        memberCount: 6,
+                        durationDays: 7,
+                        gradeBadge: '표준',
+                        gradeColor: AppColors.privacyStandard,
+                        onTap: () => _selectScenario(DemoScenarioId.s2),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _ScenarioCard(
+                        icon: Icons.business_center,
+                        iconColor: AppColors.privacyFirst,
+                        title: '해외 출장/패키지 투어',
+                        subtitle: '방콕 5일 패키지 투어',
+                        memberCount: 18,
+                        durationDays: 5,
+                        gradeBadge: '프라이버시우선',
+                        gradeColor: AppColors.privacyFirst,
+                        onTap: () => _selectScenario(DemoScenarioId.s3),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _ScenarioCard(
+                        icon: Icons.family_restroom,
+                        iconColor: AppColors.privacySafetyFirst,
+                        title: '가족 여행',
+                        subtitle: '오사카 5일 가족여행',
+                        memberCount: 6,
+                        durationDays: 5,
+                        gradeBadge: '안전최우선',
+                        gradeColor: AppColors.privacySafetyFirst,
+                        onTap: () => _selectScenario(DemoScenarioId.s4),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _ScenarioCard(
+                        icon: Icons.favorite,
+                        iconColor: AppColors.privacyFirst,
+                        title: '커플 여행',
+                        subtitle: '다낭 4일 커플여행',
+                        memberCount: 3,
+                        durationDays: 4,
+                        gradeBadge: '프라이버시우선',
+                        gradeColor: AppColors.privacyFirst,
+                        onTap: () => _selectScenario(DemoScenarioId.s5),
+                      ),
+                    ],
                   ),
-          ),
-          // §2 D3: 데모 배지
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 0,
-            right: 0,
-            child: const Center(child: DemoBadge()),
-          ),
-        ],
-      ),
+                ),
+                // §2 D3: 데모 배지
+                const Positioned(
+                  top: 8,
+                  left: 0,
+                  right: 0,
+                  child: Center(child: DemoBadge()),
+                ),
+              ],
+            ),
     );
   }
 }
