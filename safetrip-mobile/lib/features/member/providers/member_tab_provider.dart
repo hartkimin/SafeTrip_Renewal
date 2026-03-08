@@ -176,6 +176,41 @@ class MemberTabNotifier extends StateNotifier<MemberTabState> {
   final OfflineCacheService _cacheService = OfflineCacheService();
 
   // ---------------------------------------------------------------------------
+  // Demo Seeding
+  // ---------------------------------------------------------------------------
+
+  /// Seed demo members without API calls.
+  void seedDemoMembers({
+    required List<TripMember> members,
+    required String currentUserId,
+    required UserRole currentUserRole,
+    List<GuardianSlot> guardianSlots = const [],
+    String? groupId,
+    String? tripId,
+    bool isB2bTrip = false,
+    bool isPaidTrip = false,
+  }) {
+    state = state.copyWith(
+      allMembers: members,
+      guardianSlots: guardianSlots,
+      currentUserId: currentUserId,
+      currentUserRole: currentUserRole,
+      groupId: groupId,
+      tripId: tripId,
+      totalMemberCount: members.length,
+      isB2bTrip: isB2bTrip,
+      isPaidTrip: isPaidTrip,
+      isLoading: false,
+      clearError: true,
+    );
+  }
+
+  /// Update demo member positions (called on sim time change).
+  void updateDemoMemberPositions(List<TripMember> updated) {
+    state = state.copyWith(allMembers: updated);
+  }
+
+  // ---------------------------------------------------------------------------
   // Initialize
   // ---------------------------------------------------------------------------
 
@@ -214,7 +249,9 @@ class MemberTabNotifier extends StateNotifier<MemberTabState> {
 
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final data = await _apiService.getGroupMembers(groupId);
+      // tripId 우선 사용 (백엔드 라우트가 tripId 기준으로 쿼리)
+      final id = state.tripId ?? groupId;
+      final data = await _apiService.getGroupMembers(id);
       final members = data.map((e) => TripMember.fromJson(e)).toList();
 
       // 가디언 슬롯 집계: 전체 멤버의 guardianLinks를 평탄화
