@@ -8,7 +8,7 @@
 #   bash scripts/test/run-all-tests.sh
 #
 # 옵션:
-#   --phase=1       특정 Phase만 실행 (1~6)
+#   --phase=1       특정 Phase만 실행 (1~7)
 #   --skip=3,4      특정 Phase 건너뜀
 #   --no-security   보안 테스트(Phase 6) 건너뜀
 #   --no-cleanup    테스트 후 Firebase 계정 유지
@@ -184,6 +184,9 @@ main() {
   if [[ "${NO_SECURITY}" == "false" ]]; then
     phases+=("6:phase6-security.ts:보안 테스트 (Layer 3)")
   fi
+
+  # 온보딩 UX 시나리오 검증 (Phase 7) — DOC-T3-ONB-014 v3.1
+  phases+=("7:phase7-onboarding-ux.ts:온보딩 UX 시나리오 (DOC-T3-ONB-014)")
 
   for phase_entry in "${phases[@]}"; do
     IFS=':' read -r num file name <<< "${phase_entry}"
