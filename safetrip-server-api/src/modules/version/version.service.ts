@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-interface VersionCheckResult {
+export interface VersionCheckResult {
     min_version: string;
     recommended_version: string;
     update_type: 'none' | 'optional' | 'critical';

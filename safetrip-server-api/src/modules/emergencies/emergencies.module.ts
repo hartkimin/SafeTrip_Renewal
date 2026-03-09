@@ -7,6 +7,7 @@ import { GroupMember } from '../../entities/group-member.entity';
 import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 import { User } from '../../entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ChatsModule } from '../chats/chats.module';
 
 @Module({
     imports: [
@@ -14,7 +15,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
             Emergency, EmergencyContact, SosEvent, NoResponseEvent,
             GroupMember, Guardian, GuardianLink, User
         ]),
-        NotificationsModule
+        NotificationsModule,
+        ChatsModule,
     ],
     controllers: [EmergenciesController],
     providers: [EmergenciesService],

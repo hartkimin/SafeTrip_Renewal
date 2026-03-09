@@ -42,7 +42,7 @@ export const FIREBASE_APP = 'FIREBASE_APP';
                                 })
                             },
                     databaseURL,
-                    projectId: isMockKey ? 'demo-safetrip' : projectId,
+                    projectId,
                 });
             },
         },

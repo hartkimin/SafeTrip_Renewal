@@ -5,6 +5,7 @@ import * as admin from 'firebase-admin';
 import { FIREBASE_APP } from '../../config/firebase/firebase.module';
 import { User, ParentalConsent } from '../../entities/user.entity';
 import { Guardian, GuardianLink } from '../../entities/guardian.entity';
+import { UserConsent } from '../../entities/legal.entity';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +14,7 @@ export class AuthService {
         @InjectRepository(ParentalConsent) private consentRepo: Repository<ParentalConsent>,
         @InjectRepository(Guardian) private guardianRepo: Repository<Guardian>,
         @InjectRepository(GuardianLink) private guardianLinkRepo: Repository<GuardianLink>,
+        @InjectRepository(UserConsent) private userConsentRepo: Repository<UserConsent>,
         @Inject(FIREBASE_APP) private firebaseApp: admin.app.App,
     ) { }
 
@@ -92,21 +94,18 @@ export class AuthService {
             const userRole = await this.getUserRole(user.userId);
 
             return {
-                success: true,
-                data: {
-                    user_id: user.userId,
-                    phone_number: user.phoneNumber,
-                    phone_country_code: user.phoneCountryCode,
-                    display_name: user.displayName,
-                    profile_image_url: user.profileImageUrl,
-                    install_id: user.installId,
-                    location_sharing_mode: user.locationSharingMode,
-                    last_verification_at: user.lastVerificationAt,
-                    created_at: user.createdAt,
-                    last_active_at: user.lastActiveAt,
-                    user_role: userRole,
-                    is_new_user: isNewUser
-                }
+                user_id: user.userId,
+                phone_number: user.phoneNumber,
+                phone_country_code: user.phoneCountryCode,
+                display_name: user.displayName,
+                profile_image_url: user.profileImageUrl,
+                install_id: user.installId,
+                location_sharing_mode: user.locationSharingMode,
+                last_verification_at: user.lastVerificationAt,
+                created_at: user.createdAt,
+                last_active_at: user.lastActiveAt,
+                user_role: userRole,
+                is_new_user: isNewUser
             };
         } catch (error) {
             if (error instanceof BadRequestException) throw error;
@@ -147,15 +146,16 @@ export class AuthService {
                 age--;
             }
 
-            if (age < 18) {
-                minorStatus = 'minor';
-                // 14세 미만은 법정대리인 동의 필수 확인
-                if (age < 14) {
-                    const consent = await this.consentRepo.findOne({ where: { userId: uid, isVerified: true } });
-                    if (!consent) {
-                        throw new BadRequestException('Parental consent required for users under 14');
-                    }
+            // DB 스키마 정합: 'adult' | 'minor_over14' | 'minor_under14' | 'minor_child'
+            if (age < 14) {
+                minorStatus = 'minor_under14';
+                // 14세 미만은 법정대리인 동의 필수 확인 (§12)
+                const consent = await this.consentRepo.findOne({ where: { userId: uid, isVerified: true } });
+                if (!consent) {
+                    throw new BadRequestException('Parental consent required for users under 14');
                 }
+            } else if (age < 18) {
+                minorStatus = 'minor_over14';
             }
         }
 
@@ -164,6 +164,7 @@ export class AuthService {
             dateOfBirth: dateOfBirth || undefined,
             profileImageUrl: data.profileImageUrl || undefined,
             minorStatus,
+            minorStatusUpdatedAt: dateOfBirth ? new Date() : undefined,
             isOnboardingComplete: true,
             onboardingStep: 'completed',
         });
@@ -216,6 +217,7 @@ export class AuthService {
 
     /**
      * POST /auth/consent — 동의 기록
+     * DOC-T3-ONB-014 §8, DB 설계 v3.5.1 §4.30 (tb_user_consent)
      */
     async recordConsent(
         uid: string,
@@ -223,7 +225,28 @@ export class AuthService {
         consentVersion: string,
         isGranted: boolean,
     ) {
-        return null;
+        // 동일 타입+버전의 기존 동의 레코드가 있으면 업데이트, 없으면 신규 생성
+        let consent = await this.userConsentRepo.findOne({
+            where: { userId: uid, consentType, consentVersion },
+        });
+
+        if (consent) {
+            consent.isAgreed = isGranted;
+            consent.agreedAt = isGranted ? new Date() : consent.agreedAt;
+            consent.withdrawnAt = !isGranted ? new Date() : null;
+            consent.updatedAt = new Date();
+        } else {
+            consent = this.userConsentRepo.create({
+                userId: uid,
+                consentType,
+                consentVersion,
+                isAgreed: isGranted,
+                agreedAt: isGranted ? new Date() : null,
+            });
+        }
+
+        await this.userConsentRepo.save(consent);
+        return { success: true, consent_id: consent.consentId, consent_type: consentType };
     }
 
     /**

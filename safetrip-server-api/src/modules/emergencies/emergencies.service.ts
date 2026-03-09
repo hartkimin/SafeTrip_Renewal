@@ -6,6 +6,7 @@ import { GroupMember } from '../../entities/group-member.entity';
 import { Guardian, GuardianLink } from '../../entities/guardian.entity';
 import { User } from '../../entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SystemMessageService } from '../chats/system-message.service';
 
 @Injectable()
 export class EmergenciesService {
@@ -19,6 +20,7 @@ export class EmergenciesService {
         @InjectRepository(GuardianLink) private linkRepo: Repository<GuardianLink>,
         @InjectRepository(User) private userRepo: Repository<User>,
         private notifService: NotificationsService,
+        private systemMessageService: SystemMessageService,
     ) { }
 
     /** 긴급 상황 생성 (SOS 포함, 5분 쿨다운) */
@@ -57,6 +59,14 @@ export class EmergenciesService {
                 triggerMethod: data.triggerMethod || 'button',
             });
             await this.sosRepo.save(sos);
+
+            // Insert SOS system message to group chat
+            const sender = await this.userRepo.findOne({ where: { userId } });
+            await this.systemMessageService.insertSosAlert(tripId, sender?.displayName || 'Traveler', {
+                lat: data.latitude || 0,
+                lng: data.longitude || 0,
+                address: data.description,
+            });
 
             // SOS 알림 발송 로직
             await this.handleSosNotification(userId, tripId, saved);
@@ -190,6 +200,12 @@ export class EmergenciesService {
             const clearBody = `${sender?.displayName || 'Traveler'}'s emergency has been ${newStatus}.`;
             this.handleSosNotification(userId, emergency.tripId, { ...emergency, status: newStatus } as any)
                 .catch(err => console.error('SOS clear notification error:', err));
+
+            // Insert SOS cancel system message to group chat
+            await this.systemMessageService.insertSosCancel(
+                emergency.tripId,
+                sender?.displayName || 'Traveler',
+            );
         }
 
         return this.emergencyRepo.findOne({ where: { emergencyId } });

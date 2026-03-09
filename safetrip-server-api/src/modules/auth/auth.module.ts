@@ -6,10 +6,10 @@ import { AuthService } from './auth.service';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { User, ParentalConsent } from '../../entities/user.entity';
 import { Guardian, GuardianLink } from '../../entities/guardian.entity';
-// import { UserConsent } from '../../entities/event-log.entity';
+import { UserConsent } from '../../entities/legal.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([User, ParentalConsent, Guardian, GuardianLink])],
+    imports: [TypeOrmModule.forFeature([User, ParentalConsent, Guardian, GuardianLink, UserConsent])],
     controllers: [AuthController],
     providers: [
         AuthService,
