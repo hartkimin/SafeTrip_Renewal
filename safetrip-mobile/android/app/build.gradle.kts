@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.urock.safe.trip.safetrip_mobile"
+    namespace = "com.urock.safe.trip"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.urock.safe.trip.safetrip_mobile"
+        applicationId = "com.urock.safe.trip"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion // Required for coreLibraryDesugaring

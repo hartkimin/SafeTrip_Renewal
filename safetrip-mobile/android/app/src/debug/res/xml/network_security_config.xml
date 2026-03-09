@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디버그 빌드 전용 네트워크 보안 설정.
+  LAN IP 변경에 무관하게 로컬 HTTP 통신을 허용합니다.
+
+  [동작 방식]
+  - 이 파일은 debug 빌드 시 main/res/xml/network_security_config.xml을 자동으로 덮어씁니다.
+  - 모든 cleartext (HTTP) 트래픽 허용 → 192.168.x.x / 172.x.x.x / 10.x.x.x 등 IP 변경 무관
+  - 사용자 설치 인증서도 신뢰 (로컬 SSL 테스트 지원)
+  - 릴리스 빌드에는 적용되지 않습니다.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

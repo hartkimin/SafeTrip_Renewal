@@ -1,4 +1,4 @@
-package com.urock.safe.trip.safetrip_mobile
+package com.urock.safe.trip
 
 import io.flutter.embedding.android.FlutterActivity
 

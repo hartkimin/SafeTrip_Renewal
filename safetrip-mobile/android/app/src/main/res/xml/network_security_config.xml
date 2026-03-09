@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  프로덕션/릴리스 빌드 네트워크 보안 설정.
+
+  ⚠️  로컬 IP (192.168.x.x, 172.x.x.x 등)는 여기에 추가하지 마세요.
+      IP 허용은 debug 빌드 전용 파일에서 처리합니다:
+      android/app/src/debug/res/xml/network_security_config.xml
+
+  [허용 목록]
+  - 10.0.2.2        : Android 에뮬레이터 → 호스트 머신 매핑
+  - localhost       : 로컬루프백
+  - *.ngrok-free.dev / *.ngrok-free.app : ngrok HTTP 터널 (Firebase SDK 에뮬레이터 연결)
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android 에뮬레이터 호스트 -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <!-- ngrok HTTP 터널 (Firebase SDK는 HTTP로 에뮬레이터에 연결) -->
+        <domain includeSubdomains="true">ngrok-free.dev</domain>
+        <domain includeSubdomains="true">ngrok-free.app</domain>
+    </domain-config>
+</network-security-config>
