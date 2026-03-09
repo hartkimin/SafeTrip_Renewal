@@ -497,6 +497,7 @@ class _AddPlaceDirectModalState extends State<AddPlaceDirectModal> {
                               subdomains: const ['a', 'b', 'c', 'd'],
                               userAgentPackageName: 'com.urock.safe.trip',
                               maxZoom: 19,
+                              keepBuffer: 3,
                             ),
                             if (_buildGeofenceCircles().isNotEmpty)
                               CircleLayer(

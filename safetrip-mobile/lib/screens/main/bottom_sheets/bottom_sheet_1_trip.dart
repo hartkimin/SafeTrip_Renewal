@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../features/demo/data/demo_data_adapter.dart';
+import '../../../features/demo/providers/demo_state_provider.dart';
 import '../../../features/schedule/providers/schedule_provider.dart';
 import '../../../features/trip/providers/trip_provider.dart';
 import '../../../services/api_service.dart';
@@ -56,6 +58,12 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
 
   /// tripProvider에서 여행 정보를 읽어 scheduleProvider에 컨텍스트를 설정한다.
   void _initScheduleFromTrip() {
+    // 데모 모드에서는 API 서버가 없으므로 일정 fetch skip
+    if (ref.read(isDemoModeProvider)) {
+      _tripContextInitialized = true;
+      return;
+    }
+
     final tripState = ref.read(tripProvider);
     final trip = tripState.currentTrip;
     if (trip == null || _tripContextInitialized) return;
@@ -79,8 +87,6 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
   @override
   Widget build(BuildContext context) {
     final scheduleState = ref.watch(scheduleProvider);
-    final tripState = ref.watch(tripProvider);
-
     // tripProvider가 변경되면 scheduleProvider에 컨텍스트 재설정
     ref.listen<TripState>(tripProvider, (prev, next) {
       final trip = next.currentTrip;
@@ -113,8 +119,7 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
               dates: scheduleState.tripDates,
               selectedDate: scheduleState.selectedDate ?? DateTime.now(),
               scheduleDates: scheduleState.scheduleDates,
-              onDateSelected: (date) =>
-                  ref.read(scheduleProvider.notifier).selectDate(date),
+              onDateSelected: (date) => _handleDateSelected(date),
             ),
           // Region C: Share timeline (privacy_first only)
           if (scheduleState.showShareTimeline)
@@ -135,6 +140,34 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
           Expanded(child: _buildPlaceList()),
       ],
     );
+  }
+
+  /// Handle date selection — demo mode seeds schedules, normal mode fetches from API.
+  void _handleDateSelected(DateTime date) {
+    final isDemo = ref.read(isDemoModeProvider);
+    if (isDemo) {
+      final demoState = ref.read(demoStateProvider);
+      final scenario = demoState.currentScenario;
+      if (scenario == null) return;
+
+      final tripState = ref.read(tripProvider);
+      final tripStartDate = tripState.tripStartDate ?? DateTime.now();
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      final normalizedStart = DateTime(tripStartDate.year, tripStartDate.month, tripStartDate.day);
+      final dayNumber = normalizedDate.difference(normalizedStart).inDays + 1;
+
+      final schedules = DemoDataAdapter.toSchedules(
+        scenario: scenario,
+        dayNumber: dayNumber,
+        tripStartDate: tripStartDate,
+      );
+      ref.read(scheduleProvider.notifier).seedDemoSchedulesForDate(
+            schedules: schedules,
+            date: date,
+          );
+    } else {
+      ref.read(scheduleProvider.notifier).selectDate(date);
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -251,9 +284,9 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.semanticInfo.withOpacity(0.1),
+        color: AppColors.semanticInfo.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radius8),
-        border: Border.all(color: AppColors.semanticInfo.withOpacity(0.3)),
+        border: Border.all(color: AppColors.semanticInfo.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -296,73 +329,91 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
   // ──────────────────────────────────────────────
 
   Widget _buildScheduleCardList(ScheduleState scheduleState) {
-    // Loading
+    // Loading — scrollController 반드시 연결 (DraggableScrollableSheet 드래그 동작 필수)
     if (scheduleState.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        controller: widget.scrollController,
+        children: const [
+          SizedBox(height: 120),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
     }
 
     // Error
     if (scheduleState.error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                scheduleState.error!,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
+      return ListView(
+        controller: widget.scrollController,
+        children: [
+          const SizedBox(height: 80),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    scheduleState.error!,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton.icon(
+                    onPressed: () =>
+                        ref.read(scheduleProvider.notifier).fetchSchedules(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('다시 시도'),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              TextButton.icon(
-                onPressed: () =>
-                    ref.read(scheduleProvider.notifier).fetchSchedules(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('다시 시도'),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       );
     }
 
     // Empty
     if (scheduleState.schedules.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.event_note_outlined,
-                size: 48,
-                color: AppColors.textTertiary.withOpacity(0.5),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                '이 날짜에 등록된 일정이 없습니다',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textTertiary,
-                ),
-              ),
-              if (scheduleState.canEdit) ...[
-                const SizedBox(height: AppSpacing.md),
-                TextButton.icon(
-                  onPressed: _showAddScheduleModal,
-                  icon: const Icon(Icons.add),
-                  label: const Text('일정 추가하기'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primaryTeal,
+      return ListView(
+        controller: widget.scrollController,
+        children: [
+          const SizedBox(height: 80),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.event_note_outlined,
+                    size: 48,
+                    color: AppColors.textTertiary.withValues(alpha: 0.5),
                   ),
-                ),
-              ],
-            ],
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    '이 날짜에 등록된 일정이 없습니다',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  if (scheduleState.canEdit) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    TextButton.icon(
+                      onPressed: _showAddScheduleModal,
+                      icon: const Icon(Icons.add),
+                      label: const Text('일정 추가하기'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryTeal,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
@@ -596,11 +647,11 @@ class _BottomSheetTripState extends ConsumerState<BottomSheetTrip> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Row(
+            title: const Row(
               children: [
-                const Icon(Icons.description_outlined,
+                Icon(Icons.description_outlined,
                     size: 20, color: AppColors.primaryTeal),
-                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: AppSpacing.sm),
                 Text(
                   '일정 텍스트',
                   style: AppTypography.titleMedium,

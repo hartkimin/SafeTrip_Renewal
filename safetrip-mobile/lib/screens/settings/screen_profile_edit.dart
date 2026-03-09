@@ -8,7 +8,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../services/api_service.dart';
 import '../../utils/app_cache.dart';
-import '../../core/constants/avatar_constants.dart';
 import '../../widgets/avatar_selector.dart';
 import '../../widgets/guardian_badge.dart';
 
@@ -41,9 +40,8 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
 
   String? _avatarId;
   String? _privacyLevel;
-  String? _minorStatus;
   bool _isGuardian = false;
-  bool _isPaidGuardian = false;
+  final bool _isPaidGuardian = false;
   List<Map<String, dynamic>> _emergencyContacts = [];
 
   @override
@@ -88,7 +86,6 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
               userData['phone_number'] as String? ?? _phoneNumber;
           _avatarId = userData['avatar_id'] as String?;
           _privacyLevel = userData['privacy_level'] as String? ?? 'standard';
-          _minorStatus = userData['minor_status'] as String?;
           _isGuardian = userData['user_role'] == 'guardian';
         }
       }
@@ -365,7 +362,7 @@ class _ScreenProfileEditState extends State<ScreenProfileEdit> {
                                     _emergencyContacts.removeWhere((c) => c['contact_id'] == contactId);
                                   });
                                 } catch (e) {
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('긴급 연락처 삭제에 실패했습니다.')),
                                     );

@@ -42,7 +42,7 @@ class _ScreenTripCreateState extends ConsumerState<ScreenTripCreate> {
 
   Future<void> _onCreate() async {
     if (!_canProceed) return;
-    
+
     // §08: 클라이언트 측 15일 초과 검증
     final duration = _endDate!.difference(_startDate!).inDays;
     if (duration > 15) {
@@ -53,8 +53,15 @@ class _ScreenTripCreateState extends ConsumerState<ScreenTripCreate> {
     }
 
     setState(() => _isLoading = true);
+
+    // Phase 1: 여행 생성 API 호출
+    Map<String, dynamic>? trip;
     try {
-      final trip = await _apiService.createTrip(
+      debugPrint('[TripCreate] Phase 1: createTrip API 호출...');
+      debugPrint('[TripCreate]   title=${_nameController.text.trim()}, country=$_selectedCountryCode');
+      debugPrint('[TripCreate]   dates=${DateFormat('yyyy-MM-dd').format(_startDate!)} ~ ${DateFormat('yyyy-MM-dd').format(_endDate!)}');
+
+      trip = await _apiService.createTrip(
         title: _nameController.text.trim(),
         countryCode: _selectedCountryCode!,
         tripType: 'group',
@@ -63,33 +70,61 @@ class _ScreenTripCreateState extends ConsumerState<ScreenTripCreate> {
         countryName: _selectedCountryName,
       );
 
-      if (trip != null && mounted) {
-        // group_id 저장 및 AuthNotifier 활성 여행 갱신 → 라우터 redirect가 main으로 이동
-        final groupId = trip['groupId'] as String?;
-        if (groupId != null) {
-          await widget.authNotifier.setActiveTrip(groupId);
+      if (trip == null) {
+        debugPrint('[TripCreate] Phase 1 FAIL: createTrip returned null');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('여행 생성에 실패했습니다. 다시 시도해주세요.')),
+          );
         }
-        await ref.read(tripCardProvider.notifier).fetchCardView();
-        // tripProvider 초기화 — 메인 화면 바텀시트에서 사용
-        ref.read(tripProvider.notifier).setCurrentTripDetails(
-          tripName: trip['tripName'] as String? ?? _nameController.text.trim(),
-          tripStatus: trip['status'] as String? ?? 'planning',
-          userRole: 'captain',
-          tripStartDate: _startDate,
-          tripEndDate: _endDate,
-          countryCode: _selectedCountryCode,
-          countryName: _selectedCountryName,
-        );
-        if (mounted) context.go(RoutePaths.main);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('여행 생성에 실패했습니다. 다시 시도해주세요.')),
-        );
+        return;
       }
+      debugPrint('[TripCreate] Phase 1 OK: tripId=${trip['tripId']}, groupId=${trip['groupId']}');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('여행 생성에 실패했습니다.')));
+      debugPrint('[TripCreate] Phase 1 ERROR: $e');
+      if (mounted) {
+        final msg = e.toString().contains('DioException')
+            ? '서버 연결에 실패했습니다. 네트워크를 확인해주세요.'
+            : '여행 생성에 실패했습니다: ${e.toString().substring(0, (e.toString().length).clamp(0, 80))}';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+      return;
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (trip == null && mounted) setState(() => _isLoading = false);
+    }
+
+    // Phase 2: 여행 생성 성공 후 상태 갱신 + 네비게이션
+    // 이 단계에서 에러가 발생해도 여행은 이미 생성되었으므로 main으로 이동
+    if (!mounted) return;
+    try {
+      final groupId = trip['groupId'] as String?;
+      debugPrint('[TripCreate] Phase 2: setActiveTrip groupId=$groupId');
+      if (groupId != null) {
+        await widget.authNotifier.setActiveTrip(groupId);
+      }
+
+      debugPrint('[TripCreate] Phase 2: fetchCardView...');
+      await ref.read(tripCardProvider.notifier).fetchCardView();
+
+      debugPrint('[TripCreate] Phase 2: setCurrentTripDetails...');
+      ref.read(tripProvider.notifier).setCurrentTripDetails(
+        tripName: trip['tripName'] as String? ?? _nameController.text.trim(),
+        tripStatus: trip['status'] as String? ?? 'planning',
+        userRole: 'captain',
+        tripStartDate: _startDate,
+        tripEndDate: _endDate,
+        countryCode: _selectedCountryCode,
+        countryName: _selectedCountryName,
+      );
+    } catch (e) {
+      // 여행은 이미 생성됨 — 상태 갱신 실패는 무시하고 main으로 이동
+      debugPrint('[TripCreate] Phase 2 WARNING (trip already created): $e');
+    }
+
+    debugPrint('[TripCreate] Phase 3: context.go(main)');
+    if (mounted) {
+      setState(() => _isLoading = false);
+      context.go(RoutePaths.main);
     }
   }
 

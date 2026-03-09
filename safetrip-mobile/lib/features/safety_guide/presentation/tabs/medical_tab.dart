@@ -123,7 +123,7 @@ class MedicalTab extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.location_on_outlined,
                     size: 14,
                     color: AppColors.textTertiary,
@@ -145,7 +145,7 @@ class MedicalTab extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xs),
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.phone_outlined,
                     size: 14,
                     color: AppColors.textTertiary,
@@ -201,7 +201,7 @@ class MedicalTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.medical_services_outlined,
               size: 48,
               color: AppColors.textTertiary,

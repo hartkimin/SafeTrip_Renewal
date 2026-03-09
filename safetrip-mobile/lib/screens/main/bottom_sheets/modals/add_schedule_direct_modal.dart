@@ -1082,6 +1082,7 @@ class _AddScheduleDirectModalState extends State<AddScheduleDirectModal> {
                       subdomains: const ['a', 'b', 'c', 'd'],
                       userAgentPackageName: 'com.urock.safe.trip',
                       maxZoom: 19,
+                      keepBuffer: 3,
                     ),
                     if (_buildGeofenceCircles().isNotEmpty)
                       CircleLayer(

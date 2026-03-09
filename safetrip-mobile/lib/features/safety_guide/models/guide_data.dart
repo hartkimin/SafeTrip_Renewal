@@ -1,4 +1,4 @@
-/// SafetyGuide 데이터 모델 (DOC-T3-SFG-021 §3.2)
+// SafetyGuide 데이터 모델 (DOC-T3-SFG-021 §3.2)
 
 class SafetyGuideData {
   final GuideOverview? overview;

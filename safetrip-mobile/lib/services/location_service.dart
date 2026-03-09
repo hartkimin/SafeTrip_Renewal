@@ -1777,6 +1777,20 @@ class LocationService {
     _isTracking = false;
   }
 
+  /// 데모 모드 등에서 이전 세션의 백그라운드 추적을 강제 중지.
+  /// _isTracking 플래그와 무관하게 네이티브 플러그인을 직접 stop.
+  Future<void> forceStopBackground() async {
+    try {
+      await bg.BackgroundGeolocation.stop();
+      await bg.BackgroundGeolocation.removeListeners();
+      _isTracking = false;
+      _isInitialized = false;
+      debugPrint('[LocationService] 백그라운드 위치 추적 강제 중지 완료');
+    } catch (e) {
+      debugPrint('[LocationService] forceStopBackground: $e');
+    }
+  }
+
   // 현재 위치 가져오기 (UI에서 내 위치로 이동 시 사용)
   Future<bg.Location?> getCurrentPosition() async {
     try {

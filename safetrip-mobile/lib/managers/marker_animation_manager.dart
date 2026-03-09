@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 /// 마커 애니메이션 관리 클래스
 /// 점프, 숨쉬기, 그리고 좌표 이동(Interpolation) 애니메이션을 통합 관리
@@ -78,7 +78,7 @@ class MarkerAnimationManager {
     if (_currentLatLng == newLatLng) return;
 
     final begin = _currentLatLng!;
-    _moveAnimation = Tween<LatLng>(
+    _moveAnimation = _LatLngTween(
       begin: begin,
       end: newLatLng,
     ).animate(CurvedAnimation(parent: moveController, curve: Curves.easeInOut));
@@ -150,4 +150,15 @@ class MarkerAnimationManager {
     breathingController.dispose();
     moveController.dispose();
   }
+}
+
+/// LatLng 보간을 위한 커스텀 Tween
+class _LatLngTween extends Tween<LatLng> {
+  _LatLngTween({required super.begin, required super.end});
+
+  @override
+  LatLng lerp(double t) => LatLng(
+        begin!.latitude + (end!.latitude - begin!.latitude) * t,
+        begin!.longitude + (end!.longitude - begin!.longitude) * t,
+      );
 }

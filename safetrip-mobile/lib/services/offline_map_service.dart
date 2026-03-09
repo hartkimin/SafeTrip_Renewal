@@ -18,9 +18,11 @@ class OfflineMapService {
   static const int _expirationDays = 30;
   static const _prefsKeyPrefix = 'offline_map_';
 
-  /// 타일 URL 생성 (OSM)
+  /// 타일 URL 생성 (CartoDB Light @2x)
   static String tileUrl(int z, int x, int y) {
-    return 'https://tile.openstreetmap.org/$z/$x/$y.png';
+    final subdomains = ['a', 'b', 'c', 'd'];
+    final s = subdomains[(x + y) % subdomains.length];
+    return 'https://$s.basemaps.cartocdn.com/light_all/$z/$x/$y@2x.png';
   }
 
   /// 캐시 디렉토리 경로

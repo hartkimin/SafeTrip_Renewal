@@ -92,7 +92,10 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
       // Birth date was saved by screen_birth_date.dart
       final birthDate = prefs.getString('date_of_birth');
 
+      debugPrint('[ProfileSetup] _submit: userId=${widget.userId}, role=${widget.role}, name=$name, skipProfile=$skipProfile');
+
       if (!skipProfile) {
+        debugPrint('[ProfileSetup] updateUserProfile...');
         await _apiService.updateUserProfile(
           widget.userId,
           name,
@@ -100,17 +103,20 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
           emergencyContact: emergencyContact.isNotEmpty ? emergencyContact : null,
           privacyLevel: _privacyLevel,
         );
+        debugPrint('[ProfileSetup] updateUserProfile OK');
       }
 
       if (name.isNotEmpty) await prefs.setString('user_name', name);
       await prefs.setString('user_role', widget.role);
 
+      debugPrint('[ProfileSetup] completeOnboarding + markProfileCompleted...');
       await widget.authNotifier.completeOnboarding();
       await widget.authNotifier.markProfileCompleted();
 
       // Check for pending invite code (Scenario B)
       final pendingCode = prefs.getString('pending_invite_code');
       if (pendingCode != null && pendingCode.isNotEmpty && mounted) {
+        debugPrint('[ProfileSetup] Scenario B: invite code=$pendingCode');
         context.go(RoutePaths.onboardingInviteConfirm, extra: {
           'inviteCode': pendingCode,
         });
@@ -120,6 +126,7 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
       // Check for pending guardian code (Scenario C)
       final pendingGuardian = prefs.getString('pending_guardian_code');
       if (pendingGuardian != null && pendingGuardian.isNotEmpty && mounted) {
+        debugPrint('[ProfileSetup] Scenario C: guardian code=$pendingGuardian');
         context.go(RoutePaths.onboardingGuardianConfirm, extra: {
           'guardianCode': pendingGuardian,
         });
@@ -128,18 +135,26 @@ class _ScreenProfileSetupState extends State<ScreenProfileSetup> {
 
       // Scenario A: captain — go to trip create
       if (widget.role == 'captain') {
+        debugPrint('[ProfileSetup] Scenario A: captain → setAuthenticated(hasTrip: false) → tripCreate');
         await widget.authNotifier.setAuthenticated(hasTrip: false);
         if (mounted) context.go(RoutePaths.tripCreate);
       } else {
         // Default: go to main or no-trip-home
         final groupId = prefs.getString('group_id') ?? '';
+        debugPrint('[ProfileSetup] Default: groupId=$groupId → ${groupId.isNotEmpty ? 'main' : 'noTripHome'}');
         await widget.authNotifier.setAuthenticated(hasTrip: groupId.isNotEmpty);
         if (mounted) {
           context.go(groupId.isNotEmpty ? RoutePaths.main : RoutePaths.noTripHome);
         }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장에 실패했습니다.')));
+      debugPrint('[ProfileSetup] _submit ERROR: $e');
+      if (mounted) {
+        final msg = e.toString().contains('DioException')
+            ? '서버 연결에 실패했습니다. 네트워크를 확인해주세요.'
+            : '프로필 저장에 실패했습니다: ${e.toString().substring(0, (e.toString().length).clamp(0, 80))}';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

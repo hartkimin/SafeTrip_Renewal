@@ -39,18 +39,27 @@ class ApiService {
                 options.headers['Authorization'] = 'Bearer $freshToken';
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString('firebase_id_token', freshToken);
+              } else {
+                debugPrint('[ApiService] WARNING: currentUser exists but getIdToken returned null/empty');
               }
             } else {
+              debugPrint('[ApiService] WARNING: currentUser is null, using saved token');
               final prefs = await SharedPreferences.getInstance();
               final savedToken = prefs.getString('firebase_id_token');
               if (savedToken != null && savedToken.isNotEmpty) {
                 options.headers['Authorization'] = 'Bearer $savedToken';
+              } else {
+                debugPrint('[ApiService] ERROR: No auth token available for ${options.method} ${options.path}');
               }
             }
           } catch (e) {
             debugPrint('[ApiService] Token Interceptor Error: $e');
           }
           handler.next(options);
+        },
+        onError: (error, handler) {
+          debugPrint('[ApiService] HTTP ${error.response?.statusCode} ${error.requestOptions.method} ${error.requestOptions.path}: ${error.response?.data}');
+          handler.next(error);
         },
       ),
     );
@@ -221,22 +230,28 @@ class ApiService {
     String? privacyLevel,
     String? sharingMode,
   }) async {
-    final data = <String, dynamic>{
-      'title': title,
-      'country_code': countryCode,
-      'trip_type': tripType,
-      'start_date': startDate,
-      'end_date': endDate,
-    };
-    if (countryName != null) data['country_name'] = countryName;
-    if (privacyLevel != null) data['privacy_level'] = privacyLevel;
-    if (sharingMode != null) data['sharing_mode'] = sharingMode;
+    try {
+      final data = <String, dynamic>{
+        'title': title,
+        'country_code': countryCode,
+        'trip_type': tripType,
+        'start_date': startDate,
+        'end_date': endDate,
+      };
+      if (countryName != null) data['country_name'] = countryName;
+      if (privacyLevel != null) data['privacy_level'] = privacyLevel;
+      if (sharingMode != null) data['sharing_mode'] = sharingMode;
 
-    final response = await _dio.post('/api/v1/trips', data: data);
-    if (response.data['success'] == true && response.data['data'] != null) {
-      return response.data['data'] as Map<String, dynamic>;
+      final response = await _dio.post('/api/v1/trips', data: data);
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      debugPrint('[ApiService] createTrip: success=${response.data['success']}, data=${response.data['data']}');
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] createTrip Error: $e');
+      rethrow;
     }
-    return null;
   }
 
   // 사용자 조회

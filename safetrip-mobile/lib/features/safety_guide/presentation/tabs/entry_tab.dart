@@ -109,7 +109,7 @@ class EntryTab extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
+                const Icon(
                   Icons.check_circle_outline,
                   size: 18,
                   color: AppColors.semanticSuccess,
@@ -153,7 +153,7 @@ class EntryTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.article_outlined,
               size: 48,
               color: AppColors.textTertiary,

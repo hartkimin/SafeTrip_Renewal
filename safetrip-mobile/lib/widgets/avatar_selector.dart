@@ -42,7 +42,7 @@ class AvatarSelector extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: Color(avatar.color).withOpacity(0.2),
+                  color: Color(avatar.color).withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSelected

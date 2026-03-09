@@ -13,12 +13,12 @@
     "timezone": "Asia/Tokyo"
   },
   "members": [
-    {"id": "m_captain", "name": "김지민", "role": "captain"},
-    {"id": "m_chief1", "name": "이수현", "role": "crew_chief"},
-    {"id": "m_crew01", "name": "박도윤", "role": "crew"},
-    {"id": "m_crew02", "name": "최하린", "role": "crew"},
-    {"id": "m_crew03", "name": "정우빈", "role": "crew"},
-    {"id": "m_crew04", "name": "한소율", "role": "crew"}
+    {"id": "m_captain", "name": "김지민", "role": "captain", "battery": 92},
+    {"id": "m_chief1", "name": "이수현", "role": "crew_chief", "battery": 78},
+    {"id": "m_crew01", "name": "박도윤", "role": "crew", "battery": 65},
+    {"id": "m_crew02", "name": "최하린", "role": "crew", "battery": 88},
+    {"id": "m_crew03", "name": "정우빈", "role": "crew", "battery": 17},
+    {"id": "m_crew04", "name": "한소율", "role": "crew", "battery": 73}
   ],
   "guardian_links": [],
   "schedules": [
@@ -106,7 +106,7 @@
     {"time_offset_minutes": 3330, "type": "notification", "description": "자유시간 종료 30분 전 알림"},
     {"time_offset_minutes": 3360, "type": "all_arrived", "description": "전원 이케부쿠로 집합 확인"},
     {"time_offset_minutes": 4320, "type": "sos_drill", "description": "SOS 연습 발동 (정우빈)", "member_id": "m_crew03"},
-    {"time_offset_minutes": 4325, "type": "sos_resolved", "description": "SOS 연습 종료"},
+    {"time_offset_minutes": 4325, "type": "sos_resolved", "description": "SOS 연습 종료", "member_id": "m_crew03"},
     {"time_offset_minutes": 7200, "type": "daily_summary", "description": "5일차 완료: 전원 안전"},
     {"time_offset_minutes": 9360, "type": "chat_message", "description": "김지민: 다들 공항 13:30까지 와! 체크인 서둘러야 해", "member_id": "m_captain"},
     {"time_offset_minutes": 10080, "type": "trip_end", "description": "도쿄 여행 종료! 전원 안전 귀국"}

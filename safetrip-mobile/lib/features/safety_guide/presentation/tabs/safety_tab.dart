@@ -256,7 +256,7 @@ class SafetyTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.shield_outlined,
               size: 48,
               color: AppColors.textTertiary,

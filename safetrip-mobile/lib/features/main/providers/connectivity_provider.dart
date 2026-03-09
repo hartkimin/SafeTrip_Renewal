@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../services/api_service.dart';
+import '../../demo/providers/demo_state_provider.dart';
 
 // ---------------------------------------------------------------------------
 // DOC-T2-OFL-016 §2 — 3-State Network Detection with Healthcheck
@@ -90,12 +91,19 @@ const _kHealthcheckIntervalSeconds = 30;
 class NetworkStateNotifier extends StateNotifier<NetworkStatus> {
   NetworkStateNotifier({
     ApiService? apiService,
+    bool isDemoMode = false,
   })  : _apiService = apiService ?? ApiService(),
+        _isDemoMode = isDemoMode,
         super(const NetworkStatus(state: NetworkState.online)) {
-    _init();
+    // 데모 모드에서는 API 서버를 사용하지 않으므로
+    // healthcheck를 건너뛰고 항상 online 상태를 유지한다.
+    if (!_isDemoMode) {
+      _init();
+    }
   }
 
   final ApiService _apiService;
+  final bool _isDemoMode;
 
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
   Timer? _healthcheckTimer;
@@ -250,9 +258,13 @@ class NetworkStateNotifier extends StateNotifier<NetworkStatus> {
 // ---------------------------------------------------------------------------
 
 /// Primary provider — exposes full [NetworkStatus] with 3-state detection.
+/// 데모 모드 시 healthcheck를 비활성화하여 항상 online 상태를 반환한다.
 final networkStateProvider =
     StateNotifierProvider<NetworkStateNotifier, NetworkStatus>(
-  (ref) => NetworkStateNotifier(),
+  (ref) {
+    final isDemoMode = ref.watch(isDemoModeProvider);
+    return NetworkStateNotifier(isDemoMode: isDemoMode);
+  },
 );
 
 /// OS-level connectivity stream (kept for backward compatibility).

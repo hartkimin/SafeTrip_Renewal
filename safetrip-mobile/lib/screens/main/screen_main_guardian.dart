@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
@@ -66,12 +67,20 @@ class _MainGuardianScreenState extends ConsumerState<MainGuardianScreen> {
               options: const MapOptions(
                 initialCenter: LatLng(37.5665, 126.9780),
                 initialZoom: 13.0,
+                minZoom: 3.0,
+                maxZoom: 18.0,
+                interactionOptions: InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
               ),
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.urock.safe.trip',
+                  maxZoom: 19,
+                  keepBuffer: 3,
                 ),
               ],
             ),
@@ -91,10 +100,7 @@ class _MainGuardianScreenState extends ConsumerState<MainGuardianScreen> {
                 ref.read(mainScreenProvider.notifier).setSheetLevel(level);
               },
               builder: (context, scrollController) {
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _buildTabContent(scrollController),
-                );
+                return _buildTabContent(scrollController);
               },
             ),
 
@@ -168,9 +174,8 @@ class _MainGuardianScreenState extends ConsumerState<MainGuardianScreen> {
         ],
       ),
     );
-    // Note: actual app exit would need SystemNavigator.pop()
     if (shouldExit == true && mounted) {
-      // Let the system handle back navigation
+      SystemNavigator.pop();
     }
   }
 }

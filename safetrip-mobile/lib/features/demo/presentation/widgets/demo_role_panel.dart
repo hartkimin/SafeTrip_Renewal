@@ -41,7 +41,7 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
 
     DemoAnalytics.roleSwitched(fromRole: fromRole, toRole: roleStr);
 
-    // Update SharedPreferences
+    // Update SharedPreferences (demo + standard keys)
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('demo_user_role', roleStr);
 
@@ -52,6 +52,10 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
     );
     await prefs.setString('demo_user_id', member.id);
     await prefs.setString('demo_user_name', member.name);
+    // Standard keys for MarkerManager compatibility
+    await prefs.setString('user_id', member.id);
+    await prefs.setString('user_role', roleStr);
+    await prefs.setString('user_name', member.name);
 
     // Update trip provider
     ref.read(tripProvider.notifier).setCurrentTripDetails(
@@ -140,8 +144,9 @@ class _DemoRolePanelState extends ConsumerState<DemoRolePanel> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: DemoRole.values.map((role) {
                 final isSelected = role == currentRole;
+                final isLast = role == DemoRole.values.last;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 4),
                   child: GestureDetector(
                     onTap: () {
                       _switchRole(role);

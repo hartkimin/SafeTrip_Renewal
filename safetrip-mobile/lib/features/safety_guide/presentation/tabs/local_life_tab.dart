@@ -127,7 +127,7 @@ class LocalLifeTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.location_city_outlined,
               size: 48,
               color: AppColors.textTertiary,

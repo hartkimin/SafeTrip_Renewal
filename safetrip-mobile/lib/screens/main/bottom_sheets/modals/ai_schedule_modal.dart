@@ -309,7 +309,7 @@ class _AiScheduleModalState extends State<AiScheduleModal> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: AppColors.semanticError.withOpacity(0.08),
+                  color: AppColors.semanticError.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(AppSpacing.radius8),
                 ),
                 child: Text(
@@ -395,7 +395,7 @@ class _AiScheduleModalState extends State<AiScheduleModal> {
           border: Border.all(
             color: isAdded
                 ? AppColors.outlineVariant
-                : AppColors.primaryTeal.withOpacity(0.3),
+                : AppColors.primaryTeal.withValues(alpha: 0.3),
           ),
         ),
         child: Row(

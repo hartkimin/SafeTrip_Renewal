@@ -41,9 +41,11 @@ class _DemoTimeSliderState extends ConsumerState<DemoTimeSlider> {
     final preEnd = 7.0 / totalRange; // D-7 to D+0
     final tripEnd = (7 + durationDays) / totalRange; // D+0 to D+N
 
-    return Container(
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppSpacing.radius12),
@@ -154,6 +156,7 @@ class _DemoTimeSliderState extends ConsumerState<DemoTimeSlider> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

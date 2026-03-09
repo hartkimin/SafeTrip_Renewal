@@ -205,7 +205,7 @@ class _GuardianChatScreenState extends State<GuardianChatScreen> {
           // ---- 메시지 입력 ----
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.surface,
               border: Border(
                 top: BorderSide(color: AppColors.outlineVariant),

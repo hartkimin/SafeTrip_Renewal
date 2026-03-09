@@ -79,7 +79,7 @@ class TimelineEventMarker extends StatelessWidget {
       case TimelineEventType.stayPoint:
         final place = event.placeName ?? '알 수 없는 장소';
         final dur = event.durationMinutes ?? 0;
-        text = '$place (${dur}분 체류)';
+        text = '$place ($dur분 체류)';
       case TimelineEventType.sosEvent:
         text = 'SOS 이벤트';
       case TimelineEventType.alertEvent:

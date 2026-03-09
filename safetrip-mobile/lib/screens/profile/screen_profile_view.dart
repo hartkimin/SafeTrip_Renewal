@@ -82,7 +82,7 @@ class _ScreenProfileViewState extends State<ScreenProfileView> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline,
+                      const Icon(Icons.error_outline,
                           size: 48, color: AppColors.textTertiary),
                       const SizedBox(height: 12),
                       Text(

@@ -221,7 +221,7 @@ class _TimelineBarPainter extends CustomPainter {
       case 'shared':
         return AppColors.primaryTeal;
       case 'buffer':
-        return AppColors.primaryTeal.withOpacity(0.3);
+        return AppColors.primaryTeal.withValues(alpha: 0.3);
       case 'off':
       default:
         return AppColors.surfaceVariant;

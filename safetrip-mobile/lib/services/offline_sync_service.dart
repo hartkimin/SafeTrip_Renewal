@@ -648,7 +648,7 @@ class OfflineSyncService {
           ) ??
           0;
       if (count >= _maxChatMessages) {
-        debugPrint('[OfflineSync] 채팅 큐 한도 도달 (${_maxChatMessages}건)');
+        debugPrint('[OfflineSync] 채팅 큐 한도 도달 ($_maxChatMessages건)');
         return false;
       }
 

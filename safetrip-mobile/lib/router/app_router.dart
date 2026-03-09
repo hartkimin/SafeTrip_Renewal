@@ -154,7 +154,7 @@ class AppRouter {
       ),
       GoRoute(
         path: RoutePaths.tripCreate,
-        builder: (context, state) => const ScreenTripCreate(),
+        builder: (context, state) => ScreenTripCreate(authNotifier: authNotifier),
       ),
       GoRoute(
         path: RoutePaths.tripJoin,
@@ -242,32 +242,29 @@ class AppRouter {
       if (!isAuth) {
         // DOC-T3-WLC-029 §3.2 Phase 1: Deep link context detection
         if (authNotifier.pendingInviteCode != null) {
-          // Invite code → skip slides, go to Phase 3 (purpose/trip-join)
-          // tripJoin screen handles auto-fill from pendingInviteCode
           return RoutePaths.tripJoin;
         }
         if (authNotifier.pendingGuardianCode != null) {
-          // Guardian code → skip slides, go to auth (guardian needs account)
           return RoutePaths.authPhone;
         }
-        // §6.1: Invite URI received but code parse failed → Phase 3 + toast
         if (authNotifier.inviteDeeplinkFailed) {
           return RoutePaths.onboardingPurpose;
         }
-        // Route A: new user → welcome slides / Route B: returning → purpose
-        return authNotifier.isFirstLaunch
+        final target = authNotifier.isFirstLaunch
             ? RoutePaths.onboardingWelcome
             : RoutePaths.onboardingPurpose;
+        debugPrint('[Router] splash → $target (isAuth=$isAuth, firstLaunch=${authNotifier.isFirstLaunch})');
+        return target;
       }
-      // Authenticated: Route B (§4.2)
-      return authNotifier.hasActiveTrip
+      final target = authNotifier.hasActiveTrip
           ? RoutePaths.main
           : RoutePaths.noTripHome;
+      debugPrint('[Router] splash → $target (isAuth=$isAuth, hasTrip=${authNotifier.hasActiveTrip})');
+      return target;
     }
 
     // Protect auth/onboarding routes from authenticated users
     // who have COMPLETED onboarding (consent + profile done).
-    // Users mid-onboarding must stay on the flow.
     final onboardingPaths = [
       RoutePaths.onboardingWelcome,
       RoutePaths.onboardingPurpose,
@@ -280,11 +277,13 @@ class AppRouter {
       final onboardingDone =
           authNotifier.consentCompleted && authNotifier.profileCompleted;
       if (onboardingDone) {
-        return authNotifier.hasActiveTrip
+        final target = authNotifier.hasActiveTrip
             ? RoutePaths.main
             : RoutePaths.noTripHome;
+        debugPrint('[Router] redirect $path → $target (onboardingDone=$onboardingDone, hasTrip=${authNotifier.hasActiveTrip})');
+        return target;
       }
-      // Still onboarding → let them stay
+      debugPrint('[Router] staying on $path (isAuth=$isAuth, consent=${authNotifier.consentCompleted}, profile=${authNotifier.profileCompleted})');
     }
 
     return null;

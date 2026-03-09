@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,10 +28,8 @@ class AuthNotifier extends ChangeNotifier {
   bool _initCompleted = false;
   bool _requiresForceUpdate = false;
   String? _forceUpdateStoreUrl;
-  bool _isOffline = false;
   bool _optionalUpdateAvailable = false;
   String? _optionalUpdateStoreUrl;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   bool get isAuthenticated => _isAuthenticated;
   bool get hasActiveTrip => _hasActiveTrip;
@@ -50,7 +45,6 @@ class AuthNotifier extends ChangeNotifier {
   bool get initCompleted => _initCompleted;
   bool get requiresForceUpdate => _requiresForceUpdate;
   String? get forceUpdateStoreUrl => _forceUpdateStoreUrl;
-  bool get isOffline => _isOffline;
   bool get optionalUpdateAvailable => _optionalUpdateAvailable;
   String? get optionalUpdateStoreUrl => _optionalUpdateStoreUrl;
 
@@ -96,6 +90,15 @@ class AuthNotifier extends ChangeNotifier {
     }
     _isAuthenticated = true;
     _hasActiveTrip = hasTrip;
+    notifyListeners();
+  }
+
+  /// 여행 생성/참여 후 활성 여행 상태 갱신 (group_id 저장 + _hasActiveTrip = true)
+  Future<void> setActiveTrip(String groupId) async {
+    debugPrint('[AuthNotifier] setActiveTrip: groupId=$groupId');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('group_id', groupId);
+    _hasActiveTrip = true;
     notifyListeners();
   }
 
@@ -186,7 +189,6 @@ class AuthNotifier extends ChangeNotifier {
     required bool firebaseSuccess,
     required bool requiresForceUpdate,
     String? forceUpdateStoreUrl,
-    bool isOffline = false,
     bool optionalUpdateAvailable = false,
     String? optionalUpdateStoreUrl,
   }) {
@@ -199,26 +201,11 @@ class AuthNotifier extends ChangeNotifier {
     }
     _requiresForceUpdate = requiresForceUpdate;
     _forceUpdateStoreUrl = forceUpdateStoreUrl;
-    _isOffline = isOffline;
     _optionalUpdateAvailable = optionalUpdateAvailable;
     _optionalUpdateStoreUrl = optionalUpdateStoreUrl;
     _initCompleted = true;
 
-    // Start connectivity monitoring for offline banner auto-dismiss (§13.2)
-    _connectivitySub ??= Connectivity().onConnectivityChanged.listen((results) {
-      final nowOffline = results.every((r) => r == ConnectivityResult.none);
-      if (_isOffline != nowOffline) {
-        _isOffline = nowOffline;
-        notifyListeners();
-      }
-    });
-
+    // 오프라인 감지는 NetworkStateNotifier (connectivity_provider.dart)로 통합
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _connectivitySub?.cancel();
-    super.dispose();
   }
 }

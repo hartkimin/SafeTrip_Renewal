@@ -139,35 +139,33 @@ class OverviewTab extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 48,
-              color: AppColors.textTertiary,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              '정보를 불러오지 못했습니다',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '국가를 선택하거나 네트워크 연결을 확인해 주세요',
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textTertiary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      children: [
+        const SizedBox(height: 80),
+        const Icon(
+          Icons.info_outline,
+          size: 48,
+          color: AppColors.textTertiary,
         ),
-      ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          '정보를 불러오지 못했습니다',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textTertiary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          '국가를 선택하거나 네트워크 연결을 확인해 주세요',
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textTertiary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

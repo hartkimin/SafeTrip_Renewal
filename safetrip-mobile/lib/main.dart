@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,7 +12,6 @@ import 'core/theme/app_theme.dart';
 import 'features/onboarding/data/deeplink_service.dart';
 import 'router/app_router.dart';
 import 'router/auth_notifier.dart';
-import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +58,12 @@ void main() async {
 
   // Initialize deep link service
   await DeeplinkService.instance.init();
+
+  // 상태바 아이콘 색상: 밝은 배경에 어두운 아이콘
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+  ));
 
   debugPrint('[main] About to runApp...');
   runApp(
@@ -118,6 +124,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     debugPrint('[MyApp] build called');
+
     return MaterialApp.router(
       title: 'SafeTrip',
       debugShowCheckedModeBanner: false,
@@ -136,18 +143,12 @@ class _MyAppState extends State<MyApp> {
       locale: const Locale('ko', 'KR'),
       routerConfig: _appRouter.router,
       builder: (context, child) {
-        // Global offline banner (DOC-T3-SPL-028 §13.2)
-        return ListenableBuilder(
-          listenable: _authNotifier,
-          builder: (context, _) {
-            return Column(
-              children: [
-                if (_authNotifier.isOffline && _authNotifier.initCompleted)
-                  const OfflineBanner(),
-                Expanded(child: child ?? const SizedBox.shrink()),
-              ],
-            );
-          },
+        // SafeArea(top): 상태바 영역 침범 방지 (Android 15 edge-to-edge 대응)
+        // bottom: false → 하단은 개별 화면에서 처리
+        // 오프라인 배너는 screen_main.dart의 NetworkStateNotifier 기반 배너로 통합
+        return SafeArea(
+          bottom: false,
+          child: child ?? const SizedBox.shrink(),
         );
       },
     );

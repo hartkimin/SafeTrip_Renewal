@@ -38,20 +38,20 @@ class PrivacyBadge extends StatelessWidget {
   static _PrivacyConfig _getConfig(String level) {
     switch (level) {
       case 'safety_first':
-        return _PrivacyConfig(
+        return const _PrivacyConfig(
           icon: '\u{1F6E1}\u{FE0F}',
           label: '안전 최우선 \u{00B7} 강제 공유 \u{00B7} 24시간',
           color: AppColors.privacySafetyFirst,
         );
       case 'privacy_first':
-        return _PrivacyConfig(
+        return const _PrivacyConfig(
           icon: '\u{1F512}',
           label: '프라이버시 우선 \u{00B7} 일정 연동',
           color: AppColors.privacyFirst,
         );
       case 'standard':
       default:
-        return _PrivacyConfig(
+        return const _PrivacyConfig(
           icon: '\u{1F4CD}',
           label: '표준 \u{00B7} 24시간 공유',
           color: AppColors.privacyStandard,

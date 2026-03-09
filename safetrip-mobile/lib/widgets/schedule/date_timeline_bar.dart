@@ -182,11 +182,11 @@ class _DateItem extends StatelessWidget {
                     isToday ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             // 날짜 원형
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: bgColor,
                 shape: BoxShape.circle,
@@ -203,19 +203,19 @@ class _DateItem extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             // 일정 있음 표시 (작은 점)
             if (hasSchedule)
               Container(
-                width: 5,
-                height: 5,
+                width: 4,
+                height: 4,
                 decoration: const BoxDecoration(
                   color: AppColors.primaryTeal,
                   shape: BoxShape.circle,
                 ),
               )
             else
-              const SizedBox(width: 5, height: 5),
+              const SizedBox(width: 4, height: 4),
           ],
         ),
       ),

@@ -38,7 +38,7 @@ class CountrySelectorWidget extends ConsumerWidget {
               style: AppTypography.labelLarge,
             ),
             const SizedBox(width: 4),
-            Icon(
+            const Icon(
               Icons.arrow_drop_down,
               size: 20,
               color: AppColors.textSecondary,
@@ -116,8 +116,8 @@ class _CountryPickerContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+        const Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Text('국가 선택', style: AppTypography.titleMedium),
         ),
         Expanded(

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// 배터리 인식 GPS 주기 관리 (오프라인 원칙 DOC-T2-OFL-016 §7)
 class BatteryGpsManager {
   /// GPS 수집 주기 계산 (초 단위 반환)

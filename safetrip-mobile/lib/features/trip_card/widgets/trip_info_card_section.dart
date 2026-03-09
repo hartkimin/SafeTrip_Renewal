@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../features/demo/providers/demo_state_provider.dart';
 import '../models/trip_card_data.dart';
 import '../providers/trip_card_provider.dart';
 import 'member_trip_card.dart';
@@ -33,8 +34,11 @@ class _TripInfoCardSectionState extends ConsumerState<TripInfoCardSection> {
   @override
   void initState() {
     super.initState();
-    // 최초 로드
-    Future.microtask(() => ref.read(tripCardProvider.notifier).fetchCardView());
+    // 최초 로드 — 데모 모드에서는 API 서버가 없으므로 skip
+    Future.microtask(() {
+      if (ref.read(isDemoModeProvider)) return;
+      ref.read(tripCardProvider.notifier).fetchCardView();
+    });
   }
 
   @override

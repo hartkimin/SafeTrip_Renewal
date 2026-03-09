@@ -223,58 +223,69 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen>
       });
       _slideController.reverse();
     } else {
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(RoutePaths.onboardingPurpose);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isOtp = _step == _PhoneAuthStep.enterOtp;
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _onBack,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _onBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.surface,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _onBack,
+          ),
+          title: Text(isOtp ? '인증번호 입력' : '전화번호 입력'),
         ),
-        title: Text(isOtp ? '인증번호 입력' : '전화번호 입력'),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                isOtp ? '전송된 6자리 코드를\n입력해주세요' : 'SafeTrip 시작을 위해\n전화번호가 필요합니다',
-                style: AppTypography.headlineMedium.copyWith(
-                  fontWeight: FontWeight.bold,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  isOtp ? '전송된 6자리 코드를\n입력해주세요' : 'SafeTrip 시작을 위해\n전화번호가 필요합니다',
+                  style: AppTypography.headlineMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              if (!isOtp) _buildPhoneInput() else _buildOtpInput(),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: AppSpacing.buttonHeight,
-                child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : (isOtp ? _verifyCode : _sendCode),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(isOtp ? '인증하기' : '인증번호 받기'),
+                const SizedBox(height: AppSpacing.xl),
+                if (!isOtp) _buildPhoneInput() else _buildOtpInput(),
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  height: AppSpacing.buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: _isLoading
+                        ? null
+                        : (isOtp ? _verifyCode : _sendCode),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(isOtp ? '인증하기' : '인증번호 받기'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

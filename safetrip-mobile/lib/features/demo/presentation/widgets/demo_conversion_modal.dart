@@ -83,11 +83,11 @@ class DemoConversionModal extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
 
             // §8: 오프라인 가드 적용 CTA
-            FutureBuilder<List<ConnectivityResult>>(
+            FutureBuilder<ConnectivityResult>(
               future: Connectivity().checkConnectivity(),
               builder: (context, snapshot) {
                 final isOffline = snapshot.hasData &&
-                    snapshot.data!.contains(ConnectivityResult.none);
+                    snapshot.data == ConnectivityResult.none;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

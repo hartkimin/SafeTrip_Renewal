@@ -44,12 +44,21 @@ class MapRouteView extends StatelessWidget {
       options: MapOptions(
         initialCenter: bounds.center,
         initialZoom: 14,
+        minZoom: 3.0,
+        maxZoom: 18.0,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+        ),
         onTap: (_, __) {},
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.safetrip.app',
+          urlTemplate:
+              'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.urock.safe.trip',
+          maxZoom: 19,
+          keepBuffer: 3,
         ),
         // §6.2 폴리라인
         PolylineLayer(
@@ -84,7 +93,7 @@ class MapRouteView extends StatelessWidget {
       colorIndex++;
       return Polyline(
         points: entry.value,
-        color: color.withOpacity(0.8),
+        color: color.withValues(alpha: 0.8),
         strokeWidth: 3.0,
       );
     }).toList();

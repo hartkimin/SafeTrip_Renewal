@@ -155,7 +155,7 @@ class _PollCreateDialogState extends State<PollCreateDialog> {
           // ---- 마감 시한 선택 ----
           Row(
             children: [
-              Text('마감 시간: ', style: AppTypography.bodyMedium),
+              const Text('마감 시간: ', style: AppTypography.bodyMedium),
               TextButton(
                 onPressed: _pickDeadline,
                 child: Text(

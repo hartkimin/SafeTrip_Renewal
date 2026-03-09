@@ -135,7 +135,6 @@ class _InitialScreenState extends State<InitialScreen>
           result.versionResult.updateType == UpdateType.critical
               ? result.versionResult.storeUrl
               : null,
-      isOffline: result.isOffline,
       optionalUpdateAvailable:
           result.versionResult.updateType == UpdateType.optional,
       optionalUpdateStoreUrl:

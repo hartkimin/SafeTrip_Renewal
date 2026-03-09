@@ -131,7 +131,7 @@ class EmergencyTab extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.info_outline,
                 size: 16,
                 color: AppColors.textTertiary,

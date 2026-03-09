@@ -53,7 +53,7 @@ class TripSwitchBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('여행 전환', style: AppTypography.titleMedium),
+          const Text('여행 전환', style: AppTypography.titleMedium),
           const SizedBox(height: AppSpacing.md),
           Flexible(
             child: ListView(

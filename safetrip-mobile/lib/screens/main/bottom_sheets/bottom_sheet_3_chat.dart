@@ -18,6 +18,7 @@ import '../../../features/chat/widgets/poll_card_widget.dart';
 import '../../../features/chat/widgets/schedule_card_widget.dart';
 import '../../../features/chat/widgets/sos_card_widget.dart';
 import '../../../features/chat/widgets/system_message_widget.dart';
+import '../../../features/demo/providers/demo_state_provider.dart';
 import '../../../features/main/providers/connectivity_provider.dart';
 import '../../../utils/app_cache.dart';
 
@@ -82,6 +83,9 @@ class _BottomSheetChatState extends ConsumerState<BottomSheetChat> {
   void _initializeChatProvider() {
     if (_providerInitialized) return;
     _providerInitialized = true;
+
+    // 데모 모드에서는 API/WebSocket 서버가 없으므로 채팅 초기화 skip
+    if (ref.read(isDemoModeProvider)) return;
 
     final tripId = AppCache.tripIdSync;
     if (tripId != null) {

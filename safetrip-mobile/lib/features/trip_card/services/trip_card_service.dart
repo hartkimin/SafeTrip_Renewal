@@ -11,7 +11,12 @@ class TripCardService {
   Future<TripCardViewData> fetchCardView() async {
     final response = await _apiService.dio.get('/api/v1/trips/card-view');
     if (response.data is Map<String, dynamic>) {
-      return TripCardViewData.fromJson(response.data as Map<String, dynamic>);
+      final body = response.data as Map<String, dynamic>;
+      // 서버 TransformInterceptor가 { success, data } 로 래핑하므로 unwrap
+      final payload = (body['success'] == true && body['data'] is Map<String, dynamic>)
+          ? body['data'] as Map<String, dynamic>
+          : body;
+      return TripCardViewData.fromJson(payload);
     }
     return const TripCardViewData();
   }

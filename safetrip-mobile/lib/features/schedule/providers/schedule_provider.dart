@@ -85,6 +85,50 @@ class ScheduleState {
 class ScheduleNotifier extends StateNotifier<ScheduleState> {
   ScheduleNotifier(this._apiService) : super(const ScheduleState());
   final ApiService _apiService;
+  bool _isDemoMode = false;
+
+  /// Seed demo schedules without API calls.
+  void seedDemoSchedules({
+    required List<Schedule> schedules,
+    required List<String> scheduleDates,
+    required DateTime tripStartDate,
+    required DateTime tripEndDate,
+    String privacyLevel = 'standard',
+    String userRole = 'crew',
+    String tripStatus = 'active',
+  }) {
+    _isDemoMode = true;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(tripStartDate.year, tripStartDate.month, tripStartDate.day);
+    final end = DateTime(tripEndDate.year, tripEndDate.month, tripEndDate.day);
+
+    state = state.copyWith(
+      schedules: schedules,
+      scheduleDates: scheduleDates,
+      tripStartDate: start,
+      tripEndDate: end,
+      selectedDate: today.isAfter(start) &&
+              today.isBefore(end.add(const Duration(days: 1)))
+          ? today
+          : start,
+      privacyLevel: privacyLevel,
+      userRole: userRole,
+      tripStatus: tripStatus,
+      isLoading: false,
+    );
+  }
+
+  /// Update demo schedules for a specific date without API calls.
+  void seedDemoSchedulesForDate({
+    required List<Schedule> schedules,
+    required DateTime date,
+  }) {
+    state = state.copyWith(
+      schedules: schedules,
+      selectedDate: DateTime(date.year, date.month, date.day),
+    );
+  }
 
   void setTripContext({
     required String tripId,
@@ -119,6 +163,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
   void selectDate(DateTime date) {
     state = state.copyWith(
         selectedDate: DateTime(date.year, date.month, date.day));
+    if (_isDemoMode) return; // Demo mode: date state updated, skip API fetch
     fetchSchedules();
     fetchShareTimeline();
   }

@@ -9,8 +9,9 @@ import '../../../features/main/providers/main_screen_provider.dart';
 /// [DraggableScrollableSheet]를 래핑하여 AppTokens.bottomSheetSnapPoints에
 /// 정의된 5단계(collapsed/peek/half/expanded/full)로 스냅한다.
 ///
-/// [controller]를 외부에서 주입하면 [DraggableScrollableController.animateTo]로
-/// 프로그래밍적 높이 제어가 가능하다 (탭 전환, SOS, 키보드 이벤트).
+/// 콘텐츠 빌더가 반환하는 위젯은 반드시 전달받은 [ScrollController]를
+/// 스크롤 가능 위젯(ListView, CustomScrollView 등)에 연결해야 한다.
+/// 연결하지 않으면 DraggableScrollableSheet의 드래그가 동작하지 않는다.
 class SnappingBottomSheet extends StatefulWidget {
   const SnappingBottomSheet({
     super.key,
@@ -49,7 +50,6 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
   late final DraggableScrollableController _controller;
   bool _ownsController = false;
 
-  // DraggableScrollableSheet의 snapSizes는 minChildSize/maxChildSize를 제외한 중간값만 받음
   static const _minSize = AppTokens.bottomSheetHeightCollapsed; // 0.10
   static const _maxSize = AppTokens.bottomSheetHeightExpanded; // 1.00
   static const _snapSizes = [
@@ -57,17 +57,7 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
     AppTokens.bottomSheetHeightHalf, // 0.50
     AppTokens.bottomSheetHeightTall, // 0.75
   ];
-
-  /// §3.3: 직전 안정 레벨 (전환 제약 검증용)
-  BottomSheetLevel _previousStableLevel = BottomSheetLevel.half;
-
-  /// 프로그래밍적 애니메이션 중인지 여부
-  bool _isProgrammaticMove = false;
-
-  /// §3.3: 마지막 수직 드래그 velocity (dp/s)
-  double _lastDragVelocity = 0;
-  double _previousSize = 0.5;
-  DateTime _previousSizeTime = DateTime.now();
+  static const _allSnaps = [_minSize, ..._snapSizes, _maxSize];
 
   @override
   void initState() {
@@ -79,8 +69,6 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
       _ownsController = true;
     }
     _controller.addListener(_onSizeChanged);
-    _previousStableLevel = widget.initialLevel;
-    _previousSize = widget.initialLevel.fraction;
     widget.onCreated?.call(_markProgrammaticMove);
   }
 
@@ -93,62 +81,53 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
     super.dispose();
   }
 
-  void _markProgrammaticMove([Duration duration = const Duration(milliseconds: 300)]) {
-    _isProgrammaticMove = true;
+  void _markProgrammaticMove([
+    Duration duration = const Duration(milliseconds: 300),
+  ]) {
+    // 외부에서 animateTo 호출 시 레벨 콜백 안정화를 위한 마커
     Future.delayed(duration + const Duration(milliseconds: 50), () {
-      _isProgrammaticMove = false;
+      // intentionally empty — 프로그래밍적 이동 후 안정화 대기
     });
   }
 
   void _onSizeChanged() {
     if (!_controller.isAttached) return;
-    final size = _controller.size;
-    final now = DateTime.now();
-    final level = BottomSheetLevelExt.fromFraction(size);
-
-    // §3.3: 속도 추정 (dp/s 환산)
-    final dt = now.difference(_previousSizeTime).inMilliseconds;
-    if (dt > 0) {
-      final screenHeight = MediaQuery.of(context).size.height;
-      final deltaDp = (size - _previousSize).abs() * screenHeight;
-      _lastDragVelocity = deltaDp / (dt / 1000); // dp/s
-    }
-    _previousSize = size;
-    _previousSizeTime = now;
-
-    // §3.3: 프로그래밍적 이동이 아닌 사용자 제스처에 의한 직접 점프 검증
-    if (!_isProgrammaticMove && widget.isDragEnabled) {
-      final distance = (level.index - _previousStableLevel.index).abs();
-      if (distance >= 3 && _lastDragVelocity < 2000) {
-        // 느린 점프 → 리다이렉트
-        final redirectLevel = level.index > _previousStableLevel.index
-            ? BottomSheetLevel.peek
-            : BottomSheetLevel.expanded;
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_controller.isAttached) {
-            const redirectDuration = Duration(milliseconds: 300);
-            _isProgrammaticMove = true;
-            _controller.animateTo(
-              redirectLevel.fraction,
-              duration: redirectDuration,
-              curve: Curves.easeInOut,
-            );
-            Future.delayed(redirectDuration + const Duration(milliseconds: 50), () {
-              _isProgrammaticMove = false;
-            });
-          }
-        });
-
-        widget.onLevelChanged?.call(redirectLevel);
-        _previousStableLevel = redirectLevel;
-        return;
-      }
-      // distance >= 3 && velocity >= 2000 → 직접 전환 허용 (스펙 §3.3)
-    }
-
-    _previousStableLevel = level;
+    final level = BottomSheetLevelExt.fromFraction(_controller.size);
     widget.onLevelChanged?.call(level);
+  }
+
+  /// 핸들 드래그 종료 시 velocity 기반 스냅
+  void _snapToNearest(double velocity) {
+    if (!_controller.isAttached) return;
+    final cur = _controller.size;
+    double target;
+
+    if (velocity.abs() > 500) {
+      if (velocity < 0) {
+        // 위로 플릭 → 다음 큰 스냅 포인트
+        target = _allSnaps.firstWhere(
+          (s) => s > cur + 0.02,
+          orElse: () => _maxSize,
+        );
+      } else {
+        // 아래로 플릭 → 다음 작은 스냅 포인트
+        target = _allSnaps.reversed.firstWhere(
+          (s) => s < cur - 0.02,
+          orElse: () => _minSize,
+        );
+      }
+    } else {
+      // 느린 드래그: 가장 가까운 스냅 포인트
+      target = _allSnaps.reduce(
+        (a, b) => (cur - a).abs() < (cur - b).abs() ? a : b,
+      );
+    }
+
+    _controller.animateTo(
+      target,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -160,49 +139,59 @@ class _SnappingBottomSheetState extends State<SnappingBottomSheet> {
       maxChildSize: _maxSize,
       snap: true,
       snapSizes: _snapSizes,
-      snapAnimationDuration: const Duration(milliseconds: 300),
+      snapAnimationDuration: const Duration(milliseconds: 250),
       builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.radius24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(0, -2),
-              ),
-            ],
+        return Material(
+          color: AppColors.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.radius24),
           ),
+          clipBehavior: Clip.antiAlias,
+          elevation: 8,
           child: Column(
             children: [
-              // 드래그 핸들 — isDragEnabled=false일 때도 시각적 핸들은 유지 (§10.2)
+              // ── 드래그 핸들 ────────────────────────────────
+              // 핸들은 DraggableScrollableSheet의 scrollController 밖이므로
+              // GestureDetector로 controller.jumpTo()에 직접 연결한다.
+              // isDragEnabled=false일 때는 콜백을 null로 설정하여
+              // 제스처 경쟁에 참여하지 않도록 한다.
               GestureDetector(
-                // SOS 잠금 시 드래그를 흡수하여 무효화
-                onVerticalDragUpdate:
-                    widget.isDragEnabled ? null : (_) {},
-                child: Container(
-                  height: 32,
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: widget.isDragEnabled
+                    ? (details) {
+                        if (!_controller.isAttached) return;
+                        final screenH = MediaQuery.of(context).size.height;
+                        final delta =
+                            -(details.primaryDelta ?? 0) / screenH;
+                        final next =
+                            (_controller.size + delta).clamp(_minSize, _maxSize);
+                        _controller.jumpTo(next);
+                      }
+                    : null,
+                onVerticalDragEnd: widget.isDragEnabled
+                    ? (details) =>
+                        _snapToNearest(details.primaryVelocity ?? 0)
+                    : null,
+                child: SizedBox(
+                  height: 28,
                   width: double.infinity,
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.outline,
-                      borderRadius: BorderRadius.circular(2),
+                  child: Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.outline,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                 ),
               ),
-              // 콘텐츠
+              // ── 콘텐츠 ────────────────────────────────────
               Expanded(
                 child: widget.isDragEnabled
                     ? widget.builder(context, scrollController)
                     : IgnorePointer(
-                        ignoring: true,
                         child: widget.builder(context, scrollController),
                       ),
               ),

@@ -74,6 +74,11 @@ class _ScreenDemoScenarioSelectState
       await prefs.setString('demo_user_name', currentUser.name);
       await prefs.setString('demo_group_id', 'demo_${scenarioId.name}');
       await prefs.setString('demo_user_role', currentUser.role);
+      // Standard keys for MarkerManager/FirebaseLocationManager compatibility
+      await prefs.setString('user_id', currentUser.id);
+      await prefs.setString('group_id', 'demo_${scenarioId.name}');
+      await prefs.setString('user_role', currentUser.role);
+      await prefs.setString('user_name', currentUser.name);
 
       // 5. Set auth state and navigate
       await widget.authNotifier.setDemoAuthenticated();

@@ -1,3 +1,10 @@
+/// PostgreSQL raw query에서 int/String 혼용 반환 대응
+int _parseInt(dynamic value) {
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
 /// TB_TRIP_CARD_VIEW 매핑 모델 (DOC-T3-TIC-024 §11.3)
 ///
 /// 서버 GET /trips/card-view 응답의 memberTrips / guardianTrips 각 항목을
@@ -48,7 +55,7 @@ class MemberTripCard {
       reactivationCount: json['reactivation_count'] as int? ?? 0,
       dDay: json['d_day'] as int?,
       currentDay: json['current_day'] as int?,
-      memberCount: json['member_count'] as int? ?? 0,
+      memberCount: _parseInt(json['member_count']),
       canReactivate: json['can_reactivate'] as bool? ?? false,
       userRole: json['user_role'] as String? ?? 'crew',
       isAdmin: json['is_admin'] as bool? ?? false,

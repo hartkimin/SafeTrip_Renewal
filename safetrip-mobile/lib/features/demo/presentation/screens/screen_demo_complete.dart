@@ -42,10 +42,10 @@ class _ScreenDemoCompleteState extends ConsumerState<ScreenDemoComplete> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Padding(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -87,11 +87,11 @@ class _ScreenDemoCompleteState extends ConsumerState<ScreenDemoComplete> {
                   const Spacer(flex: 2),
 
                   // §8: 오프라인 가드 적용 CTA
-                  FutureBuilder<List<ConnectivityResult>>(
+                  FutureBuilder<ConnectivityResult>(
                     future: Connectivity().checkConnectivity(),
                     builder: (context, snapshot) {
                       final isOffline = snapshot.hasData &&
-                          snapshot.data!.contains(ConnectivityResult.none);
+                          snapshot.data == ConnectivityResult.none;
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,15 +180,15 @@ class _ScreenDemoCompleteState extends ConsumerState<ScreenDemoComplete> {
                 ],
               ),
             ),
-          ),
-          // §2 D3: 데모 배지
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 0,
-            right: 0,
-            child: const Center(child: DemoBadge()),
-          ),
-        ],
+            // §2 D3: 데모 배지
+            const Positioned(
+              top: 8,
+              left: 0,
+              right: 0,
+              child: Center(child: DemoBadge()),
+            ),
+          ],
+        ),
       ),
     );
   }

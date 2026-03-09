@@ -13,8 +13,8 @@ class ForceUpdateDialog extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: AlertDialog(
-        title: Text('업데이트가 필요합니다', style: AppTypography.titleLarge),
-        content: Text(
+        title: const Text('업데이트가 필요합니다', style: AppTypography.titleLarge),
+        content: const Text(
           '안전한 여행을 위해 최신 버전으로 업데이트해 주세요.',
           style: AppTypography.bodyMedium,
         ),

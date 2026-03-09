@@ -13,8 +13,8 @@
     "timezone": "Asia/Ho_Chi_Minh"
   },
   "members": [
-    {"id": "m_captain", "name": "박준혁", "role": "captain"},
-    {"id": "m_crew01", "name": "서윤아", "role": "crew"},
+    {"id": "m_captain", "name": "박준혁", "role": "captain", "battery": 87},
+    {"id": "m_crew01", "name": "서윤아", "role": "crew", "battery": 95},
     {"id": "g_guard01", "name": "서윤아 엄마", "role": "guardian"}
   ],
   "guardian_links": [
