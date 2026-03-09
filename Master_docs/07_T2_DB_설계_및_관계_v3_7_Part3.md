@@ -1,6 +1,6 @@
 ---
-date: '2026-03-05'
-version: v3.6
+date: '2026-03-08'
+version: v3.7
 part: 3/3
 tags:
   - SafeTrip
@@ -18,11 +18,11 @@ status: completed
 ---
 
 > **📂 분할 문서 네비게이션**
-> [Part 1: 개요·ERD·테이블 A~F](07_T2_DB_설계_및_관계_v3_6_Part1.md) |
-> [Part 2: 테이블 G~N·인덱스](07_T2_DB_설계_및_관계_v3_6_Part2.md) |
-> [Part 3: 운영·부록](07_T2_DB_설계_및_관계_v3_6_Part3.md)
+> [Part 1: 개요·ERD·테이블 A~F](07_T2_DB_설계_및_관계_v3_7_Part1.md) |
+> [Part 2: 테이블 G~N·인덱스](07_T2_DB_설계_및_관계_v3_7_Part2.md) |
+> [Part 3: 운영·부록](07_T2_DB_설계_및_관계_v3_7_Part3.md)
 
-# SafeTrip — DB 설계 및 관계 v3.6 (Part 3)
+# SafeTrip — DB 설계 및 관계 v3.7 (Part 3)
 
 ## 6. 데이터 보관 및 생명주기
 
@@ -78,7 +78,6 @@ status: completed
 | **TB_GUARDIAN_SNAPSHOT** | R (연결 멤버 그룹) | — | — | R (연결 멤버만) |
 | RTDB guardian_messages | RW (captain 채널) | — | RW (본인 채널) | RW (본인 채널) |
 | **TB_PARENTAL_CONSENT** | — | — | — | — (시스템 전용) |
-| **TB_COUNTRY_SAFETY** | R | R | R | R |
 | **TB_GEOFENCE_EVENT** | R (전 멤버) | R (자기 그룹) | R (본인) | R (연결 멤버) |
 | **TB_GEOFENCE_PENALTY** | RW | R | R (본인) | — |
 | **TB_MOVEMENT_SESSION** | R (전 멤버) | R (자기 그룹) | R (본인) | — |
@@ -94,6 +93,17 @@ status: completed
 | **TB_B2B_ADMIN** | RW (B2B 관리자) | — | — | — |
 | **TB_B2B_DASHBOARD_CONFIG** | RW (B2B 관리자) | — | — | — |
 | **TB_AI_USAGE** | R (본인) | R (본인) | R (본인) | — |
+| **TB_GUARDIAN_MESSAGE** | R (captain 채널) | — | RW (본인 채널) | RW (본인 채널) |
+| **TB_GUARDIAN_RELEASE_REQUEST** | RW | — | R (본인 관련) | R (본인 관련) |
+| **TB_SCHEDULE_HISTORY** | R | R | R | — |
+| **TB_SCHEDULE_COMMENT** | RW | RW | RW | — |
+| **TB_SCHEDULE_REACTION** | RW | RW | RW | — |
+| **TB_SCHEDULE_VOTE** | RW | RW | RW | — |
+| **TB_CHAT_REACTION** | RW | RW | RW | — |
+| **TB_SAFETY_GUIDE_CACHE** | R | R | R | R |
+| **TB_COUNTRY_EMERGENCY_CONTACT** | R | R | R | R |
+| **TB_AI_USAGE_LOG** | — (시스템) | — (시스템) | — (시스템) | — |
+| **TB_AI_SUBSCRIPTION** | R (본인) | R (본인) | R (본인) | — |
 
 > R = 읽기, W = 쓰기, — = 접근 불가. 프라이버시 등급에 따라 추가 제한 적용.
 > `TB_GUARDIAN_SNAPSHOT`: `privacy_first` 등급에서 데이터 없음 (가디언도 접근 불가)
@@ -189,11 +199,33 @@ status: completed
 | `migration-v3.5.1-location-schedule-specific-date.sql` | TB_LOCATION_SCHEDULE: specific_date DATE 컬럼 추가, CONSTRAINT chk_schedule_scope 추가, idx_location_schedule_date 부분 인덱스 추가 | 🟠 P1 |
 | `migration-v3.5.1-refund-log-policy.sql` | TB_REFUND_LOG: refund_policy VARCHAR(30) 컬럼 추가 (기존 행은 NULL 허용) | 🟡 P2 |
 
+### 9.6 v3.6 엔티티 정합 마이그레이션 (적용됨)
+
+| 파일 | 내용 | 상태 |
+|------|------|:----:|
+| `20-migration-schema-sync.sql` | 엔티티 ↔ DB 정합성 일괄 마이그레이션 (17개 테이블 추가·22개 컬럼 추가) | ✅ 적용됨 |
+| `11-migration-profile-columns.sql` | TB_USER 프로필 컬럼 5개 + nickname unique 인덱스 | ✅ 적용됨 |
+
+### 9.7 v3.7 기능 확장 마이그레이션 (적용됨)
+
+| 파일 | 내용 | 상태 |
+|------|------|:----:|
+| `11-schema-schedule-history.sql` | TB_SCHEDULE_HISTORY 생성 | ✅ 적용됨 |
+| `12-schema-schedule-social.sql` | TB_SCHEDULE_COMMENT, TB_SCHEDULE_REACTION 생성 | ✅ 적용됨 |
+| `12-schema-guardian-message.sql` | TB_GUARDIAN_MESSAGE 생성 | ✅ 적용됨 |
+| `13-schema-schedule-voting.sql` | TB_SCHEDULE_VOTE, TB_SCHEDULE_VOTE_OPTION, TB_SCHEDULE_VOTE_RESPONSE 생성 | ✅ 적용됨 |
+| `13-schema-chat-reaction.sql` | TB_CHAT_REACTION + pg_trgm 검색 인덱스 | ✅ 적용됨 |
+| `14-schema-schedule-templates.sql` | TB_SCHEDULE_TEMPLATE 생성 (시드 데이터 포함) | ✅ 적용됨 |
+| `15-schema-ai.sql` | TB_AI_USAGE_LOG, TB_AI_SUBSCRIPTION 생성 | ✅ 적용됨 |
+| `16-schema-safety-guide.sql` | TB_SAFETY_GUIDE_CACHE, TB_COUNTRY_EMERGENCY_CONTACT 생성 | ✅ 적용됨 |
+| `migration-guardian-release-request.sql` | TB_GUARDIAN_RELEASE_REQUEST 생성 | ✅ 적용됨 |
+| `20260307-add-movement-session-table.sql` | TB_MOVEMENT_SESSION 재생성 (확장 스키마) | ✅ 적용됨 |
+
 ---
 
 ## 10. 알려진 이슈
 
-> **v3.5 기준 미해결 이슈: 0개** (v3.3 이슈 전부 해소 + v3.5 신규 18개 이슈 전부 해소)
+> **v3.7 기준 미해결 이슈: 0개** (v3.6 이슈 전부 해소 + v3.7 실제 DB 정합 달성)
 
 | # | 이슈 | 해소 방법 |
 |:-:|------|----------|
@@ -227,6 +259,12 @@ status: completed
 | 28 | TB_GUARDIAN_LOCATION_REQUEST 자동 응답 추적 불가 | ✅ v3.5 auto_responded + auto_response_reason 추가 |
 | 29 | 시간당 3회 제한 쿼리 인덱스 없음 | ✅ v3.5 idx_guardian_location_request_hourly 추가 |
 | 30 | 구현에만 존재하는 17개 테이블 문서 미반영 | ✅ v3.6 — 17개 테이블(TB_PARENTAL_CONSENT 외 16개) 전부 문서화 |
+| 31 | v3.6 문서 71개 테이블 vs 실제 DB 84개 테이블 불일치 (13개 누락) | ✅ v3.7 — 13개 테이블 신규 추가, 22개 기존 테이블 컬럼 수정 |
+| 32 | TB_COUNTRY_SAFETY 문서에만 존재 (실제 DB 미생성) | ✅ v3.7 — 테이블 제거, 기능을 [J] 도메인 TB_SAFETY_GUIDE_CACHE로 이관 |
+| 33 | TB_GEOFENCE_EVENT/PENALTY 문서 스키마 vs 실제 DB 불일치 | ✅ v3.7 — 실제 DB 기준 재작성 (trip_id 제거, 컬럼명 변경) |
+| 34 | TB_MOVEMENT_SESSION 컬럼 4개만 문서화 (실제 14개) | ✅ v3.7 — 실제 DB 기준 14개 컬럼 완전 재작성 |
+| 35 | TB_EMERGENCY/RECIPIENT 과다 컬럼 문서화 (실제보다 많은 컬럼) | ✅ v3.7 — 실제 DB 기준 간소화 |
+| 36 | v3.6 인덱스 섹션에 존재하지 않는 인덱스 포함 | ✅ v3.7 — 실제 DB 기준 인덱스 전면 재검증 |
 
 ---
 
@@ -259,7 +297,12 @@ status: completed
 | 🟠 P1 | TB_AI_USAGE, TB_NO_RESPONSE_EVENT | Phase 1 | v3.6 AI 사용 추적, 무응답 이벤트 |
 | 🟡 P2 | TB_B2B_ORGANIZATION, TB_B2B_ADMIN, TB_B2B_DASHBOARD_CONFIG | Phase 2 | v3.6 B2B 조직/관리자/대시보드 |
 | 🟡 P2 | TB_REDEEM_CODE, TB_NOTIFICATION_PREFERENCE | Phase 2 | v3.6 리딤 코드, 알림 세부 설정 |
-| 🟢 P3 | TB_PARENTAL_CONSENT, TB_COUNTRY_SAFETY, TB_MOVEMENT_SESSION | Phase 3 | v3.6 보호자 동의, 국가 안전, 이동 세션 집계 |
+| 🟢 P3 | TB_PARENTAL_CONSENT, TB_MOVEMENT_SESSION | Phase 3 | v3.6 보호자 동의, 이동 세션 집계 |
+| 🟠 P1 | TB_GUARDIAN_MESSAGE, TB_GUARDIAN_RELEASE_REQUEST | Phase 1 | v3.7 가디언 1:1 메시지, 해제 요청 |
+| 🟠 P1 | TB_SCHEDULE_HISTORY, TB_SCHEDULE_COMMENT, TB_SCHEDULE_REACTION, TB_SCHEDULE_VOTE | Phase 1 | v3.7 일정 협업 기능 |
+| 🟠 P1 | TB_CHAT_REACTION, TB_SAFETY_GUIDE_CACHE, TB_COUNTRY_EMERGENCY_CONTACT | Phase 1 | v3.7 채팅 리액션, 안전 가이드 캐시 |
+| 🟡 P2 | TB_AI_USAGE_LOG, TB_AI_SUBSCRIPTION | Phase 2 | v3.7 AI 사용 로그, 구독 관리 |
+| 🟢 P3 | TB_SCHEDULE_TEMPLATE | Phase 3 | v3.7 일정 템플릿 (시드 데이터 포함) |
 
 ---
 
@@ -296,7 +339,7 @@ status: completed
 | 5 | 에러 및 엣지케이스 처리가 포함되어 있다 (§10 알려진 이슈) | ✅ |
 | 6 | 검증 체크리스트가 포함되어 있다 (§13) | ✅ |
 | 7 | 기존 문서 대비 변경/확장 사항이 명시되어 있다 (§1.3) | ✅ |
-| 8 | DB 스키마가 필요한 경우 테이블 구조가 포함되어 있다 | ✅ (54개 + RTDB) — v3.5: TB_LOCATION_SCHEDULE·TB_ATTENDANCE_CHECK·TB_ATTENDANCE_RESPONSE 추가 |
+| 8 | DB 스키마가 필요한 경우 테이블 구조가 포함되어 있다 | ✅ (84개 + RTDB) — v3.7: 실제 DB 84개 테이블 전면 정합 |
 | 9 | 구현 우선순위(P0~P3)와 Phase 배치가 포함되어 있다 (§11) | ✅ |
 | 10 | 오프라인 동작이 해당되는 경우 대응 방안이 포함되어 있다 (§12) | ✅ |
 | 11 | 가디언 과금(무료/유료)이 해당되는 경우 과금 분기가 포함되어 있다 | ✅ (TB_GUARDIAN_LINK §4.10, TB_PAYMENT §4.40) |
@@ -311,12 +354,14 @@ status: completed
 | 20 | 출석 체크(TB_ATTENDANCE_CHECK/RESPONSE)가 DB에 정의되어 있다 | ✅ (§4.22a/b — captain/crew_chief 시작, 멤버 응답) |
 | 21 | 캡틴 유일성이 DB 부분 인덱스로 강제된다 | ✅ (idx_group_member_captain WHERE member_role='captain') |
 | 22 | 계정 삭제 7일 유예 기간이 DB에 정의되어 있다 | ✅ (TB_USER.deletion_requested_at §4.1) |
-| 23 | 구현 엔티티와 문서 테이블 1:1 매핑이 완료되어 있다 | ✅ (v3.6 — 71개 테이블, 24개 엔티티 파일) |
-| 24 | 신규 도메인 N(AI)이 정의되어 있다 | ✅ (§4.52 TB_AI_USAGE) |
+| 23 | 구현 엔티티와 문서 테이블 1:1 매핑이 완료되어 있다 | ✅ (v3.7 — 84개 테이블, 실제 DB 완전 정합) |
+| 24 | 신규 도메인 N(AI)이 정의되어 있다 | ✅ (§4.52 TB_AI_USAGE, TB_AI_USAGE_LOG, TB_AI_SUBSCRIPTION) |
+| 25 | 안전 가이드 도메인 [J]이 정의되어 있다 | ✅ (§4.49 TB_SAFETY_GUIDE_CACHE, §4.50 TB_COUNTRY_EMERGENCY_CONTACT) |
+| 26 | 일정 협업 테이블(이력/댓글/리액션/투표/템플릿)이 정의되어 있다 | ✅ (§4.14a~f 7개 테이블) |
 
 ---
 
-## 부록 A: 테이블 전체 목록 (PostgreSQL 54개)
+## 부록 A: 테이블 전체 목록 (PostgreSQL 84개)
 
 | # | 테이블명 | 도메인 | v3.0 상태 | 출처 문서 |
 |:-:|---------|:------:|:---------:|----------|
@@ -375,8 +420,7 @@ status: completed
 | 53 | **TB_ATTENDANCE_CHECK** | B | **신규 (v3.5)** | 비즈니스 원칙 v5.1 §05.5 출석 체크 |
 | 54 | **TB_ATTENDANCE_RESPONSE** | B | **신규 (v3.5)** | 비즈니스 원칙 v5.1 §05.5 출석 체크 응답 |
 | 55 | **TB_PARENTAL_CONSENT** | A | **신규 (v3.6)** | user.entity.ts, 미성년자 보호 |
-| 56 | **TB_COUNTRY_SAFETY** | B | **신규 (v3.6)** | country-safety.entity.ts, MOFA 연동 |
-| 57 | **TB_GEOFENCE_EVENT** | D | **신규 (v3.6)** | geofence.entity.ts |
+| 56 | **TB_GEOFENCE_EVENT** | D | **신규 (v3.6)** | geofence.entity.ts |
 | 58 | **TB_GEOFENCE_PENALTY** | D | **신규 (v3.6)** | geofence.entity.ts |
 | 59 | **TB_MOVEMENT_SESSION** | E | **신규 (v3.6)** | location.entity.ts |
 | 60 | **TB_EMERGENCY** | F | **신규 (v3.6)** | emergency.entity.ts, 긴급 상황 통합 |
@@ -391,6 +435,20 @@ status: completed
 | 69 | **TB_B2B_ADMIN** | L | **신규 (v3.6)** | b2b.entity.ts |
 | 70 | **TB_B2B_DASHBOARD_CONFIG** | L | **신규 (v3.6)** | b2b.entity.ts |
 | 71 | **TB_AI_USAGE** | N | **신규 (v3.6)** | ai.entity.ts, AI 기능 사용 추적 |
+| 72 | **TB_GUARDIAN_MESSAGE** | C | **신규 (v3.7)** | 12-schema-guardian-message.sql, 가디언 1:1 채팅 |
+| 73 | **TB_GUARDIAN_RELEASE_REQUEST** | C | **신규 (v3.7)** | migration-guardian-release-request.sql, 가디언 해제 요청 |
+| 74 | **TB_SCHEDULE_HISTORY** | D | **신규 (v3.7)** | 11-schema-schedule-history.sql, 일정 수정 이력 |
+| 75 | **TB_SCHEDULE_COMMENT** | D | **신규 (v3.7)** | 12-schema-schedule-social.sql, 일정 댓글 |
+| 76 | **TB_SCHEDULE_REACTION** | D | **신규 (v3.7)** | 12-schema-schedule-social.sql, 일정 리액션 |
+| 77 | **TB_SCHEDULE_VOTE** | D | **신규 (v3.7)** | 13-schema-schedule-voting.sql, 일정 투표 |
+| 78 | **TB_SCHEDULE_VOTE_OPTION** | D | **신규 (v3.7)** | 13-schema-schedule-voting.sql, 투표 선택지 |
+| 79 | **TB_SCHEDULE_VOTE_RESPONSE** | D | **신규 (v3.7)** | 13-schema-schedule-voting.sql, 투표 응답 |
+| 80 | **TB_SCHEDULE_TEMPLATE** | D | **신규 (v3.7)** | 14-schema-schedule-templates.sql, 일정 템플릿 |
+| 81 | **TB_CHAT_REACTION** | G | **신규 (v3.7)** | 13-schema-chat-reaction.sql, 채팅 리액션 |
+| 82 | **TB_SAFETY_GUIDE_CACHE** | J | **신규 (v3.7)** | 16-schema-safety-guide.sql, MOFA API 캐시 |
+| 83 | **TB_COUNTRY_EMERGENCY_CONTACT** | J | **신규 (v3.7)** | 16-schema-safety-guide.sql, 국가별 긴급연락처 |
+| 84 | **TB_AI_USAGE_LOG** | N | **신규 (v3.7)** | 15-schema-ai.sql, AI 사용 건별 로그 |
+| 85 | **TB_AI_SUBSCRIPTION** | N | **신규 (v3.7)** | 15-schema-ai.sql, AI 구독 정보 |
 
 **RTDB 노드 (5개)**:
 
@@ -420,9 +478,13 @@ status: completed
 | SafeTrip_설정_메뉴_원칙_v1_0 | TB_GUARDIAN_PAUSE, TB_TRIP_SETTINGS |
 | SafeTrip_초대코드_원칙_v1_0 | TB_INVITE_CODE, TB_B2B_INVITE_BATCH |
 | SafeTrip_프로필화면_원칙_v1_0 | TB_EMERGENCY_CONTACT |
-| 12_일정탭_원칙_v1_0 | TB_TRAVEL_SCHEDULE, TB_SCHEDULE, TB_GEOFENCE |
+| 12_일정탭_원칙_v1_0 | TB_TRAVEL_SCHEDULE, TB_SCHEDULE, TB_GEOFENCE, TB_SCHEDULE_HISTORY, TB_SCHEDULE_COMMENT, TB_SCHEDULE_REACTION, TB_SCHEDULE_VOTE, TB_SCHEDULE_TEMPLATE |
 | 비즈니스_원칙_v5_0_§11 | TB_PAYMENT, TB_SUBSCRIPTION, TB_BILLING_ITEM, TB_REFUND_LOG |
 | 비즈니스_원칙_v5_0_§12 | TB_B2B_CONTRACT, TB_B2B_SCHOOL, TB_B2B_INVITE_BATCH, TB_B2B_MEMBER_LOG |
+| SafeTrip_채팅탭_원칙_v1_0 (Phase 3) | TB_CHAT_REACTION (리액션), TB_CHAT_MESSAGE (trgm 검색 인덱스) |
+| 26_T3_AI_기능_원칙_v1_1 | TB_AI_USAGE, TB_AI_USAGE_LOG, TB_AI_SUBSCRIPTION |
+| DOC-T3-SFG-021 안전가이드 원칙 | TB_SAFETY_GUIDE_CACHE, TB_COUNTRY_EMERGENCY_CONTACT |
+| DOC-T3-MBR-019 멤버탭 원칙 | TB_GUARDIAN_MESSAGE, TB_GUARDIAN_RELEASE_REQUEST |
 
 ---
 
@@ -525,6 +587,33 @@ status: completed
 | **컬럼 추가** | TB_REFUND_LOG: **refund_policy VARCHAR(30)** | 비즈니스 원칙 v5.1 §09.7 환불 규칙 추적 (planning_full / active_24h_half / active_no_refund / completed_no_refund / admin_override) |
 | **설명 보완** | TB_LOCATION_SHARING | visibility_type='specified' 시 다중 멤버 지정 방법(N행 패턴) 및 멤버 탈퇴 시 연쇄 처리 의무 명시 |
 | **합계** | 6건 보완 | 비즈니스 원칙 v5.1 완전 정합 달성 |
+
+### v3.6 (2026-03-05) — 구현 정합 전면 검토 (엔티티 ↔ DB)
+
+| 변경 유형 | 대상 | 변경 내용 |
+|----------|------|----------|
+| **신규 테이블 (17개)** | 14개 도메인 | TB_PARENTAL_CONSENT, TB_GEOFENCE_EVENT, TB_GEOFENCE_PENALTY, TB_MOVEMENT_SESSION, TB_EMERGENCY, TB_EMERGENCY_RECIPIENT, TB_NO_RESPONSE_EVENT, TB_SAFETY_CHECKIN, TB_CHAT_ROOM, TB_FCM_TOKEN, TB_NOTIFICATION_PREFERENCE, TB_REDEEM_CODE, TB_B2B_ORGANIZATION, TB_B2B_ADMIN, TB_B2B_DASHBOARD_CONFIG, TB_COUNTRY_SAFETY, TB_AI_USAGE |
+| **컬럼 추가** | TB_USER (5건) | avatar_id, privacy_level, image_review_status, onboarding_completed, deletion_reason |
+| **컬럼 추가** | TB_CHAT_MESSAGE (3건) | room_id, is_deleted, metadata |
+| **컬럼 추가** | TB_GROUP (2건), TB_GROUP_MEMBER (4건), TB_NOTIFICATION (2건), TB_GUARDIAN_LINK (1건), TB_SCHEDULE (3건), TB_LOCATION (7건), TB_LOCATION_SHARING (2건) | 기타 다수 |
+| **합계** | PostgreSQL 54→71개 | 엔티티 파일 24개와 문서 정합 |
+
+### v3.7 (2026-03-08) — 실제 DB 기반 전면 재검증
+
+| 변경 유형 | 대상 | 변경 내용 |
+|----------|------|----------|
+| **신규 테이블 (14개)** | C, D, G, J, N 도메인 | TB_GUARDIAN_MESSAGE, TB_GUARDIAN_RELEASE_REQUEST, TB_SCHEDULE_HISTORY, TB_SCHEDULE_COMMENT, TB_SCHEDULE_REACTION, TB_SCHEDULE_VOTE, TB_SCHEDULE_VOTE_OPTION, TB_SCHEDULE_VOTE_RESPONSE, TB_SCHEDULE_TEMPLATE, TB_CHAT_REACTION, TB_SAFETY_GUIDE_CACHE, TB_COUNTRY_EMERGENCY_CONTACT, TB_AI_USAGE_LOG, TB_AI_SUBSCRIPTION |
+| **테이블 제거 (1개)** | TB_COUNTRY_SAFETY | 실제 DB 미존재 → [J] 도메인 TB_SAFETY_GUIDE_CACHE로 기능 이관 |
+| **테이블 재작성** | TB_MOVEMENT_SESSION | 4→14개 컬럼 (trip_id, distance_meters, transport_mode, 좌표 등 추가, is_completed→is_active) |
+| **테이블 간소화** | TB_EMERGENCY | 6개 과다 컬럼 제거 (severity, acknowledged_*, resolution_note, escalation_*) |
+| **테이블 간소화** | TB_EMERGENCY_RECIPIENT | 5개 과다 컬럼 제거 |
+| **테이블 간소화** | TB_SAFETY_CHECKIN | 8개 과다 컬럼 제거 |
+| **스키마 수정** | TB_GEOFENCE_EVENT | trip_id 제거, occurred_at→triggered_at, VARCHAR(10)→(20) |
+| **스키마 수정** | TB_GEOFENCE_PENALTY | event_id→geofence_event_id, trip_id/penalty_reason 등 제거 |
+| **스키마 수정** | TB_NO_RESPONSE_EVENT | PK no_response_id→event_id, status default 변경 |
+| **컬럼 추가** | TB_USER (12건) | nickname, avatar_id, privacy_level, is_active, onboarding 관련, terms 관련, deletion_reason 등 |
+| **인덱스 재검증** | §5 전면 | 7개 잘못된 인덱스 제거/수정, 30+ 신규 인덱스 추가 |
+| **합계** | PostgreSQL 71→84개 | 실제 DB 84개 테이블과 완전 정합 |
 
 ### v3.5.1p (2026-03-02) — 비즈니스 원칙 v5.1 기준 불일치 항목 점검 및 수정
 

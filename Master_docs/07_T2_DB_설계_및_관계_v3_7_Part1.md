@@ -1,6 +1,6 @@
 ---
-date: '2026-03-05'
-version: v3.6
+date: '2026-03-08'
+version: v3.7
 part: 1/3
 tags:
   - SafeTrip
@@ -18,12 +18,12 @@ status: completed
 ---
 
 > **📂 분할 문서 네비게이션**
-> [Part 1: 개요·ERD·테이블 A~F](07_T2_DB_설계_및_관계_v3_6_Part1.md) |
-> [Part 2: 테이블 G~N·인덱스](07_T2_DB_설계_및_관계_v3_6_Part2.md) |
-> [Part 3: 운영·부록](07_T2_DB_설계_및_관계_v3_6_Part3.md)
+> [Part 1: 개요·ERD·테이블 A~F](07_T2_DB_설계_및_관계_v3_7_Part1.md) |
+> [Part 2: 테이블 G~N·인덱스](07_T2_DB_설계_및_관계_v3_7_Part2.md) |
+> [Part 3: 운영·부록](07_T2_DB_설계_및_관계_v3_7_Part3.md)
 
 
-# SafeTrip — DB 설계 및 관계 v3.6
+# SafeTrip — DB 설계 및 관계 v3.7
 
 ## 1. 문서 개요
 
@@ -43,7 +43,9 @@ status: completed
 | SafeTrip_개인정보처리방침_원칙 | v1.0 | TB_USER_CONSENT, TB_DATA_DELETION_LOG |
 | SafeTrip_위치기반서비스_이용약관_원칙 | v1.0 | TB_LOCATION_ACCESS_LOG, TB_LOCATION_SHARING_PAUSE_LOG |
 
-### 1.3 v2.0 → v3.0 변경 요약
+### 1.3 버전별 변경 요약
+
+#### v2.0 → v3.0
 
 | 항목 | v2.0 | v3.0 |
 |------|:----:|:----:|
@@ -57,6 +59,21 @@ status: completed
 | TB_TRIP_SETTINGS | 미정의 | **신규** |
 | TB_COUNTRY | 미정의 | **신규** |
 | 알려진 이슈 | 5개 미해결 | **0개 (전부 해소)** |
+
+#### v3.6 → v3.7
+
+| 항목 | v3.6 | v3.7 |
+|------|:----:|:----:|
+| 테이블 수 | 71개 | **84개** |
+| 도메인 수 | 14개 | **14개** (변동 없음) |
+| TB_COUNTRY_SAFETY | 존재 | **제거** (DB에 미존재) |
+| [C] 가디언 | 5개 | **7개** (+tb_guardian_message, +tb_guardian_release_request) |
+| [D] 일정 | 5개 | **12개** (+스케줄 협업 테이블 7개) |
+| [G] 채팅 | 5개 | **6개** (+tb_chat_reaction) |
+| [J] 운영/로그 | 3개 | **5개** (+tb_country_emergency_contact, +tb_safety_guide_cache) |
+| [N] AI | 1개 | **3개** (+tb_ai_subscription, +tb_ai_usage_log) |
+| 기존 테이블 컬럼 | — | **22개 테이블 컬럼 추가/수정** |
+| 구현 정합성 | 문서↔DB 불일치 | **실제 DB 기준 전면 재정렬** |
 
 ---
 
@@ -88,26 +105,26 @@ status: completed
 
 ### 3.1 도메인 영역 분류
 
-SafeTrip v3.6의 71개 PostgreSQL 테이블은 14개 도메인 영역으로 분류된다.
+SafeTrip v3.7의 84개 PostgreSQL 테이블은 14개 도메인 영역으로 분류된다.
 
 | # | 도메인 | 테이블 수 | 변경 | 핵심 테이블 |
 |:-:|--------|:--------:|:----:|------------|
-| A | 사용자 및 인증 | **3** | **+1 v3.6** | TB_USER, TB_EMERGENCY_CONTACT, **TB_PARENTAL_CONSENT** |
-| B | 그룹 및 여행 | **9** | **+1 v3.6** | TB_GROUP, TB_TRIP, TB_GROUP_MEMBER, TB_INVITE_CODE, TB_TRIP_SETTINGS, TB_COUNTRY, TB_ATTENDANCE_CHECK, TB_ATTENDANCE_RESPONSE, **TB_COUNTRY_SAFETY** |
-| C | 보호자(가디언) | **5** | **+3 신규** | TB_GUARDIAN, **TB_GUARDIAN_LINK**, TB_GUARDIAN_PAUSE, **TB_GUARDIAN_LOCATION_REQUEST**, **TB_GUARDIAN_SNAPSHOT** |
-| D | 일정 및 지오펜스 | **5** | **+2 v3.6** | TB_SCHEDULE, TB_TRAVEL_SCHEDULE, TB_GEOFENCE, **TB_GEOFENCE_EVENT**, **TB_GEOFENCE_PENALTY** |
-| E | 위치 및 이동기록 | **9** | **+1 v3.6** | TB_LOCATION_SHARING, TB_LOCATION, TB_STAY_POINT, TB_SESSION_MAP_IMAGE, TB_PLANNED_ROUTE, TB_ROUTE_DEVIATION, TB_LOCATION_SCHEDULE, **TB_MOVEMENT_SESSION** |
-| F | 안전 및 SOS | **9** | **+4 v3.6** | TB_HEARTBEAT, TB_SOS_EVENT, TB_POWER_EVENT, TB_SOS_RESCUE_LOG, TB_SOS_CANCEL_LOG, **TB_EMERGENCY**, **TB_EMERGENCY_RECIPIENT**, **TB_NO_RESPONSE_EVENT**, **TB_SAFETY_CHECKIN** |
-| G | 채팅 | **5** | **+1 v3.6** | TB_CHAT_MESSAGE, TB_CHAT_POLL, TB_CHAT_POLL_VOTE, TB_CHAT_READ_STATUS, **TB_CHAT_ROOM** |
-| H | 알림 | **5** | **+2 v3.6** | TB_NOTIFICATION, TB_NOTIFICATION_SETTING, TB_EVENT_NOTIFICATION_CONFIG, **TB_FCM_TOKEN**, **TB_NOTIFICATION_PREFERENCE** |
+| A | 사용자 및 인증 | **3** | 동일 | TB_USER, TB_EMERGENCY_CONTACT, TB_PARENTAL_CONSENT |
+| B | 그룹 및 여행 | **8** | **−1 v3.7** | TB_GROUP, TB_TRIP, TB_GROUP_MEMBER, TB_INVITE_CODE, TB_TRIP_SETTINGS, TB_COUNTRY, TB_ATTENDANCE_CHECK, TB_ATTENDANCE_RESPONSE |
+| C | 보호자(가디언) | **7** | **+2 v3.7** | TB_GUARDIAN, TB_GUARDIAN_LINK, TB_GUARDIAN_PAUSE, TB_GUARDIAN_LOCATION_REQUEST, TB_GUARDIAN_SNAPSHOT, **TB_GUARDIAN_MESSAGE**, **TB_GUARDIAN_RELEASE_REQUEST** |
+| D | 일정 및 지오펜스 | **12** | **+7 v3.7** | TB_SCHEDULE, TB_TRAVEL_SCHEDULE, TB_GEOFENCE, TB_GEOFENCE_EVENT, TB_GEOFENCE_PENALTY, **TB_SCHEDULE_COMMENT**, **TB_SCHEDULE_HISTORY**, **TB_SCHEDULE_REACTION**, **TB_SCHEDULE_TEMPLATE**, **TB_SCHEDULE_VOTE**, **TB_SCHEDULE_VOTE_OPTION**, **TB_SCHEDULE_VOTE_RESPONSE** |
+| E | 위치 및 이동기록 | **9** | 동일 | TB_LOCATION_SHARING, TB_LOCATION, TB_STAY_POINT, TB_SESSION_MAP_IMAGE, TB_PLANNED_ROUTE, TB_ROUTE_DEVIATION, TB_LOCATION_SCHEDULE, TB_MOVEMENT_SESSION |
+| F | 안전 및 SOS | **9** | 동일 | TB_HEARTBEAT, TB_SOS_EVENT, TB_POWER_EVENT, TB_SOS_RESCUE_LOG, TB_SOS_CANCEL_LOG, TB_EMERGENCY, TB_EMERGENCY_RECIPIENT, TB_NO_RESPONSE_EVENT, TB_SAFETY_CHECKIN |
+| G | 채팅 | **6** | **+1 v3.7** | TB_CHAT_MESSAGE, TB_CHAT_POLL, TB_CHAT_POLL_VOTE, TB_CHAT_READ_STATUS, TB_CHAT_ROOM, **TB_CHAT_REACTION** |
+| H | 알림 | **5** | 동일 | TB_NOTIFICATION, TB_NOTIFICATION_SETTING, TB_EVENT_NOTIFICATION_CONFIG, TB_FCM_TOKEN, TB_NOTIFICATION_PREFERENCE |
 | I | 법적 동의 및 개인정보 | 6 | 동일 | TB_USER_CONSENT, TB_MINOR_CONSENT, TB_LOCATION_ACCESS_LOG, TB_LOCATION_SHARING_PAUSE_LOG, TB_DATA_DELETION_LOG, TB_DATA_PROVISION_LOG |
-| J | 운영 및 로그 | 3 | 동일 | TB_EVENT_LOG, TB_LEADER_TRANSFER_LOG, TB_EMERGENCY_NUMBER |
-| **K** | **결제/과금** | **5** | **+1 v3.6** | TB_PAYMENT, TB_SUBSCRIPTION, TB_BILLING_ITEM, TB_REFUND_LOG, **TB_REDEEM_CODE** |
-| **L** | **B2B** | **7** | **+3 v3.6** | TB_B2B_CONTRACT, TB_B2B_SCHOOL, TB_B2B_INVITE_BATCH, TB_B2B_MEMBER_LOG, **TB_B2B_ORGANIZATION**, **TB_B2B_ADMIN**, **TB_B2B_DASHBOARD_CONFIG** |
-| **M** | **Firebase RTDB** | **—** | **신규** | **별도 스키마 (RTDB JSON 노드)** |
-| **N** | **AI** | **1** | **신규 v3.6** | **TB_AI_USAGE** |
+| J | 운영 및 로그 | **5** | **+2 v3.7** | TB_EVENT_LOG, TB_LEADER_TRANSFER_LOG, TB_EMERGENCY_NUMBER, **TB_COUNTRY_EMERGENCY_CONTACT**, **TB_SAFETY_GUIDE_CACHE** |
+| K | 결제/과금 | **5** | 동일 | TB_PAYMENT, TB_SUBSCRIPTION, TB_BILLING_ITEM, TB_REFUND_LOG, TB_REDEEM_CODE |
+| L | B2B | **7** | 동일 | TB_B2B_CONTRACT, TB_B2B_SCHOOL, TB_B2B_INVITE_BATCH, TB_B2B_MEMBER_LOG, TB_B2B_ORGANIZATION, TB_B2B_ADMIN, TB_B2B_DASHBOARD_CONFIG |
+| **M** | **Firebase RTDB** | **—** | 동일 | **별도 스키마 (RTDB JSON 노드)** |
+| N | AI | **3** | **+2 v3.7** | TB_AI_USAGE, **TB_AI_SUBSCRIPTION**, **TB_AI_USAGE_LOG** |
 
-> **PostgreSQL 합계: 71개 독립 테이블** (v3.1: E 도메인 +4, v3.2: C 도메인 +2 / TB_TRIP 컬럼 추가, v3.3: DB 무결성 전면 수정, v3.5: TB_LOCATION_SCHEDULE·TB_ATTENDANCE_CHECK·TB_ATTENDANCE_RESPONSE 신규, v3.6: 엔티티 기준 17개 테이블 추가 + 도메인 N 신규). RTDB는 별도 문서화.
+> **PostgreSQL 합계: 84개 독립 테이블** (v3.7: 실제 DB 기준 전면 재정렬 — TB_COUNTRY_SAFETY 제거, 14개 신규 테이블 추가, 22개 기존 테이블 컬럼 수정). RTDB는 별도 문서화.
 
 ### 3.2 ERD 관계도 (전체)
 
@@ -125,16 +142,21 @@ TB_USER ────────────────────────
   ├── 1:N → TB_GROUP_MEMBER              (user_id)
   ├── 1:N → TB_GUARDIAN                  (traveler_user_id / guardian_user_id)
   ├── 1:N → TB_GUARDIAN_LINK             (member_id / guardian_id)
+  ├── 1:N → TB_GUARDIAN_MESSAGE          (sender_id)       -- v3.7 신규
+  ├── 1:N → TB_GUARDIAN_RELEASE_REQUEST  (requested_by)    -- v3.7 신규
   ├── 1:N → TB_USER_CONSENT             (user_id)
   ├── 1:N → TB_MINOR_CONSENT            (user_id)
   ├── 1:N → TB_NOTIFICATION             (user_id)
   ├── 1:N → TB_NOTIFICATION_SETTING     (user_id)
   ├── 1:N → TB_HEARTBEAT                (user_id)
   ├── 1:N → TB_CHAT_MESSAGE             (sender_id)
-  ├── 1:N → TB_LOCATION                 (user_id)    -- 실제 구현 (TB_LOCATION_LOG 대체)
+  ├── 1:N → TB_CHAT_REACTION            (user_id)          -- v3.7 신규
+  ├── 1:N → TB_LOCATION                 (user_id)
   ├── 1:N → TB_PAYMENT                  (user_id)
   ├── 1:N → TB_LOCATION_ACCESS_LOG      (user_id / accessed_by)
-  └── 1:1 → TB_PARENTAL_CONSENT        (user_id)  -- v3.6 신규
+  ├── 1:N → TB_AI_USAGE                 (user_id)
+  ├── 1:N → TB_AI_SUBSCRIPTION          (user_id)          -- v3.7 신규
+  └── 1:1 → TB_PARENTAL_CONSENT        (user_id)
 
 ═══════════════════════════════════════════════════════════════════════
                        [B] 그룹 및 여행
@@ -159,30 +181,46 @@ TB_TRIP  ─── 1:N → TB_GROUP_MEMBER      (trip_id)
          ─── 1:1 → TB_TRIP_SETTINGS     (trip_id)
          ─── N:1 → TB_B2B_CONTRACT      (b2b_contract_id, NULL=B2C)
 
-TB_COUNTRY ─── 1:N → TB_COUNTRY_SAFETY   (country_code)          -- v3.6 신규
-
 ═══════════════════════════════════════════════════════════════════════
                        [C] 보호자(가디언)
 ═══════════════════════════════════════════════════════════════════════
 
 TB_GUARDIAN_LINK ─── N:M (멤버 ↔ 가디언 연결, trip 단위)
                  ─── 1:N → TB_GUARDIAN_PAUSE (link_id)
+                 ─── 1:N → TB_GUARDIAN_MESSAGE         (link_id)    -- v3.7 신규
+                 ─── 1:N → TB_GUARDIAN_RELEASE_REQUEST  (link_id)    -- v3.7 신규
+
+TB_GUARDIAN_MESSAGE ─── N:1 → TB_TRIP           (trip_id)            -- v3.7 신규
+                    ─── N:1 → TB_GUARDIAN_LINK  (link_id)
+                    ─── N:1 → TB_USER           (sender_id)
+
+TB_GUARDIAN_RELEASE_REQUEST ─── N:1 → TB_GUARDIAN_LINK (link_id)     -- v3.7 신규
+                             ─── N:1 → TB_TRIP          (trip_id)
+                             ─── N:1 → TB_USER          (requested_by)
 
 TB_GUARDIAN_LOCATION_REQUEST ─── N:1 → TB_GROUP  (group_id)
                               ─── N:1 → TB_USER   (guardian_user_id: 요청자)
                               ─── N:1 → TB_USER   (target_user_id: 피요청자)
-                              -- 비즈니스 원칙 v5.1 시나리오 5: 긴급 위치 요청
 
 TB_GUARDIAN_SNAPSHOT ─── N:1 → TB_GROUP  (group_id)
                      ─── N:1 → TB_USER   (user_id: 여행자)
-                     -- 표준 등급, 비공유 시간대 30분 스냅샷 (§05.4)
 
 ═══════════════════════════════════════════════════════════════════════
-              [D] 일정 및 지오펜스 — v3.6 신규 테이블
+              [D] 일정 및 지오펜스
 ═══════════════════════════════════════════════════════════════════════
 
-TB_GEOFENCE ─── 1:N → TB_GEOFENCE_EVENT      (geofence_id)     -- v3.6 신규
-TB_GEOFENCE_EVENT ── 1:N → TB_GEOFENCE_PENALTY (event_id)      -- v3.6 신규
+TB_SCHEDULE ─── 1:N → TB_SCHEDULE_COMMENT    (schedule_id)      -- v3.7 신규
+            ─── 1:N → TB_SCHEDULE_HISTORY    (schedule_id)      -- v3.7 신규
+            ─── 1:N → TB_SCHEDULE_REACTION   (schedule_id)      -- v3.7 신규
+            ─── 1:N → TB_SCHEDULE_VOTE       (schedule_id)      -- v3.7 신규
+
+TB_SCHEDULE_VOTE ─── 1:N → TB_SCHEDULE_VOTE_OPTION   (vote_id)  -- v3.7 신규
+TB_SCHEDULE_VOTE_OPTION ── 1:N → TB_SCHEDULE_VOTE_RESPONSE (option_id) -- v3.7 신규
+
+TB_SCHEDULE_TEMPLATE (독립 — 여행 일정 템플릿)                    -- v3.7 신규
+
+TB_GEOFENCE ─── 1:N → TB_GEOFENCE_EVENT      (geofence_id)
+TB_GEOFENCE_EVENT ── 1:N → TB_GEOFENCE_PENALTY (event_id)
 
 ═══════════════════════════════════════════════════════════════════════
                   [E] 위치 및 이동기록
@@ -202,8 +240,9 @@ TB_ROUTE_DEVIATION ─── N:1 → TB_PLANNED_ROUTE (route_id)
                    ─── N:1 → TB_TRIP           (trip_id)
                    ─── N:1 → TB_USER           (user_id)
 
-TB_MOVEMENT_SESSION ─── N:1 → TB_USER   (user_id)               -- v3.6 신규
-                    ─── 논리키 → TB_LOCATION (movement_session_id) -- v3.6 신규
+TB_MOVEMENT_SESSION ─── N:1 → TB_USER   (user_id)
+                    ─── N:1 → TB_TRIP   (trip_id)               -- v3.7 추가
+                    ─── 1:N → TB_LOCATION (movement_session_id FK)
 
 ═══════════════════════════════════════════════════════════════════════
                        [F] 안전 및 SOS
@@ -232,19 +271,27 @@ TB_SAFETY_CHECKIN ─── N:1 → TB_USER         (user_id)
 ═══════════════════════════════════════════════════════════════════════
 
 TB_CHAT_MESSAGE ─── 1:N → TB_CHAT_POLL     (message_id)
+                ─── 1:N → TB_CHAT_REACTION  (message_id)        -- v3.7 신규
                 ─── self  → reply_to_id     (답글 구조)
 
 TB_CHAT_POLL    ─── 1:N → TB_CHAT_POLL_VOTE (poll_id)
 
-TB_CHAT_ROOM ─── 1:N → TB_CHAT_MESSAGE      (room_id)          -- v3.6 신규
+TB_CHAT_ROOM ─── 1:N → TB_CHAT_MESSAGE      (room_id)
              ─── N:1 → TB_TRIP               (trip_id)
 
 ═══════════════════════════════════════════════════════════════════════
-                       [H] 알림 — v3.6 신규 테이블
+                       [H] 알림
 ═══════════════════════════════════════════════════════════════════════
 
-TB_USER ─── 1:N → TB_FCM_TOKEN              (user_id)          -- v3.6 신규
-TB_USER ─── 1:N → TB_NOTIFICATION_PREFERENCE (user_id)          -- v3.6 신규
+TB_USER ─── 1:N → TB_FCM_TOKEN              (user_id)
+TB_USER ─── 1:N → TB_NOTIFICATION_PREFERENCE (user_id)
+
+═══════════════════════════════════════════════════════════════════════
+                       [J] 운영 및 로그 — v3.7 신규 테이블
+═══════════════════════════════════════════════════════════════════════
+
+TB_SAFETY_GUIDE_CACHE (독립 — MOFA API 캐시, country_code+data_type UNIQUE)  -- v3.7 신규
+TB_COUNTRY_EMERGENCY_CONTACT (독립 — 국가별 긴급연락처)                       -- v3.7 신규
 
 ═══════════════════════════════════════════════════════════════════════
                        [K] 결제/과금
@@ -283,11 +330,14 @@ TB_ATTENDANCE_RESPONSE ─── N:1 → TB_ATTENDANCE_CHECK (check_id)
                        -- UNIQUE(check_id, user_id)
 
 ═══════════════════════════════════════════════════════════════════════
-                       [N] AI ⭐ 신규 v3.6
+                       [N] AI
 ═══════════════════════════════════════════════════════════════════════
 
 TB_AI_USAGE ─── N:1 → TB_USER  (user_id)
-            ─── N:1 → TB_TRIP  (trip_id, nullable)
+
+TB_AI_SUBSCRIPTION ─── N:1 → TB_USER  (user_id)                -- v3.7 신규
+
+TB_AI_USAGE_LOG (독립 — AI 호출 로그, user_id 논리키)             -- v3.7 신규
 ```
 
 ---
@@ -302,8 +352,9 @@ TB_AI_USAGE ─── N:1 → TB_USER  (user_id)
 
 #### 4.1 TB_USER (사용자)
 
-> 출처: 01-init-schema.sql, SafeTrip_프로필화면_원칙_v1_0, SafeTrip_미성년자_보호_원칙_v1_0
+> 출처: 01-init-schema.sql, 11-migration-profile-columns.sql, 20-migration-schema-sync.sql, user.entity.ts
 > v3.0 변경: 미성년자 컬럼 추가
+> v3.7 변경: 프로필·온보딩·프라이버시 컬럼 12개 추가 (실제 DB 기준)
 
 ```sql
 CREATE TABLE tb_user (
@@ -311,6 +362,7 @@ CREATE TABLE tb_user (
     phone_number             VARCHAR(20),
     phone_country_code       VARCHAR(5),
     display_name             VARCHAR(100),
+    nickname                 VARCHAR(50),                  -- v3.7: 고유 닉네임 (UNIQUE INDEX)
     profile_image_url        TEXT,
     email                    VARCHAR(255),
     date_of_birth            DATE,
@@ -319,11 +371,24 @@ CREATE TABLE tb_user (
     install_id               VARCHAR(100),
     device_info              JSONB,
     user_status              VARCHAR(20) DEFAULT 'active', -- active | inactive | banned
+    -- ▼ v3.7: 프로필 확장 컬럼
+    avatar_id                VARCHAR(30),                  -- 프로필 아바타 ID
+    privacy_level            VARCHAR(20) DEFAULT 'standard', -- safety_first | standard | privacy_first
+    image_review_status      VARCHAR(20) DEFAULT 'none',  -- none | pending | approved | rejected
+    is_active                BOOLEAN DEFAULT TRUE,
+    -- ▼ v3.7: 온보딩 추적
+    is_onboarding_complete   BOOLEAN DEFAULT FALSE,
+    onboarding_step          VARCHAR(50),                  -- 현재 온보딩 단계
+    onboarding_completed     BOOLEAN DEFAULT FALSE,        -- 온보딩 완료 플래그
+    -- ▼ v3.7: 약관 동의
+    terms_version            VARCHAR(20),                  -- 동의한 약관 버전
+    terms_agreed_at          TIMESTAMPTZ,                  -- 약관 동의 시각
     -- ▼ 미성년자 보호 원칙 §13 반영
     minor_status             VARCHAR(20) DEFAULT 'adult',  -- adult | minor_over14 | minor_under14 | minor_child
     minor_status_updated_at  TIMESTAMPTZ,
     guardian_pause_blocked   BOOLEAN DEFAULT FALSE,        -- 미성년자: 가디언 일시중지 차단
     ai_intelligence_blocked  BOOLEAN DEFAULT FALSE,        -- 미성년자: AI 개인 분석 차단
+    guardian_consent_id      UUID,                         -- FK→tb_minor_consent (미성년자 보호자 동의)
     -- ▼ 시스템 컬럼
     last_verification_at     TIMESTAMPTZ,
     last_login_at            TIMESTAMPTZ,
@@ -332,8 +397,11 @@ CREATE TABLE tb_user (
     updated_at               TIMESTAMPTZ,
     -- ▼ v3.5: 계정 삭제 유예 기간 추적 (비즈니스 원칙 v5.1 §14 — 7일 유예 후 hard delete)
     deletion_requested_at    TIMESTAMPTZ,                  -- 삭제 요청 시각 (7일 유예 기산점)
+    deletion_reason          TEXT,                         -- v3.7: 삭제 사유
     deleted_at               TIMESTAMPTZ                   -- soft delete
 );
+
+CREATE UNIQUE INDEX idx_user_nickname ON tb_user(nickname) WHERE nickname IS NOT NULL;
 ```
 
 #### 4.2 TB_EMERGENCY_CONTACT (비상 연락처)
@@ -380,12 +448,13 @@ CREATE TABLE tb_parental_consent (
 
 #### 4.3 TB_GROUP (그룹)
 
-> 출처: 01-init-schema.sql
+> 출처: 01-init-schema.sql, 20-migration-schema-sync.sql
+> v3.7 변경: is_active, created_by 추가
 
 ```sql
 CREATE TABLE tb_group (
     group_id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    group_name            VARCHAR(200) NOT NULL,
+    group_name            VARCHAR(200),
     group_description     TEXT,
     group_type            VARCHAR(20) DEFAULT 'travel',  -- travel | b2b_school | b2b_corporate
     owner_user_id         VARCHAR(128) REFERENCES tb_user(user_id),
@@ -394,6 +463,8 @@ CREATE TABLE tb_group (
     current_member_count  INTEGER DEFAULT 0,
     max_members           INTEGER DEFAULT 50,
     status                VARCHAR(20) DEFAULT 'active',  -- active | inactive
+    is_active             BOOLEAN DEFAULT TRUE,           -- v3.7: 활성 상태 플래그
+    created_by            VARCHAR(128),                   -- v3.7: 생성자 user_id
     expires_at            TIMESTAMPTZ,
     created_at            TIMESTAMPTZ DEFAULT NOW(),
     updated_at            TIMESTAMPTZ,
@@ -461,8 +532,9 @@ CREATE INDEX idx_trips_b2b      ON tb_trip(b2b_contract_id) WHERE b2b_contract_i
 
 #### 4.5 TB_GROUP_MEMBER (그룹 멤버 — 역할 핵심)
 
-> 출처: 01-init-schema.sql, migration-guardian-system.sql
+> 출처: 01-init-schema.sql, migration-guardian-system.sql, 20-migration-schema-sync.sql
 > v3.0 변경: trip_id NOT NULL 확정, 권한 컬럼 복원, member_role에 guardian 포함
+> v3.7 변경: can_manage_members, can_send_notifications, can_view_location, can_manage_geofences 추가
 
 ```sql
 CREATE TABLE tb_group_member (
@@ -481,6 +553,11 @@ CREATE TABLE tb_group_member (
     can_edit_geofence        BOOLEAN DEFAULT FALSE,
     can_view_all_locations   BOOLEAN DEFAULT TRUE,
     can_attendance_check     BOOLEAN DEFAULT TRUE,
+    -- ▼ v3.7: 추가 권한 컬럼
+    can_manage_members       BOOLEAN DEFAULT FALSE,           -- 멤버 관리 권한
+    can_send_notifications   BOOLEAN DEFAULT FALSE,           -- 알림 전송 권한
+    can_view_location        BOOLEAN DEFAULT TRUE,            -- 위치 조회 권한
+    can_manage_geofences     BOOLEAN DEFAULT FALSE,           -- 지오펜스 관리 권한
     -- ▼ 보호자 역할 (레거시)
     traveler_user_id         VARCHAR(128) REFERENCES tb_user(user_id),
     -- ▼ 위치 공유 마스터 스위치
@@ -510,17 +587,19 @@ CREATE UNIQUE INDEX idx_group_member_captain
 #### 4.6 TB_INVITE_CODE (역할별 초대코드)
 
 > 출처: 01-init-schema.sql, SafeTrip_초대코드_원칙_v1_0
+> v3.7 변경: used_count→current_uses 이름 변경, model_type 추가, code/target_role/expires_at NOT NULL
 
 ```sql
 CREATE TABLE tb_invite_code (
     invite_code_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     group_id        UUID REFERENCES tb_group(group_id),
     trip_id         UUID REFERENCES tb_trip(trip_id),
-    code            VARCHAR(7) UNIQUE,
-    target_role     VARCHAR(30),                    -- crew_chief | crew | guardian
+    code            VARCHAR(7) NOT NULL UNIQUE,
+    target_role     VARCHAR(30) NOT NULL,            -- crew_chief | crew | guardian
+    model_type      VARCHAR(30),                     -- v3.7: 코드 유형 (일반/B2B/이벤트 등)
     max_uses        INTEGER DEFAULT 1,
-    used_count      INTEGER DEFAULT 0,
-    expires_at      TIMESTAMPTZ,
+    current_uses    INTEGER DEFAULT 0,               -- v3.7: used_count에서 이름 변경
+    expires_at      TIMESTAMPTZ NOT NULL,
     created_by      VARCHAR(128) REFERENCES tb_user(user_id),
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     is_active       BOOLEAN DEFAULT TRUE,
@@ -583,27 +662,7 @@ CREATE INDEX idx_country_code   ON tb_country(country_code);
 CREATE INDEX idx_country_region ON tb_country(region);
 ```
 
-#### 4.8a TB_COUNTRY_SAFETY (국가 안전 정보) ⭐ 신규 v3.6
-
-> 출처: country-safety.entity.ts — MOFA 외교부 여행경보 및 안전 데이터
-> v3.6: 신규 정의. TB_COUNTRY와 country_code 기반 연동.
-
-```sql
-CREATE TABLE tb_country_safety (
-    country_code             VARCHAR(3) PRIMARY KEY,
-    country_name_ko          VARCHAR(100) NOT NULL,
-    country_name_en          VARCHAR(100) NOT NULL,
-    travel_alert_level       INTEGER,                   -- 1~4 (외교부 경보 단계)
-    travel_alert_description TEXT,
-    emergency_number         VARCHAR(20),               -- 현지 긴급 전화번호
-    embassy_phone            VARCHAR(50),               -- 대사관 전화번호
-    embassy_address          TEXT,                       -- 대사관 주소
-    mofa_data                JSONB,                     -- 외교부 API 원본 데이터
-    last_synced_at           TIMESTAMPTZ,               -- 마지막 동기화 시각
-    created_at               TIMESTAMPTZ DEFAULT NOW(),
-    updated_at               TIMESTAMPTZ
-);
-```
+> **v3.7 변경**: TB_COUNTRY_SAFETY 제거됨. 실제 DB에 존재하지 않으며, 안전 정보 기능은 [J] 도메인의 TB_SAFETY_GUIDE_CACHE와 TB_COUNTRY_EMERGENCY_CONTACT로 대체.
 
 ---
 
@@ -648,10 +707,11 @@ CREATE INDEX idx_guardian_guardian ON tb_guardian(guardian_user_id);
 CREATE INDEX idx_guardian_trip     ON tb_guardian(trip_id);
 ```
 
-#### 4.10 TB_GUARDIAN_LINK (가디언-멤버 연결) ⭐ 신규
+#### 4.10 TB_GUARDIAN_LINK (가디언-멤버 연결)
 
-> 출처: migration-guardian-system.sql (실제 구현)
+> 출처: migration-guardian-system.sql (실제 구현), 20-migration-schema-sync.sql
 > v3.0: 신규 정의. 실제 구현에서 사용하는 가디언 링크 테이블.
+> v3.7 변경: accepted_at 추가
 > 컬럼명: member_id / guardian_id / status (v2.0의 traveler_user_id/guardian_user_id/invite_status 대체)
 
 ```sql
@@ -681,6 +741,7 @@ CREATE TABLE tb_guardian_link (
     -- ▼ 시스템
     invited_at           TIMESTAMPTZ DEFAULT NOW(),
     responded_at         TIMESTAMPTZ,
+    accepted_at          TIMESTAMPTZ,                    -- v3.7: 수락 시각
     created_at           TIMESTAMPTZ DEFAULT NOW(),
     updated_at           TIMESTAMPTZ
     -- ▼ v3.5: UNIQUE(trip_id, member_id, guardian_id) 제거 — guardian_id NULL 허용으로 NULL≠NULL 문제 발생
@@ -821,6 +882,51 @@ CREATE INDEX idx_guardian_snapshot_trip
 > - 데이터 보존: 여행 종료 후 30일 자동 삭제 (비즈니스 원칙 v5.1 §13.1)
 > - `TB_LOCATION_ACCESS_LOG`에 `access_type = 'guardian_snapshot'`으로 접근 기록
 
+#### 4.11c TB_GUARDIAN_MESSAGE (가디언 1:1 메시지) ⭐ 신규 v3.7
+
+> 출처: 12-schema-guardian-message.sql
+> v3.7: 신규 정의. 가디언-멤버 간 1:1 채팅 메시지 (그룹채팅과 별도).
+
+```sql
+CREATE TABLE tb_guardian_message (
+    message_id   BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    trip_id      UUID NOT NULL REFERENCES tb_trip(trip_id),
+    link_id      UUID NOT NULL REFERENCES tb_guardian_link(link_id),
+    sender_type  VARCHAR(20) NOT NULL CHECK (sender_type IN ('member','guardian')),
+    sender_id    VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    message_type VARCHAR(20) NOT NULL DEFAULT 'text'
+                 CHECK (message_type IN ('text','location_card','system')),
+    content      TEXT,
+    card_data    JSONB,                              -- location_card 유형 시 좌표/주소 JSON
+    is_read      BOOLEAN DEFAULT FALSE,
+    sent_at      TIMESTAMPTZ DEFAULT NOW(),
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_guardian_msg_link ON tb_guardian_message(link_id, sent_at DESC);
+CREATE INDEX idx_guardian_msg_trip ON tb_guardian_message(trip_id);
+```
+
+#### 4.11d TB_GUARDIAN_RELEASE_REQUEST (가디언 해제 요청) ⭐ 신규 v3.7
+
+> 출처: migration-guardian-release-request.sql
+> v3.7: 신규 정의. 가디언 해제 요청 관리 (멤버/가디언 → Captain 승인).
+
+```sql
+CREATE TABLE tb_guardian_release_request (
+    request_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    link_id       UUID NOT NULL REFERENCES tb_guardian_link(link_id) ON DELETE CASCADE,
+    trip_id       UUID NOT NULL REFERENCES tb_trip(trip_id) ON DELETE CASCADE,
+    requested_by  VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    status        VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'approved', 'rejected')),
+    captain_id    VARCHAR(128) REFERENCES tb_user(user_id), -- 승인/거부한 Captain
+    responded_at  TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
 ---
 
 ### [D] 도메인: 일정 및 지오펜스
@@ -829,13 +935,17 @@ CREATE INDEX idx_guardian_snapshot_trip
 
 #### 4.12 TB_SCHEDULE (기본 일정)
 
-> 출처: 01-init-schema.sql
+> 출처: 01-init-schema.sql, 20-migration-schema-sync.sql
+> v3.7 변경: title, description, all_day 추가
 
 ```sql
 CREATE TABLE tb_schedule (
     schedule_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     trip_id       UUID REFERENCES tb_trip(trip_id),
     schedule_name VARCHAR(200),
+    title         VARCHAR(200),                       -- v3.7: 일정 제목 (schedule_name에서 복사)
+    description   TEXT,                               -- v3.7: 일정 설명
+    all_day       BOOLEAN DEFAULT FALSE,              -- v3.7: 종일 일정 여부
     schedule_date DATE,
     start_time    TIME,
     end_time      TIME,
@@ -939,49 +1049,152 @@ CREATE INDEX idx_geofence_trip     ON tb_geofence(trip_id);
 CREATE INDEX idx_geofence_active   ON tb_geofence(group_id, is_active) WHERE is_active = TRUE;
 ```
 
-#### 4.14a TB_GEOFENCE_EVENT (지오펜스 진입/이탈 이벤트) ⭐ 신규 v3.6
+#### 4.14a TB_GEOFENCE_EVENT (지오펜스 진입/이탈 이벤트)
 
-> 출처: geofence.entity.ts — 지오펜스 경계 진입/이탈 시 기록
-> v3.6: 신규 정의.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: trip_id/dwell_time_seconds 제거, occurred_at→triggered_at, geofence_id/lat/lng nullable, event_type VARCHAR(20)
 
 ```sql
 CREATE TABLE tb_geofence_event (
     event_id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    geofence_id          UUID NOT NULL REFERENCES tb_geofence(geofence_id),
-    user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
-    trip_id              UUID NOT NULL REFERENCES tb_trip(trip_id),
-    event_type           VARCHAR(10) NOT NULL,        -- enter | exit
-    latitude             DOUBLE PRECISION NOT NULL,
-    longitude            DOUBLE PRECISION NOT NULL,
-    dwell_time_seconds   INTEGER,                     -- 체류 시간 (초)
-    occurred_at          TIMESTAMPTZ DEFAULT NOW()
+    geofence_id          UUID REFERENCES tb_geofence(geofence_id),
+    user_id              VARCHAR(128) NOT NULL,
+    event_type           VARCHAR(20) NOT NULL,        -- enter | exit
+    latitude             DOUBLE PRECISION,
+    longitude            DOUBLE PRECISION,
+    triggered_at         TIMESTAMPTZ DEFAULT NOW(),
+    created_at           TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE INDEX idx_geofence_event_trip      ON tb_geofence_event(trip_id);
-CREATE INDEX idx_geofence_event_geofence  ON tb_geofence_event(geofence_id);
-CREATE INDEX idx_geofence_event_user      ON tb_geofence_event(user_id, occurred_at DESC);
 ```
 
-#### 4.14b TB_GEOFENCE_PENALTY (지오펜스 위반 패널티) ⭐ 신규 v3.6
+#### 4.14b TB_GEOFENCE_PENALTY (지오펜스 위반 패널티)
 
-> 출처: geofence.entity.ts — 지오펜스 위반 시 패널티 기록
-> v3.6: 신규 정의.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: event_id→geofence_event_id, trip_id/penalty_reason/cumulative_violations/resolved_at 제거, penalty_amount/applied_at 추가
 
 ```sql
 CREATE TABLE tb_geofence_penalty (
     penalty_id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id                UUID NOT NULL REFERENCES tb_geofence_event(event_id),
-    trip_id                 UUID NOT NULL REFERENCES tb_trip(trip_id),
-    user_id                 VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
-    penalty_type            VARCHAR(30) NOT NULL,      -- warning | location_forced | privilege_revoked
-    penalty_reason          TEXT,
-    cumulative_violations   INTEGER DEFAULT 1,
-    resolved_at             TIMESTAMPTZ,
+    geofence_event_id       UUID REFERENCES tb_geofence_event(event_id),
+    user_id                 VARCHAR(128) NOT NULL,
+    penalty_type            VARCHAR(30),
+    penalty_amount          INTEGER DEFAULT 0,
+    applied_at              TIMESTAMPTZ DEFAULT NOW(),
     created_at              TIMESTAMPTZ DEFAULT NOW()
 );
+```
 
-CREATE INDEX idx_geofence_penalty_event ON tb_geofence_penalty(event_id);
-CREATE INDEX idx_geofence_penalty_user  ON tb_geofence_penalty(user_id, trip_id);
+#### 4.14c TB_SCHEDULE_HISTORY (일정 수정 이력) ⭐ 신규 v3.7
+
+> 출처: 11-schema-schedule-history.sql
+
+```sql
+CREATE TABLE tb_schedule_history (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    schedule_id     UUID NOT NULL REFERENCES tb_travel_schedule(travel_schedule_id) ON DELETE CASCADE,
+    modified_by     VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    field_name      VARCHAR(50) NOT NULL,
+    old_value       TEXT,
+    new_value       TEXT,
+    modified_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_schedule_history_schedule ON tb_schedule_history(schedule_id);
+CREATE INDEX idx_schedule_history_modified ON tb_schedule_history(modified_at);
+```
+
+#### 4.14d TB_SCHEDULE_COMMENT (일정 댓글) ⭐ 신규 v3.7
+
+> 출처: 12-schema-schedule-social.sql
+
+```sql
+CREATE TABLE tb_schedule_comment (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    schedule_id     UUID NOT NULL REFERENCES tb_travel_schedule(travel_schedule_id) ON DELETE CASCADE,
+    user_id         VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    content         TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at      TIMESTAMPTZ
+);
+
+CREATE INDEX idx_schedule_comment_schedule ON tb_schedule_comment(schedule_id);
+```
+
+#### 4.14e TB_SCHEDULE_REACTION (일정 리액션) ⭐ 신규 v3.7
+
+> 출처: 12-schema-schedule-social.sql
+
+```sql
+CREATE TABLE tb_schedule_reaction (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    schedule_id     UUID NOT NULL REFERENCES tb_travel_schedule(travel_schedule_id) ON DELETE CASCADE,
+    user_id         VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    emoji           VARCHAR(10) NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_schedule_reaction UNIQUE(schedule_id, user_id, emoji)
+);
+
+CREATE INDEX idx_schedule_reaction_schedule ON tb_schedule_reaction(schedule_id);
+```
+
+#### 4.14f TB_SCHEDULE_VOTE (일정 투표) ⭐ 신규 v3.7
+
+> 출처: 13-schema-schedule-voting.sql
+
+```sql
+CREATE TABLE tb_schedule_vote (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trip_id         UUID NOT NULL REFERENCES tb_trip(trip_id) ON DELETE CASCADE,
+    title           VARCHAR(200) NOT NULL,
+    created_by      VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    status          VARCHAR(20) NOT NULL DEFAULT 'open',
+    deadline        TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_schedule_vote_trip ON tb_schedule_vote(trip_id);
+```
+
+#### 4.14g TB_SCHEDULE_VOTE_OPTION (투표 옵션) ⭐ 신규 v3.7
+
+> 출처: 13-schema-schedule-voting.sql
+
+```sql
+CREATE TABLE tb_schedule_vote_option (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vote_id         UUID NOT NULL REFERENCES tb_schedule_vote(id) ON DELETE CASCADE,
+    label           VARCHAR(200) NOT NULL,
+    schedule_data   JSONB
+);
+```
+
+#### 4.14h TB_SCHEDULE_VOTE_RESPONSE (투표 응답) ⭐ 신규 v3.7
+
+> 출처: 13-schema-schedule-voting.sql
+
+```sql
+CREATE TABLE tb_schedule_vote_response (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vote_id         UUID NOT NULL REFERENCES tb_schedule_vote(id) ON DELETE CASCADE,
+    option_id       UUID NOT NULL REFERENCES tb_schedule_vote_option(id) ON DELETE CASCADE,
+    user_id         VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_vote_response UNIQUE(vote_id, user_id)
+);
+```
+
+#### 4.14i TB_SCHEDULE_TEMPLATE (일정 템플릿) ⭐ 신규 v3.7
+
+> 출처: 14-schema-schedule-templates.sql
+
+```sql
+CREATE TABLE tb_schedule_template (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name            VARCHAR(200) NOT NULL,
+    category        VARCHAR(50),
+    items           JSONB NOT NULL DEFAULT '[]',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
 ---
@@ -992,7 +1205,8 @@ CREATE INDEX idx_geofence_penalty_user  ON tb_geofence_penalty(user_id, trip_id)
 
 #### 4.15 TB_LOCATION_SHARING (위치 공유 설정)
 
-> 출처: 01-init-schema.sql
+> 출처: 01-init-schema.sql, 20-migration-schema-sync.sql
+> v3.7 변경: visibility_member_ids, is_active 추가
 
 ```sql
 CREATE TABLE tb_location_sharing (
@@ -1010,9 +1224,9 @@ CREATE TABLE tb_location_sharing (
             'admin_only',   -- 관리자만: captain/crew_chief만 위치 조회 가능
             'specified'     -- 지정 멤버: target_user_id로 지정된 멤버만 가능
         )),
-    -- ▼ specified 타입 다중 멤버 지정 패턴:
-    --   동일 (trip_id, user_id) 조합으로 visibility_type='specified', target_user_id=각 멤버 로 N개 행 생성.
-    --   멤버 탈퇴 시(§14.3) 서비스 레이어에서 해당 target_user_id 행을 일괄 삭제해야 한다.
+    -- ▼ v3.7: 지정 멤버 목록 (JSONB 배열 — specified 타입에서 사용)
+    visibility_member_ids JSONB,                     -- ["userId1", "userId2", ...]
+    is_active       BOOLEAN DEFAULT TRUE,            -- v3.7: 활성 상태 플래그
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ
 );
@@ -1090,14 +1304,16 @@ CREATE TABLE tb_location_log (
 );
 ```
 
-**▼ 실제 구현 스키마 (database-schema.sql — 실제 테스트 검증 완료)**
+**▼ 실제 구현 스키마 (database-schema.sql + 20-migration-schema-sync.sql — 실제 테스트 검증 완료)**
 
 ```sql
 CREATE TABLE tb_location (
     -- 기본 정보
     location_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id           VARCHAR(128) NOT NULL REFERENCES tb_user(user_id) ON DELETE CASCADE,
-    -- Note: trip_id는 제거됨 (user_id 기반으로 관리)
+    -- ▼ v3.7: trip_id, group_id 추가 (여행/그룹 단위 위치 조회 지원)
+    trip_id           UUID,
+    group_id          UUID,
 
     -- 좌표
     latitude          DECIMAL(10, 8) NOT NULL,
@@ -1116,10 +1332,17 @@ CREATE TABLE tb_location (
     -- 이동 정보
     speed             DECIMAL(6, 2),
     heading           DECIMAL(5, 2),                -- 이동 방향 (도)
+    bearing           DOUBLE PRECISION,              -- v3.7: 방위각 (도)
 
     -- 디바이스 상태
     battery_level     INTEGER,
     network_type      VARCHAR(20),
+
+    -- v3.7: 추가 메타데이터
+    is_sharing        BOOLEAN DEFAULT TRUE,          -- 공유 상태 플래그
+    motion_state      VARCHAR(20),                   -- moving | stationary | unknown
+    provider          VARCHAR(20),                   -- gps | network | fused
+    server_received_at TIMESTAMPTZ,                  -- 서버 수신 시각
 
     -- 추적 모드
     tracking_mode     VARCHAR(20) DEFAULT 'normal', -- normal | power_saving | minimal | sos
@@ -1324,25 +1547,37 @@ CREATE INDEX idx_route_deviations_geom    ON tb_route_deviation USING GIST(devia
 > | high | 300–500m | 가디언 + 캡틴 푸시 |
 > | critical | > 500m | 긴급 알림 + SOS 고려 |
 
-#### 4.17d TB_MOVEMENT_SESSION (이동 세션 집계) ⭐ 신규 v3.6
+#### 4.17d TB_MOVEMENT_SESSION (이동 세션 집계)
 
-> 출처: location.entity.ts — 이동 세션의 시작/종료 시각을 관리하는 독립 테이블
-> v3.6: 신규 정의. TB_LOCATION.movement_session_id의 논리키를 실체화.
+> 출처: 20-migration-schema-sync.sql, migrations/20260307-add-movement-session-table.sql
+> v3.7 변경: 4→14개 컬럼 완전 재작성. trip_id, 거리/시간/교통수단/좌표 추가. is_completed→is_active (의미 반전).
 
 ```sql
 CREATE TABLE tb_movement_session (
     session_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id          VARCHAR(128) NOT NULL REFERENCES tb_user(user_id) ON DELETE CASCADE,
-    start_time       TIMESTAMPTZ,
+    trip_id          UUID REFERENCES tb_trip(trip_id),         -- v3.7: 여행 연결
+    start_time       TIMESTAMPTZ NOT NULL,
     end_time         TIMESTAMPTZ,
-    is_completed     BOOLEAN DEFAULT FALSE
+    -- ▼ v3.7: 이동 통계
+    distance_meters  DOUBLE PRECISION DEFAULT 0,
+    duration_seconds INTEGER DEFAULT 0,
+    transport_mode   VARCHAR(20),                              -- walking | vehicle | bicycle | unknown
+    -- ▼ v3.7: 시작/종료 좌표
+    start_latitude   DOUBLE PRECISION,
+    start_longitude  DOUBLE PRECISION,
+    end_latitude     DOUBLE PRECISION,
+    end_longitude    DOUBLE PRECISION,
+    -- ▼ v3.7: 상태 (is_completed → is_active로 의미 반전)
+    is_active        BOOLEAN DEFAULT TRUE,
+    created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_movement_session_user ON tb_movement_session(user_id);
-CREATE INDEX idx_movement_session_active ON tb_movement_session(is_completed) WHERE is_completed = FALSE;
+CREATE INDEX idx_movement_session_user  ON tb_movement_session(user_id);
+CREATE INDEX idx_movement_session_start ON tb_movement_session(start_time DESC);
 ```
 
-> **TB_LOCATION과의 관계**: TB_LOCATION.movement_session_id가 이 테이블의 session_id를 참조하는 논리키(FK 미설정). 세션이 진행 중(is_completed=FALSE)이면 RTDB realtime_users/{userId}/active_session_id와 동기화.
+> **TB_LOCATION과의 관계**: TB_LOCATION.movement_session_id → tb_movement_session.session_id FK. 세션이 진행 중(is_active=TRUE)이면 RTDB realtime_users/{userId}/active_session_id와 동기화.
 
 ---
 
@@ -1500,108 +1735,78 @@ CREATE INDEX idx_attendance_response_user  ON tb_attendance_response(user_id, cr
 
 > **동작 흐름**: captain/crew_chief가 출석 체크 개시 → TB_ATTENDANCE_CHECK 행 생성 + 그룹 전 멤버에게 FCM 알림 → 각 멤버 앱에서 확인 응답 → TB_ATTENDANCE_RESPONSE 업데이트 → deadline_at 경과 시 미응답자 `absent` 처리 → captain에게 요약 알림.
 
-#### 4.22c TB_EMERGENCY (긴급 상황) ⭐ 신규 v3.6
+#### 4.22c TB_EMERGENCY (긴급 상황)
 
-> 출처: emergency.entity.ts — SOS, 무응답, 지오펜스 위반 등 긴급 상황 통합 관리
-> v3.6: 신규 정의. TB_SOS_EVENT와 병행 사용 (통합 긴급 상황 뷰 제공).
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: 간소화 — severity, acknowledged_by/at, resolution_note, escalation_level, last_escalated_at 제거. trip_id nullable. updated_at 추가.
 
 ```sql
 CREATE TABLE tb_emergency (
     emergency_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trip_id              UUID REFERENCES tb_trip(trip_id),
     user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
-    trip_id              UUID NOT NULL REFERENCES tb_trip(trip_id),
-    emergency_type       VARCHAR(30) NOT NULL,         -- sos | no_response | geofence_violation | manual
-    severity             VARCHAR(20) DEFAULT 'medium', -- low | medium | high | critical
-    status               VARCHAR(20) DEFAULT 'active', -- active | acknowledged | resolved | false_alarm
+    emergency_type       VARCHAR(30) NOT NULL DEFAULT 'sos',
+    status               VARCHAR(20) DEFAULT 'active',
     latitude             DOUBLE PRECISION,
     longitude            DOUBLE PRECISION,
     description          TEXT,
-    acknowledged_by      VARCHAR(128) REFERENCES tb_user(user_id),
-    acknowledged_at      TIMESTAMPTZ,
-    resolved_by          VARCHAR(128) REFERENCES tb_user(user_id),
     resolved_at          TIMESTAMPTZ,
-    resolution_note      TEXT,
-    escalation_level     INTEGER DEFAULT 0,
-    last_escalated_at    TIMESTAMPTZ,
-    created_at           TIMESTAMPTZ DEFAULT NOW()
+    resolved_by          VARCHAR(128),
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE INDEX idx_emergency_trip   ON tb_emergency(trip_id);
-CREATE INDEX idx_emergency_user   ON tb_emergency(user_id);
-CREATE INDEX idx_emergency_status ON tb_emergency(status);
 ```
 
-#### 4.22d TB_EMERGENCY_RECIPIENT (긴급 알림 수신자) ⭐ 신규 v3.6
+#### 4.22d TB_EMERGENCY_RECIPIENT (긴급 알림 수신자)
 
-> 출처: emergency.entity.ts — 긴급 상황 발생 시 알림 수신자 및 채널별 전송 상태 추적
-> v3.6: 신규 정의.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: 간소화 — recipient_type, channels, is_acknowledged, acknowledged_at, response_message 제거. notified_at 추가.
 
 ```sql
 CREATE TABLE tb_emergency_recipient (
     recipient_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    emergency_id         UUID NOT NULL REFERENCES tb_emergency(emergency_id) ON DELETE CASCADE,
-    user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
-    recipient_type       VARCHAR(20) NOT NULL,          -- guardian | group_member | emergency_contact
-    channels             JSONB,                         -- {push: 'sent', sms: 'failed', email: 'pending'}
-    is_acknowledged      BOOLEAN DEFAULT FALSE,
+    emergency_id         UUID REFERENCES tb_emergency(emergency_id),
+    user_id              VARCHAR(128) NOT NULL,
+    notified_at          TIMESTAMPTZ,
     acknowledged_at      TIMESTAMPTZ,
-    response_message     TEXT,
-    sent_at              TIMESTAMPTZ DEFAULT NOW()
+    created_at           TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE INDEX idx_emergency_recipient_emergency ON tb_emergency_recipient(emergency_id);
-CREATE INDEX idx_emergency_recipient_user      ON tb_emergency_recipient(user_id);
 ```
 
-#### 4.22e TB_NO_RESPONSE_EVENT (무응답 이벤트) ⭐ 신규 v3.6
+#### 4.22e TB_NO_RESPONSE_EVENT (무응답 이벤트)
 
-> 출처: emergency.entity.ts — 주기적/수동 안전 확인에 무응답한 이벤트 기록
-> v3.6: 신규 정의. Heartbeat 타임아웃과 별도로 관리자가 수동으로 개시한 안전 확인 추적.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: PK no_response_id→event_id, check_type default 'safety_checkin', status default 'pending', threshold_minutes/check_started_at 제거, triggered_at/resolved_at 추가.
 
 ```sql
 CREATE TABLE tb_no_response_event (
-    no_response_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
-    trip_id              UUID NOT NULL REFERENCES tb_trip(trip_id),
-    check_type           VARCHAR(30) NOT NULL,          -- periodic | admin_manual
-    status               VARCHAR(20) DEFAULT 'waiting', -- waiting | responded | escalated | resolved
-    threshold_minutes    INTEGER DEFAULT 30,
-    check_started_at     TIMESTAMPTZ DEFAULT NOW(),
-    responded_at         TIMESTAMPTZ
+    trip_id              UUID REFERENCES tb_trip(trip_id),
+    check_type           VARCHAR(20) DEFAULT 'safety_checkin',
+    triggered_at         TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at          TIMESTAMPTZ,
+    status               VARCHAR(20) DEFAULT 'pending',
+    created_at           TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE INDEX idx_no_response_user ON tb_no_response_event(user_id, trip_id);
-CREATE INDEX idx_no_response_status ON tb_no_response_event(status);
 ```
 
-#### 4.22f TB_SAFETY_CHECKIN (안전 체크인) ⭐ 신규 v3.6
+#### 4.22f TB_SAFETY_CHECKIN (안전 체크인)
 
-> 출처: emergency.entity.ts — 사용자가 수동/자동으로 안전 상태를 보고하는 체크인 기록
-> v3.6: 신규 정의. 가디언 요청, 스케줄, 자동 등 다양한 트리거 지원.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: 간소화 — location_id, address, status, battery_level, network_type, requested_by_user_id, requested_at, visibility 제거. checkin_type default 'manual'. 좌표 타입 DOUBLE PRECISION.
 
 ```sql
 CREATE TABLE tb_safety_checkin (
     checkin_id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
     trip_id              UUID REFERENCES tb_trip(trip_id),
-    location_id          UUID,                          -- TB_LOCATION 참조 (논리키)
-    checkin_type         VARCHAR(20) NOT NULL,           -- manual | guardian_request | scheduled | auto
-    latitude             DECIMAL(10, 8),
-    longitude            DECIMAL(11, 8),
-    address              TEXT,
-    status               VARCHAR(20) DEFAULT 'safe',    -- safe | need_help | no_response
+    checkin_type         VARCHAR(20) DEFAULT 'manual',
+    latitude             DOUBLE PRECISION,
+    longitude            DOUBLE PRECISION,
     message              TEXT,
-    battery_level        INTEGER,
-    network_type         VARCHAR(20),                   -- wifi | 4g | 5g
-    requested_by_user_id VARCHAR(128) REFERENCES tb_user(user_id),
-    requested_at         TIMESTAMPTZ,
-    visibility           VARCHAR(20) DEFAULT 'all',     -- private | guardians | group | all
     created_at           TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE INDEX idx_safety_checkin_user    ON tb_safety_checkin(user_id);
-CREATE INDEX idx_safety_checkin_trip    ON tb_safety_checkin(trip_id);
-CREATE INDEX idx_safety_checkin_created ON tb_safety_checkin(created_at DESC);
 ```
 
 ---

@@ -1,6 +1,6 @@
 ---
-date: '2026-03-05'
-version: v3.6
+date: '2026-03-08'
+version: v3.7
 part: 2/3
 tags:
   - SafeTrip
@@ -18,11 +18,11 @@ status: completed
 ---
 
 > **📂 분할 문서 네비게이션**
-> [Part 1: 개요·ERD·테이블 A~F](07_T2_DB_설계_및_관계_v3_6_Part1.md) |
-> [Part 2: 테이블 G~N·인덱스](07_T2_DB_설계_및_관계_v3_6_Part2.md) |
-> [Part 3: 운영·부록](07_T2_DB_설계_및_관계_v3_6_Part3.md)
+> [Part 1: 개요·ERD·테이블 A~F](07_T2_DB_설계_및_관계_v3_7_Part1.md) |
+> [Part 2: 테이블 G~N·인덱스](07_T2_DB_설계_및_관계_v3_7_Part2.md) |
+> [Part 3: 운영·부록](07_T2_DB_설계_및_관계_v3_7_Part3.md)
 
-# SafeTrip — DB 설계 및 관계 v3.6 (Part 2)
+# SafeTrip — DB 설계 및 관계 v3.7 (Part 2)
 
 ## 4. 테이블 상세 명세 (계속)
 
@@ -30,19 +30,21 @@ status: completed
 
 ---
 
-#### 4.22g TB_CHAT_ROOM (채팅방) ⭐ 신규 v3.6
+#### 4.22g TB_CHAT_ROOM (채팅방)
 
-> 출처: chat.entity.ts — 채팅 메시지의 컨테이너 역할. 여행당 그룹/가디언/DM 채팅방 구분.
-> v3.6: 신규 정의. TB_CHAT_MESSAGE.room_id FK의 부모 테이블.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: created_by, updated_at 추가
 
 ```sql
 CREATE TABLE tb_chat_room (
     room_id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    trip_id              UUID NOT NULL REFERENCES tb_trip(trip_id),
+    trip_id              UUID REFERENCES tb_trip(trip_id),
     room_type            VARCHAR(20) DEFAULT 'group',   -- group | guardian | dm
     room_name            VARCHAR(100),
+    created_by           VARCHAR(128),                   -- v3.7: 생성자
     is_active            BOOLEAN DEFAULT TRUE,
-    created_at           TIMESTAMPTZ DEFAULT NOW()
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ DEFAULT NOW()       -- v3.7: 수정 시각
 );
 
 CREATE INDEX idx_chat_room_trip ON tb_chat_room(trip_id);
@@ -50,13 +52,15 @@ CREATE INDEX idx_chat_room_trip ON tb_chat_room(trip_id);
 
 #### 4.23 TB_CHAT_MESSAGE (채팅 메시지)
 
-> 출처: SafeTrip_채팅탭_원칙_v1_0
+> 출처: SafeTrip_채팅탭_원칙_v1_0, 20-migration-schema-sync.sql
+> v3.7 변경: room_id, is_deleted, metadata 추가. pg_trgm 풀텍스트 인덱스 추가.
 
 ```sql
 CREATE TABLE tb_chat_message (
     message_id         BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     trip_id            UUID NOT NULL REFERENCES tb_trip(trip_id),
     group_id           UUID NOT NULL REFERENCES tb_group(group_id),
+    room_id            UUID,                           -- v3.7: TB_CHAT_ROOM 참조
     -- ▼ v3.5: FK 추가 (NULL = 시스템 메시지)
     sender_id          VARCHAR(128) REFERENCES tb_user(user_id) ON DELETE SET NULL,
     message_type       VARCHAR(20) NOT NULL,
@@ -64,11 +68,13 @@ CREATE TABLE tb_chat_message (
     content            TEXT,
     media_urls         JSONB,                      -- [{url, type, size, thumbnail}]
     location_data      JSONB,                      -- {lat, lng, address, place_name}
+    metadata           JSONB,                      -- v3.7: 추가 메타데이터
     reply_to_id        BIGINT,                     -- 답글 대상 message_id
     system_event_type  VARCHAR(50),
     system_event_level VARCHAR(20),               -- INFO | SCHEDULE | WARNING | CRITICAL | CELEBRATION
     is_pinned          BOOLEAN DEFAULT FALSE,
     pinned_by          VARCHAR(128),
+    is_deleted         BOOLEAN DEFAULT FALSE,      -- v3.7: 삭제 플래그
     deleted_by         VARCHAR(128),
     created_at         TIMESTAMPTZ DEFAULT NOW(),
     updated_at         TIMESTAMPTZ
@@ -78,6 +84,9 @@ CREATE INDEX idx_chat_message_trip   ON tb_chat_message(trip_id, created_at DESC
 CREATE INDEX idx_chat_message_type   ON tb_chat_message(message_type);
 CREATE INDEX idx_chat_message_system ON tb_chat_message(system_event_level)
     WHERE message_type = 'system';
+-- v3.7: pg_trgm 풀텍스트 검색 인덱스
+CREATE INDEX idx_chat_message_content_trgm ON tb_chat_message USING gin (content gin_trgm_ops)
+    WHERE content IS NOT NULL AND deleted_by IS NULL;
 ```
 
 #### 4.24 TB_CHAT_POLL (투표)
@@ -124,6 +133,22 @@ CREATE TABLE tb_chat_read_status (
 );
 ```
 
+#### 4.26a TB_CHAT_REACTION (채팅 리액션) ⭐ 신규 v3.7
+
+> 출처: 13-schema-chat-reaction.sql
+> v3.7: 신규 정의. 채팅 메시지에 이모지 리액션 기능 지원.
+
+```sql
+CREATE TABLE tb_chat_reaction (
+    reaction_id  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    message_id   BIGINT NOT NULL REFERENCES tb_chat_message(message_id) ON DELETE CASCADE,
+    user_id      VARCHAR(128) NOT NULL REFERENCES tb_user(user_id) ON DELETE CASCADE,
+    emoji        VARCHAR(10) NOT NULL,
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(message_id, user_id, emoji)
+);
+```
+
 ---
 
 ### [H] 도메인: 알림
@@ -132,7 +157,8 @@ CREATE TABLE tb_chat_read_status (
 
 #### 4.27 TB_NOTIFICATION (알림)
 
-> 출처: SafeTrip_알림버튼_원칙_v1_0
+> 출처: SafeTrip_알림버튼_원칙_v1_0, 20-migration-schema-sync.sql
+> v3.7 변경: notification_type, data 추가
 
 ```sql
 CREATE TABLE tb_notification (
@@ -140,6 +166,7 @@ CREATE TABLE tb_notification (
     user_id          VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
     trip_id          UUID REFERENCES tb_trip(trip_id),
     event_type       VARCHAR(50) NOT NULL,
+    notification_type VARCHAR(40),                  -- v3.7: 알림 유형 분류
     priority         VARCHAR(10) NOT NULL,          -- P0 | P1 | P2 | P3 | P4
     channel          VARCHAR(30) NOT NULL,          -- FCM 채널 ID
     title            TEXT NOT NULL,
@@ -150,6 +177,7 @@ CREATE TABLE tb_notification (
     related_user_id  VARCHAR(128),
     related_event_id BIGINT,
     location_data    JSONB,
+    data             JSONB,                         -- v3.7: 추가 데이터
     is_read          BOOLEAN DEFAULT FALSE,
     read_at          TIMESTAMPTZ,
     is_deleted       BOOLEAN DEFAULT FALSE,
@@ -195,10 +223,10 @@ CREATE TABLE tb_event_notification_config (
 );
 ```
 
-#### 4.29a TB_FCM_TOKEN (FCM 토큰 관리) ⭐ 신규 v3.6
+#### 4.29a TB_FCM_TOKEN (FCM 토큰 관리)
 
-> 출처: notification.entity.ts — Firebase Cloud Messaging 토큰 다중 디바이스 관리
-> v3.6: 신규 정의. TB_USER.fcm_token(단일 값) 대신 다중 디바이스 지원.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: last_used_at 제거, device_info 추가
 
 ```sql
 CREATE TABLE tb_fcm_token (
@@ -206,20 +234,19 @@ CREATE TABLE tb_fcm_token (
     user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
     token                TEXT NOT NULL,
     device_type          VARCHAR(20),                   -- ios | android | web
+    device_info          JSONB,                         -- v3.7: 디바이스 상세 정보
     is_active            BOOLEAN DEFAULT TRUE,
-    last_used_at         TIMESTAMPTZ,
     created_at           TIMESTAMPTZ DEFAULT NOW(),
-    updated_at           TIMESTAMPTZ
+    updated_at           TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_fcm_token_user ON tb_fcm_token(user_id);
-CREATE INDEX idx_fcm_token_active ON tb_fcm_token(user_id, is_active) WHERE is_active = TRUE;
 ```
 
-#### 4.29b TB_NOTIFICATION_PREFERENCE (알림 세부 설정) ⭐ 신규 v3.6
+#### 4.29b TB_NOTIFICATION_PREFERENCE (알림 세부 설정)
 
-> 출처: notification.entity.ts — 알림 유형별 푸시/인앱 개별 설정
-> v3.6: 신규 정의. TB_NOTIFICATION_SETTING(이벤트별 on/off)과 병행 사용.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: is_push_enabled/is_in_app_enabled 제거, updated_at 추가, UNIQUE(user_id, notification_type)
 
 ```sql
 CREATE TABLE tb_notification_preference (
@@ -227,12 +254,10 @@ CREATE TABLE tb_notification_preference (
     user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
     notification_type    VARCHAR(40) NOT NULL,           -- emergency | location | chat | schedule | geofence 등
     is_enabled           BOOLEAN DEFAULT TRUE,
-    is_push_enabled      BOOLEAN DEFAULT TRUE,
-    is_in_app_enabled    BOOLEAN DEFAULT TRUE,
-    created_at           TIMESTAMPTZ DEFAULT NOW()
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, notification_type)
 );
-
-CREATE INDEX idx_notification_pref_user ON tb_notification_preference(user_id);
 ```
 
 ---
@@ -469,9 +494,51 @@ CREATE INDEX idx_emergency_number_country ON tb_emergency_number(country_code);
 CREATE INDEX idx_emergency_number_type    ON tb_emergency_number(number_type);
 ```
 
+#### 4.38a TB_SAFETY_GUIDE_CACHE (안전가이드 캐시) ⭐ 신규 v3.7
+
+> 출처: 16-schema-safety-guide.sql
+> v3.7: 신규 정의. MOFA API 응답 캐시.
+
+```sql
+CREATE TABLE tb_safety_guide_cache (
+    id              BIGSERIAL PRIMARY KEY,
+    country_code    VARCHAR(3) NOT NULL,
+    data_type       VARCHAR(30) NOT NULL,
+    content         JSONB NOT NULL,
+    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at      TIMESTAMPTZ NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_cache_country_type UNIQUE (country_code, data_type)
+);
+
+CREATE INDEX idx_safety_cache_country ON tb_safety_guide_cache(country_code);
+CREATE INDEX idx_safety_cache_expires ON tb_safety_guide_cache(expires_at);
+```
+
+#### 4.38b TB_COUNTRY_EMERGENCY_CONTACT (국가별 긴급연락처) ⭐ 신규 v3.7
+
+> 출처: 16-schema-safety-guide.sql
+> v3.7: 신규 정의. 국가별 긴급 서비스 번호 (경찰·소방·영사관 등). TB_EMERGENCY_CONTACT(사용자 개인 비상연락처)와 별도.
+
+```sql
+CREATE TABLE tb_country_emergency_contact (
+    id              BIGSERIAL PRIMARY KEY,
+    country_code    VARCHAR(3) NOT NULL,
+    contact_type    VARCHAR(20) NOT NULL,
+    phone_number    VARCHAR(30) NOT NULL,
+    description_ko  VARCHAR(100),
+    is_24h          BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_country_emergency_contact_country ON tb_country_emergency_contact(country_code);
+```
+
 ---
 
-### [K] 도메인: 결제/과금 ⭐ 신규
+### [K] 도메인: 결제/과금
 
 > 출처: 비즈니스 원칙 v5.1 §11 과금 모델 원칙
 
@@ -969,31 +1036,59 @@ CREATE TABLE tb_b2b_member_log (
 
 ---
 
-#### 4.52 TB_AI_USAGE (AI 사용 추적) ⭐ 신규 v3.6
+#### 4.52 TB_AI_USAGE (AI 사용 추적)
 
-> 출처: ai.entity.ts — AI 기능별 일일 사용량 추적 및 할당량 관리
-> v3.6: 신규 정의. 비즈니스 원칙 v5.1 AI 기능 요금제(addon_ai_plus/pro) 기반 사용량 제한.
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+> v3.7 변경: trip_id 제거, use_count→daily_count+monthly_count, usage_date default CURRENT_DATE
 
 ```sql
 CREATE TABLE tb_ai_usage (
     usage_id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
-    trip_id              UUID REFERENCES tb_trip(trip_id),
-    usage_date           DATE NOT NULL,                  -- 일일 할당량 기준 날짜
     feature_type         VARCHAR(30) NOT NULL,           -- recommendation | optimization | chat | briefing | intelligence
-    use_count            INTEGER DEFAULT 0,
+    daily_count          INTEGER DEFAULT 0,              -- v3.7: 일일 사용 횟수
+    monthly_count        INTEGER DEFAULT 0,              -- v3.7: 월간 사용 횟수
+    usage_date           DATE DEFAULT CURRENT_DATE,
     created_at           TIMESTAMPTZ DEFAULT NOW(),
     updated_at           TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE INDEX idx_ai_usage_user_date ON tb_ai_usage(user_id, usage_date);
-CREATE INDEX idx_ai_usage_trip      ON tb_ai_usage(trip_id) WHERE trip_id IS NOT NULL;
 ```
 
-> **할당량 체크 로직**: `SELECT use_count FROM tb_ai_usage WHERE user_id=$1 AND usage_date=CURRENT_DATE AND feature_type=$2`
-> - free 플랜: feature별 일 3회
-> - addon_ai_plus: feature별 일 20회
-> - addon_ai_pro: feature별 일 100회
+#### 4.52a TB_AI_SUBSCRIPTION (AI 구독) ⭐ 신규 v3.7
+
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+
+```sql
+CREATE TABLE tb_ai_subscription (
+    subscription_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id              VARCHAR(128) NOT NULL REFERENCES tb_user(user_id),
+    plan_type            VARCHAR(20) DEFAULT 'free',    -- free | ai_plus | ai_pro
+    daily_limit          INTEGER DEFAULT 10,
+    monthly_limit        INTEGER DEFAULT 100,
+    is_active            BOOLEAN DEFAULT TRUE,
+    started_at           TIMESTAMPTZ DEFAULT NOW(),
+    expires_at           TIMESTAMPTZ,
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### 4.52b TB_AI_USAGE_LOG (AI 호출 로그) ⭐ 신규 v3.7
+
+> 출처: 20-migration-schema-sync.sql (실제 DB 기준)
+
+```sql
+CREATE TABLE tb_ai_usage_log (
+    log_id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id              VARCHAR(128) NOT NULL,
+    feature_type         VARCHAR(30) NOT NULL,
+    input_tokens         INTEGER DEFAULT 0,
+    output_tokens        INTEGER DEFAULT 0,
+    model_name           VARCHAR(50),
+    cost_usd             NUMERIC(10,6) DEFAULT 0,
+    created_at           TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ---
 
@@ -1185,17 +1280,16 @@ CREATE INDEX idx_geofence_active ON tb_geofence(group_id, is_active) WHERE is_ac
 -- ▼ v3.6 신규 인덱스
 
 -- 지오펜스 이벤트 (TB_GEOFENCE_EVENT)
-CREATE INDEX idx_geofence_event_trip      ON tb_geofence_event(trip_id);
 CREATE INDEX idx_geofence_event_geofence  ON tb_geofence_event(geofence_id);
-CREATE INDEX idx_geofence_event_user      ON tb_geofence_event(user_id, occurred_at DESC);
+CREATE INDEX idx_geofence_event_user      ON tb_geofence_event(user_id, triggered_at DESC);
 
 -- 지오펜스 패널티 (TB_GEOFENCE_PENALTY)
-CREATE INDEX idx_geofence_penalty_event ON tb_geofence_penalty(event_id);
-CREATE INDEX idx_geofence_penalty_user  ON tb_geofence_penalty(user_id, trip_id);
+CREATE INDEX idx_geofence_penalty_event ON tb_geofence_penalty(geofence_event_id);
+CREATE INDEX idx_geofence_penalty_user  ON tb_geofence_penalty(user_id);
 
 -- 이동 세션 (TB_MOVEMENT_SESSION)
-CREATE INDEX idx_movement_session_user   ON tb_movement_session(user_id);
-CREATE INDEX idx_movement_session_active ON tb_movement_session(is_completed) WHERE is_completed = FALSE;
+CREATE INDEX idx_movement_session_user  ON tb_movement_session(user_id);
+CREATE INDEX idx_movement_session_start ON tb_movement_session(start_time DESC);
 
 -- 긴급 상황 (TB_EMERGENCY)
 CREATE INDEX idx_emergency_trip   ON tb_emergency(trip_id);
@@ -1219,8 +1313,7 @@ CREATE INDEX idx_safety_checkin_created ON tb_safety_checkin(created_at DESC);
 CREATE INDEX idx_chat_room_trip ON tb_chat_room(trip_id);
 
 -- FCM 토큰 (TB_FCM_TOKEN)
-CREATE INDEX idx_fcm_token_user   ON tb_fcm_token(user_id);
-CREATE INDEX idx_fcm_token_active ON tb_fcm_token(user_id, is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_fcm_token_user ON tb_fcm_token(user_id);
 
 -- 알림 세부 설정 (TB_NOTIFICATION_PREFERENCE)
 CREATE INDEX idx_notification_pref_user ON tb_notification_preference(user_id);
@@ -1241,7 +1334,66 @@ CREATE INDEX idx_b2b_dashboard_org ON tb_b2b_dashboard_config(org_id);
 
 -- AI 사용 추적 (TB_AI_USAGE)
 CREATE INDEX idx_ai_usage_user_date ON tb_ai_usage(user_id, usage_date);
-CREATE INDEX idx_ai_usage_trip      ON tb_ai_usage(trip_id) WHERE trip_id IS NOT NULL;
+
+-- ▼ v3.7 신규 인덱스
+
+-- 사용자 닉네임 유일성 (TB_USER)
+CREATE UNIQUE INDEX idx_user_nickname_unique
+    ON tb_user(display_name)
+    WHERE deleted_at IS NULL AND display_name IS NOT NULL AND display_name != '';
+
+-- 가디언 메시지 (TB_GUARDIAN_MESSAGE)
+CREATE INDEX idx_guardian_msg_link ON tb_guardian_message(link_id, sent_at DESC);
+CREATE INDEX idx_guardian_msg_trip ON tb_guardian_message(trip_id);
+
+-- 가디언 해제 요청 (TB_GUARDIAN_RELEASE_REQUEST)
+CREATE INDEX idx_guardian_release_request_link         ON tb_guardian_release_request(link_id);
+CREATE INDEX idx_guardian_release_request_trip          ON tb_guardian_release_request(trip_id, status);
+CREATE INDEX idx_guardian_release_request_requested_by  ON tb_guardian_release_request(requested_by);
+
+-- 일정 수정 이력 (TB_SCHEDULE_HISTORY)
+CREATE INDEX idx_schedule_history_schedule ON tb_schedule_history(schedule_id);
+CREATE INDEX idx_schedule_history_modified ON tb_schedule_history(modified_at);
+
+-- 일정 댓글 (TB_SCHEDULE_COMMENT)
+CREATE INDEX idx_schedule_comment_schedule ON tb_schedule_comment(schedule_id);
+
+-- 일정 리액션 (TB_SCHEDULE_REACTION)
+CREATE INDEX idx_schedule_reaction_schedule ON tb_schedule_reaction(schedule_id);
+-- UNIQUE(schedule_id, user_id, emoji)
+
+-- 일정 투표 (TB_SCHEDULE_VOTE)
+CREATE INDEX idx_schedule_vote_trip ON tb_schedule_vote(trip_id);
+-- UNIQUE(vote_id, user_id) on tb_schedule_vote_response
+
+-- 채팅 리액션 (TB_CHAT_REACTION)
+-- UNIQUE(message_id, user_id, emoji)
+
+-- 채팅 메시지 전문 검색 (pg_trgm)
+CREATE INDEX idx_chat_message_content_trgm
+    ON tb_chat_message USING gin (content gin_trgm_ops)
+    WHERE content IS NOT NULL AND deleted_by IS NULL;
+
+-- 안전 가이드 캐시 (TB_SAFETY_GUIDE_CACHE)
+CREATE INDEX idx_safety_cache_country ON tb_safety_guide_cache(country_code);
+CREATE INDEX idx_safety_cache_expires ON tb_safety_guide_cache(expires_at);
+
+-- 국가별 긴급연락처 (TB_COUNTRY_EMERGENCY_CONTACT)
+CREATE INDEX idx_country_emergency_contact_country ON tb_country_emergency_contact(country_code);
+
+-- AI 사용 로그 (TB_AI_USAGE_LOG)
+CREATE INDEX idx_ai_usage_log_user    ON tb_ai_usage_log(user_id);
+CREATE INDEX idx_ai_usage_log_trip    ON tb_ai_usage_log(trip_id);
+CREATE INDEX idx_ai_usage_log_type    ON tb_ai_usage_log(ai_type, feature_name);
+CREATE INDEX idx_ai_usage_log_expires ON tb_ai_usage_log(expires_at);
+
+-- AI 구독 (TB_AI_SUBSCRIPTION)
+CREATE INDEX idx_ai_subscription_user   ON tb_ai_subscription(user_id);
+CREATE INDEX idx_ai_subscription_status ON tb_ai_subscription(status, expires_at);
+CREATE INDEX idx_ai_subscription_trip   ON tb_ai_subscription(trip_id) WHERE trip_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_ai_subscription_active_monthly
+    ON tb_ai_subscription(user_id, plan_type)
+    WHERE billing_cycle = 'monthly' AND status IN ('active', 'grace_period');
 ```
 
 ---
